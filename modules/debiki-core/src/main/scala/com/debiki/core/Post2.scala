@@ -92,32 +92,32 @@ case class Post2(
   parentId: Option[PostId],
   multireplyPostIds: immutable.Set[PostId],
   createdAt: ju.Date,
-  createdById: UserId2,
+  createdById: UserId,
   lastEditedAt: Option[ju.Date],
-  lastEditedById: Option[UserId2],
+  lastEditedById: Option[UserId],
   lastApprovedEditAt: Option[ju.Date],
-  lastApprovedEditById: Option[UserId2],
+  lastApprovedEditById: Option[UserId],
   numDistinctEditors: Int,
   safeVersion: Option[Int],
   approvedSource: Option[String],
   approvedHtmlSanitized: Option[String],
   approvedAt: Option[ju.Date],
-  approvedById: Option[UserId2],
+  approvedById: Option[UserId],
   approvedVersion: Option[Int],
   currentSourcePatch: Option[String],
   currentVersion: Int,
   collapsedStatus: CollapsedStatus,
   collapsedAt: Option[ju.Date],
-  collapsedById: Option[UserId2],
+  collapsedById: Option[UserId],
   closedStatus: ClosedStatus,
   closedAt: Option[ju.Date],
-  closedById: Option[UserId2],
+  closedById: Option[UserId],
   hiddenAt: Option[ju.Date],
-  hiddenById: Option[UserId2],
+  hiddenById: Option[UserId],
   //hiddenReason: ?
   deletedStatus: DeletedStatus,
   deletedAt: Option[ju.Date],
-  deletedById: Option[UserId2],
+  deletedById: Option[UserId],
   pinnedPosition: Option[Int],
   numPendingFlags: Int,
   numHandledFlags: Int,
@@ -265,7 +265,7 @@ case class Post2(
     */
   def copyWithNewStatus(
     currentTime: ju.Date,
-    userId: UserId2,
+    userId: UserId,
     postCollapsed: Boolean = false,
     treeCollapsed: Boolean = false,
     ancestorsCollapsed: Boolean = false,
@@ -382,10 +382,10 @@ object Post2 {
         parent: Option[Post2],
         multireplyPostIds: Set[PostId],
         createdAt: ju.Date,
-        createdById: UserId2,
+        createdById: UserId,
         source: String,
         htmlSanitized: String,
-        approvedById: Option[UserId2]): Post2 = {
+        approvedById: Option[UserId]): Post2 = {
 
     require(multireplyPostIds.nonEmpty == parent.isDefined)
 
@@ -462,10 +462,10 @@ object Post2 {
         siteId: SiteId,
         pageId: PageId,
         createdAt: ju.Date,
-        createdById: UserId2,
+        createdById: UserId,
         source: String,
         htmlSanitized: String,
-        approvedById: Option[UserId2]): Post2 =
+        approvedById: Option[UserId]): Post2 =
     create(siteId, pageId = pageId, postId = PageParts.TitleId, parent = None,
       multireplyPostIds = Set.empty, createdAt = createdAt, createdById = createdById,
       source = source, htmlSanitized = htmlSanitized, approvedById = approvedById)
@@ -474,10 +474,10 @@ object Post2 {
         siteId: SiteId,
         pageId: PageId,
         createdAt: ju.Date,
-        createdById: UserId2,
+        createdById: UserId,
         source: String,
         htmlSanitized: String,
-        approvedById: Option[UserId2]): Post2 =
+        approvedById: Option[UserId]): Post2 =
     create(siteId, pageId = pageId, postId = PageParts.BodyId, parent = None,
       multireplyPostIds = Set.empty, createdAt = createdAt, createdById = createdById,
       source = source, htmlSanitized = htmlSanitized, approvedById = approvedById)

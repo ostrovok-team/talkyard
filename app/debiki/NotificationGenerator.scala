@@ -70,7 +70,7 @@ case class NotificationGenerator(transaction: SiteTransaction) {
     // People watching this topic or category
     for {
       userId <- transaction.loadUserIdsWatchingPage(page.id)
-      if userId != newPost.createdById.toString // UserId2
+      if userId != newPost.createdById
       user <- transaction.loadUser(userId)
     } {
       makeNewPostNotf(Notification.NewPostNotfType.NewPost, newPost, user)
@@ -109,7 +109,7 @@ case class NotificationGenerator(transaction: SiteTransaction) {
       createdAt = newPost.createdAt,
       pageId = newPost.pageId,
       postId = newPost.id,
-      byUserId = newPost.createdById.toString, // UserId2
+      byUserId = newPost.createdById,
       toUserId = user.id)
   }
 

@@ -33,7 +33,7 @@ case class PageStuff(
   title: String,
   bodyExcerpt: Option[String],
   authorDisplayName: String,
-  authorUserId: UserId2)
+  authorUserId: UserId)
 
 
 

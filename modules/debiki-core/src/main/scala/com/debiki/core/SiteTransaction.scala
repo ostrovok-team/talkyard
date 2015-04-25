@@ -42,23 +42,23 @@ trait SiteTransaction {
   def insertPost(newPost: Post2)
   def updatePost(newPost: Post2)
 
-  def loadActionsByUserOnPage(userId: UserId2, pageId: PageId): immutable.Seq[PostAction2]
+  def loadActionsByUserOnPage(userId: UserId, pageId: PageId): immutable.Seq[PostAction2]
   def loadActionsDoneToPost(pageId: PageId, postId: PostId): immutable.Seq[PostAction2]
 
-  def deleteVote(pageId: PageId, postId: PostId, voteType: PostVoteType, voterId: UserId2): Boolean
-  def insertVote(pageId: PageId, postId: PostId, voteType: PostVoteType, voterId: UserId2)
+  def deleteVote(pageId: PageId, postId: PostId, voteType: PostVoteType, voterId: UserId): Boolean
+  def insertVote(pageId: PageId, postId: PostId, voteType: PostVoteType, voterId: UserId)
 
   /** Remembers that the specified posts have been read by a certain user.
     */
-  def updatePostsReadStats(pageId: PageId, postIdsRead: Set[PostId], readById: UserId2,
+  def updatePostsReadStats(pageId: PageId, postIdsRead: Set[PostId], readById: UserId,
         readFromIp: String)
 
   def loadPostsReadStats(pageId: PageId, postId: Option[PostId]): PostsReadStats
 
 
   def loadFlagsFor(pagePostIds: immutable.Seq[PagePostId]): immutable.Seq[PostFlag]
-  def insertFlag(pageId: PageId, postId: PostId, flagType: PostFlagType, flaggerId: UserId2)
-  def clearFlags(pageId: PageId, postId: PostId, clearedById: UserId2)
+  def insertFlag(pageId: PageId, postId: PostId, flagType: PostFlagType, flaggerId: UserId)
+  def clearFlags(pageId: PageId, postId: PostId, clearedById: UserId)
 
 
   def nextPageId(): PageId
@@ -80,11 +80,16 @@ trait SiteTransaction {
 
   def currentTime: ju.Date
 
-  def loadUser(userId: UserId2): Option[User] = loadUser(userId.toString)
+  def nextIdentityId: IdentityId
+  def insertIdentity(Identity: Identity)
+
+  def nextAuthenticatedUserId: UserId
+  def insertAuthenticatedUser(user: User)
+
   def loadUser(userId: UserId): Option[User]
-  def loadUsers(userIds: Seq[UserId2]): immutable.Seq[User]
+  def loadUsers(userIds: Seq[UserId]): immutable.Seq[User]
   def loadUsersOnPageAsMap2(pageId: PageId, siteId: Option[SiteId] = None): Map[UserId, User]
-  def loadUsersAsMap2(userIds: Iterable[UserId2]): Map[UserId2, User]
+  def loadUsersAsMap2(userIds: Iterable[UserId]): Map[UserId, User]
   def loadUserByEmailOrUsername(emailOrUsername: String): Option[User]
 
   def loadUserIdsWatchingPage(pageId: PageId): Seq[UserId]

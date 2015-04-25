@@ -86,7 +86,7 @@ abstract class PageParts2 extends People2 {
   }
 
 
-  def theUser(userId: UserId2): User
+  def theUser(userId: UserId): User
 
 
   def childrenOf(postId: PostId): immutable.Seq[Post2] =
@@ -168,6 +168,6 @@ abstract class PageParts2 extends People2 {
 
 abstract class People2 {
 
-  def theUser(id: UserId2): User
+  def theUser(id: UserId): User
 
 }

@@ -21,7 +21,7 @@ import java.{util => ju}
 import org.scalactic.{Or, Every, ErrorMessage}
 import EmailNotfPrefs.EmailNotfPrefs
 import Prelude._
-import User.{isRoleId, isGuestId, checkId}
+import User._
 
 
 object People {
@@ -59,11 +59,11 @@ sealed abstract class NewUserData {
   def isAdmin: Boolean
   def isOwner: Boolean
 
-  def userNoId = User(
-    id = "?",
+  def makeUser(userId: UserId, createdAt: ju.Date) = User(
+    id = userId,
     displayName = name,
     username = Some(username),
-    createdAt = None,
+    createdAt = Some(createdAt),
     email = email,
     emailNotfPrefs = EmailNotfPrefs.Unspecified,
     emailVerifiedAt = emailVerifiedAt,
@@ -72,7 +72,7 @@ sealed abstract class NewUserData {
     isAdmin = isAdmin,
     isOwner = isOwner)
 
-  def identityNoId: Identity
+  def makeIdentity(userId: UserId, identityId: IdentityId): Identity
 
   Validation.checkName(name)
   Validation.checkUsername(username)
@@ -93,11 +93,11 @@ case class NewPasswordUserData(
   val passwordHash: String =
     DbDao.saltAndHashPassword(password)
 
-  def userNoId = User(
-    id = "?",
+  def makeUser(userId: UserId, createdAt: ju.Date) = User(
+    id = userId,
     displayName = name,
     username = Some(username),
-    createdAt = None,
+    createdAt = Some(createdAt),
     email = email,
     emailNotfPrefs = EmailNotfPrefs.Unspecified,
     emailVerifiedAt = None,
@@ -142,8 +142,8 @@ case class NewOauthUserData(
   isAdmin: Boolean,
   isOwner: Boolean) extends NewUserData {
 
-  def identityNoId =
-    OpenAuthIdentity(id = "?", userId = "?", openAuthDetails = identityData)
+  def makeIdentity(userId: UserId, identityId: IdentityId): Identity =
+    OpenAuthIdentity(id = identityId, userId = userId, openAuthDetails = identityData)
 }
 
 
@@ -205,24 +205,39 @@ case class UserIdData(
 
 case object User {
 
-  val SystemUserId = SystemUser.User.id2
+  val SystemUserId = SystemUser.User.id
+  val UnknownUserId = UnknownUser.User.id
 
   // Perhaps in the future:
   // /** A user that has logged in and can post comments, but is anonymous. */
   // val AnonymousUserId = -2
 
+  /** Guests with custom name and email, but not guests with magic ids like the Unknown user. */
+  val MaxCustomGuestId = -10
+
   val MaxGuestId = -2
   //assert(MaxGuestId == AnonymousUserId)
-  assert(UnknownUser.Id.toInt <= MaxGuestId)
+  assert(UnknownUserId.toInt <= MaxGuestId)
+
+  /** Ids 1 .. 99 are reserved in case in the future I want to combine users and groups,
+    * and then there'll be a few groups with hardcoded ids in the range 1..99.
+    */
+  val LowestAuthentiatedUserId = 100
 
   val LowestNonGuestId = -1
-  assert(LowestNonGuestId == SystemUser.User.id2)
+  assert(LowestNonGuestId == SystemUser.User.id)
 
   def isGuestId(userId: UserId) =
-    userId != SystemUser.User.id && userId.startsWith("-") && userId.length > 1
+    userId <= MaxGuestId
 
   def isRoleId(userId: UserId) =
-    !isGuestId(userId) && userId.nonEmpty
+    !isGuestId(userId)
+
+  def isOkayUserId(id: UserId) =
+    id >= LowestAuthentiatedUserId ||
+      id == SystemUserId ||
+      id == UnknownUserId ||
+      id <= -MaxCustomGuestId
 
   /**
    * Checks for weird ASCII chars in an user name.
@@ -278,23 +293,7 @@ case object User {
     false
   }
 
-
-  def checkId(id: String, errcode: String) {
-    if (id == "") assErr(errcode, "Empty ID ")
-    if (id == "0") assErr(errcode, "ID is `0' ")
-    // "?" is okay, means unknown.
-  }
-
 }
-
-
-/* Could use:
-sealed abstract class UserId
-case class GuestId(String) extends UserId
-case class RoleId(String) extends UserId
--- instead of setting User.id to "-<some-id>" for IdentitySimple,
-  and "<some-id>" for Role:s.
-*/
 
 
 /**
@@ -313,7 +312,7 @@ case class RoleId(String) extends UserId
  * @param isOwner
  */
 case class User (
-  id: String,
+  id: UserId,
   displayName: String,
   username: Option[String],
   createdAt: Option[ju.Date],
@@ -326,15 +325,12 @@ case class User (
   isAdmin: Boolean = false,
   isOwner: Boolean = false
 ){
-  checkId(id, "DwE02k125r")
-  def id2 = id.toInt
-  def isAuthenticated = isRoleId(id) && !id.startsWith("?")
+  require(User.isOkayUserId(id), "DwE02k125r")
+
+  def isAuthenticated = isRoleId(id)
 
   def isGuest = User.isGuestId(id)
-  def anyRoleId: Option[String] = if (isRoleId(id)) Some(id) else None
-  def anyGuestId: Option[String] = if (isGuestId(id)) Some(id drop 1) else None
-  def theRoleId: String = anyRoleId getOrDie "DwE035SKF7"
-  def theGuestId: String = anyGuestId getOrDie "DwE5GK904"
+  def anyRoleId: Option[RoleId] = if (isRoleId(id)) Some(id) else None
 
 }
 
@@ -450,18 +446,18 @@ sealed abstract class Identity {
  * @param emailSent Not known before login (is `None`)
  */
 case class IdentityEmailId(
-  id: String,
-  userId: String = "?",
+  id: IdentityId,
+  userId: UserId,
   emailSent: Option[Email] = None
 ) extends Identity {
   // Either only email id known, or all info known.
-  require((userId startsWith "?") == emailSent.isEmpty)
+  // require((userId startsWith "?") == emailSent.isEmpty)    TODO what?
 }
 
 
 case class IdentityOpenId(
-  id: String,
-  override val userId: String,
+  id: IdentityId,
+  override val userId: UserId,
   openIdDetails: OpenIdDetails) extends Identity {
 
   def displayName = openIdDetails.firstName
@@ -492,6 +488,8 @@ case class OpenAuthIdentity(
   override val userId: UserId,
   openAuthDetails: OpenAuthDetails) extends Identity {
 
+  require(userId >= LowestAuthentiatedUserId)
+
   def displayName = openAuthDetails.displayName
 }
 
@@ -520,7 +518,6 @@ case class LoginGrant(
    isNewRole: Boolean) {
 
   require(identity.map(_.id.contains('?')) != Some(true))
-  require(!user.id.contains('?'))
   require(identity.map(_.userId == user.id) != Some(false))
   require(!isNewRole || isNewIdentity)
 
@@ -537,7 +534,7 @@ case class LoginGrant(
   */
 object UnknownUser {
 
-  val Id = "-3"
+  val Id = -3
 
   val User = com.debiki.core.User(id = Id, displayName = "(unknown user)", username = None,
     createdAt = None, email = "", emailNotfPrefs = EmailNotfPrefs.DontReceive,

@@ -256,7 +256,7 @@ object ReactJson {
       "isAuthenticated" -> JsBoolean(user.isAuthenticated),
       "permsOnPage" -> permsOnPageJson(permsOnPage),
       "rolePageSettings" -> rolePageSettings,
-      "votes" -> votesJson(user.id2, pageId, transaction),
+      "votes" -> votesJson(user.id, pageId, transaction),
       "unapprovedPosts" -> unapprovedPostsJson(user.id, pageId, transaction),
       "postIdsAutoReadLongAgo" -> JsArray(Nil),
       "postIdsAutoReadNow" -> JsArray(Nil),
@@ -286,7 +286,7 @@ object ReactJson {
   }
 
 
-  private def votesJson(userId: UserId2, pageId: PageId, transaction: SiteTransaction): JsObject = {
+  private def votesJson(userId: UserId, pageId: PageId, transaction: SiteTransaction): JsObject = {
     val actions = transaction.loadActionsByUserOnPage(userId, pageId)
     val votes = actions.filter(_.isInstanceOf[PostVote]).asInstanceOf[immutable.Seq[PostVote]]
     val userVotesMap = UserPostVotes.makeMap(votes)
