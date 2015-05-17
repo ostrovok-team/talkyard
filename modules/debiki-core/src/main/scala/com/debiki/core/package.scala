@@ -57,5 +57,7 @@ package object core {
 
   val HomepageUrlPath = "/"
 
+  val MillisPerDay: Long = 24 * 3600 * 1000
+
 }
 
