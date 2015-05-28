@@ -37,7 +37,7 @@ object VoteController extends mvc.Controller {
   /** Currently handles only one vote at a time. Example post data, in Yaml:
     *   pageId: "123abc"
     *   postId: 123
-    *   vote: "VoteLike"      # or "VoteWrong" or "VoteOffTopic"
+    *   vote: "VoteLike"      # or "VoteWrong" or "VoteBury"
     *   action: "CreateVote"  # or "DeleteVote"
     *   postIdsRead: [1, 9, 53, 82]
     */
@@ -72,6 +72,7 @@ object VoteController extends mvc.Controller {
     val voteType: PostVoteType = voteStr match {
       case "VoteLike" => PostVoteType.Like
       case "VoteWrong" => PostVoteType.Wrong
+      case "VoteBury" => PostVoteType.Bury
       case _ => throwBadReq("DwE35gKP8", s"Bad vote type: $voteStr")
     }
 

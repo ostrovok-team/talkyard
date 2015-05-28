@@ -127,6 +127,7 @@ case class Post(
   numPendingEditSuggestions: Int,
   numLikeVotes: Int,
   numWrongVotes: Int,
+  numBuryVotes: Int,
   numTimesRead: Int) {
 
   require(uniqueId >= 1, "DwE4WEKQ8")
@@ -193,6 +194,7 @@ case class Post(
   require(numHandledFlags >= 0, "DwE6IKF3")
   require(numLikeVotes >= 0, "DwEIK7K")
   require(numWrongVotes >= 0, "DwE7YQ08")
+  require(numBuryVotes >= 0, "DwE5FKW2")
   require(numTimesRead >= 0, "DwE2ZfMI3")
 
   def isReply = PageParts.isReply(id)
@@ -355,6 +357,7 @@ case class Post(
         : Post = {
     var numLikeVotes = 0
     var numWrongVotes = 0
+    var numBuryVotes = 0
     for (action <- actions) {
       action match {
         case vote: PostVote =>
@@ -363,6 +366,8 @@ case class Post(
               numLikeVotes += 1
             case PostVoteType.Wrong =>
               numWrongVotes += 1
+            case PostVoteType.Bury =>
+              numBuryVotes += 1
           }
       }
     }
@@ -370,6 +375,7 @@ case class Post(
     copy(
       numLikeVotes = numLikeVotes,
       numWrongVotes = numWrongVotes,
+      numBuryVotes = numBuryVotes,
       numTimesRead = numTimesRead)
   }
 }
@@ -462,6 +468,7 @@ object Post {
       numPendingEditSuggestions = 0,
       numLikeVotes = 0,
       numWrongVotes = 0,
+      numBuryVotes = 0,
       numTimesRead = 0)
   }
 
