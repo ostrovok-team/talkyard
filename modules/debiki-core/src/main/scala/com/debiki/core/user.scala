@@ -205,7 +205,7 @@ case class UserIdData(
 
 case object User {
 
-  val SystemUserId = SystemUser.User.id2
+  val SystemUserId = -1
 
   // Perhaps in the future:
   // /** A user that has logged in and can post comments, but is anonymous. */
@@ -216,10 +216,10 @@ case object User {
   assert(UnknownUser.Id.toInt <= MaxGuestId)
 
   val LowestNonGuestId = -1
-  assert(LowestNonGuestId == SystemUser.User.id2)
+  assert(LowestNonGuestId == SystemUserId)
 
   def isGuestId(userId: UserId) =
-    userId != SystemUser.User.id && userId.startsWith("-") && userId.length > 1
+    userId != SystemUserId.toString && userId.startsWith("-") && userId.length > 1
 
   def isRoleId(userId: UserId) =
     !isGuestId(userId) && userId.nonEmpty
