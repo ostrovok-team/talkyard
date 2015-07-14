@@ -17,7 +17,7 @@
 
 package controllers
 
-import actions.ApiActions.PostJsonAction
+import actions.ApiActions.AsyncPostJsonAction
 import com.debiki.core._
 import com.debiki.core.Prelude._
 import controllers.Utils.OkSafeJson
@@ -26,6 +26,8 @@ import debiki.DebikiHttp._
 import play.api._
 import play.api.mvc.{Action => _, _}
 import requests._
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.{Success, Failure}
 
 
 /** Handles reply form submissions. Lazily creates pages for embedded discussions
@@ -34,7 +36,7 @@ import requests._
 object ReplyController extends mvc.Controller {
 
 
-  def handleReply = PostJsonAction(RateLimits.PostReply, maxLength = MaxPostSize) {
+  def handleReply = AsyncPostJsonAction(RateLimits.PostReply, maxLength = MaxPostSize) {
         request: JsonPostRequest =>
     val body = request.body
     val pageId = (body \ "pageId").as[PageId]
@@ -60,12 +62,28 @@ object ReplyController extends mvc.Controller {
     if (text.isEmpty)
       throwBadReq("DwE85FK03", "Empty post")
 
-    val postId = pageReq.dao.insertReply(text, pageId = pageId, replyToPostIds,
-      authorId = pageReq.theUser.id, pageReq.theBrowserIdData)
+    // https://rest.akismet.com/1.1/verify-key
+    // http://api.hostip.info/get_json.php?ip=12.215.42.19
+    // http://ipinfo.io/8.8.8.8/json
+    //val http = dispatch.Http.configure(_.setAllowPoolingConnection(true).setConnectionTimeoutInMs(5000))
+    Globals.antiSpam.checkIfIsSpam("??", request, pageId, text) map { isSpam =>
+      if (isSpam)
+        throwForbidden("DwE4KP80", "Akismet thinks this is spam") // for now TODO
 
-    val json = ReactJson.postToJson2(postId = postId, pageId = pageId, pageReq.dao,
-      includeUnapproved = true)
-    OkSafeJson(json)
+      val postId = pageReq.dao.insertReply(text, pageId = pageId, replyToPostIds,
+        authorId = pageReq.theUser.id, pageReq.theBrowserIdData)
+
+      val json = ReactJson.postToJson2(postId = postId, pageId = pageId, pageReq.dao,
+        includeUnapproved = true)
+      OkSafeJson(json)
+    } recover {
+      case debiki.antispam.ApiKeyInvalidException =>
+        InternalErrorResult("DwE4KEP8", "Invalid Akismet API key") // for now TODO
+      case debiki.antispam.CouldNotVerifyApiKeyException =>
+        InternalErrorResult("DwE5KEF2", "Could not ckeck Akismet API key") // for now TODO
+      case throwable =>
+        InternalErrorResult("DwE4KER2", "Unkown error when checking if is spam: " + throwable) // for now TODO
+    }
   }
 
 

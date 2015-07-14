@@ -24,6 +24,7 @@ import com.debiki.core.Prelude._
 import com.debiki.dao.rdb.{RdbDaoFactory, Rdb}
 import debiki.dao.{SystemDao, SiteDao, CachingSiteDaoFactory, CachingSystemDao}
 import debiki.dao.migrations.ScalaBasedMigrations
+import debiki.antispam.AntiSpam
 //import com.twitter.ostrich.stats.Stats
 //import com.twitter.ostrich.{admin => toa}
 import java.{lang => jl}
@@ -67,6 +68,9 @@ class Globals {
 
   def siteDao(siteId: SiteId): SiteDao =
     state.siteDaoFactory.newSiteDao(siteId)
+
+
+  def antiSpam: AntiSpam = state.antiSpam
 
 
   def sendEmail(email: Email, websiteId: String) {
@@ -205,6 +209,9 @@ class Globals {
   private class State {
 
     val ShutdownTimeout = 30 seconds
+
+    val antiSpam = new AntiSpam()
+    antiSpam.start()
 
     val dbDaoFactory = new RdbDaoFactory(
       makeDataSource(), ScalaBasedMigrations, Akka.system, debiki.ReactRenderer,
