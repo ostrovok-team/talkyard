@@ -117,6 +117,17 @@ export function updatePost(post) {
 }
 
 
+export function saveSummary(postId: number, text: string, success: () => void) {
+  Server.saveSummary(postId, text, (response) => {
+    success();
+    ReactDispatcher.handleViewAction({
+      actionType: actionTypes.UpdatePost,
+      post: response.summaryPost
+    });
+  });
+}
+
+
 export function vote(post, doWhat: string, voteType: string) {
   ReactDispatcher.handleViewAction({
     actionType: actionTypes.VoteOnPost,

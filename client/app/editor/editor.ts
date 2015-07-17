@@ -52,6 +52,11 @@ export function openEditorToEditPost(postId: number) {
 }
 
 
+export function openEditorToAddSummary(postId: number) {
+  theEditor.addSummary(postId);
+}
+
+
 export function editNewForumPage(parentPageId: string, role: string) {
   theEditor.editNewForumPage(parentPageId, role);
 }
@@ -129,6 +134,23 @@ export var Editor = createComponent({
     }
   },
 
+  addSummary: function(postId: number) {
+    if (this.alertBadState('AddSummary'))
+      return;
+    if (!postId) {
+      // The page title has id 0 but cannot be summarized.
+      alert('Cannot summarize: ' + postId);
+      return;
+    }
+    this.showEditor();
+    this.setState({
+      addingSummaryToPostId: postId,
+      text: "### Title of thread. Delete this line if you don't want a title.\n\n" +
+          "Type a summary here. Delete this line if you don't want a summary."
+    });
+    this.updatePreview();
+  },
+
   editPost: function(postId: number) {
     if (this.alertBadState())
       return;
@@ -178,6 +200,10 @@ export var Editor = createComponent({
       d.i.clearIsReplyingMarks();
       return true;
     }
+    if (this.state.addingSummaryToPostId) {
+      alert("Please first finish the title or summary you have started writing");
+      return true;
+    }
     return false;
   },
 
@@ -216,6 +242,9 @@ export var Editor = createComponent({
     else if (_.isNumber(this.state.editingPostId)) {
       this.saveEdits();
     }
+    else if (this.state.addingSummaryToPostId) {
+      this.saveSummary();
+    }
     else {
       this.saveNewPost();
     }
@@ -225,6 +254,11 @@ export var Editor = createComponent({
     Server.saveEdits(this.state.editingPostId, this.state.text, () => {
       this.closeEditor();
     });
+  },
+
+  saveSummary: function() {
+    ReactActions.saveSummary(this.state.addingSummaryToPostId,
+        this.state.text, this.closeEditor);
   },
 
   saveNewPost: function() {
@@ -259,6 +293,7 @@ export var Editor = createComponent({
       visible: false,
       replyToPostIds: [],
       editingPostId: null,
+      addingSummaryToPostId: null,
       newForumPageParentId: null,
       newForumPageRole: null,
       text: '',
@@ -287,10 +322,17 @@ export var Editor = createComponent({
 
     var doingWhatInfo;
     var editingPostId = this.state.editingPostId;
+    var addingSummaryToPostId = this.state.addingSummaryToPostId;
     if (_.isNumber(editingPostId)) {
       doingWhatInfo =
         r.div({},
           'Editing ', r.a({ href: '#post-' + editingPostId }, 'post ' + editingPostId + ':'));
+    }
+    else if (addingSummaryToPostId) {
+      doingWhatInfo =
+        r.div({},
+          'Adding title or summary for ', r.a({ href: '#post-' + addingSummaryToPostId },
+            'post ' + addingSummaryToPostId + ':'));
     }
     else if (this.state.newForumPageRole === 'ForumTopic') {
       doingWhatInfo = r.div({}, 'New topic title and text:');
@@ -319,6 +361,9 @@ export var Editor = createComponent({
     var saveButtonTitle = 'Save';
     if (_.isNumber(this.state.editingPostId)) {
       saveButtonTitle = 'Save edits';
+    }
+    if (this.state.addingSummaryToPostId) {
+      saveButtonTitle = 'Add';
     }
     else if (this.state.replyToPostIds.length) {
       saveButtonTitle = 'Post reply';

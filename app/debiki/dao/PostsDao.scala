@@ -131,6 +131,85 @@ trait PostsDao {
   }
 
 
+  def insertSummary(pageId: PageId, treeRootPostId: PostId, text: String,
+        authorId: UserId, browserIdData: BrowserIdData): PostId = {
+
+    No do NOT do things in this way: inserting the summary as a new parent breaks sorting,
+    because the summary has 0 like votes.
+
+    Instead add a special Post.summaryPostId field that helps one find the summary, if any.
+
+
+    if (!PageParts.isReply(treeRootPostId))
+      throwBadReq("DwE4KEPF8", s"Cannot add summary at post id '$treeRootPostId'")
+
+    val htmlSanitized = siteDbDao.commonMarkRenderer.renderAndSanitizeCommonMark(
+      text, allowClassIdDataAttrs = false, followLinks = false)
+    if (htmlSanitized.trim.isEmpty)
+      throwBadReq("DwE4KEF7", "Empty title or summary")
+
+    val postNr = readWriteTransaction { transaction =>
+      val page = PageDao(pageId, transaction)
+      val uniqueId = transaction.nextPostId()
+      val postNr = page.parts.highestReplyId.map(_ + 1) getOrElse PageParts.FirstReplyId
+      val postToSummarize = page.parts.post(treeRootPostId) getOrElse throwNotFound(
+        "DwE4KEW8", "Post not found")
+
+      val isApproved = true // for now
+      val author = transaction.loadUser(authorId) getOrElse throwNotFound("DwE404UF3", "Bad user")
+      if (!author.isStaff)
+        throwForbidden("DwE4023", "Only staff can add titles and summaries")
+
+      val summaryPost = Post.create(
+        siteId = siteId,
+        uniqueId = uniqueId,
+        pageId = pageId,
+        postId = postNr,
+        parent = page.parts.post(postToSummarize.parentId),
+        multireplyPostIds = Set.empty,
+        createdAt = transaction.currentTime,
+        createdById = authorId,
+        source = text,
+        htmlSanitized = htmlSanitized,
+        approvedById = Some(authorId))
+
+      // TODO update postToSummarize too
+
+      val oldMeta = page.meta
+      val newMeta = oldMeta.copy(
+        bumpedAt = Some(transaction.currentTime),
+        lastReplyAt = Some(transaction.currentTime))
+
+      val auditLogEntry = AuditLogEntry(
+        siteId = siteId,
+        id = AuditLogEntry.UnassignedId,
+        didWhat = AuditLogEntryType.NewPost, // TODO entry type SummarizePost
+        doerId = authorId,
+        doneAt = transaction.currentTime,
+        browserIdData = browserIdData,
+        pageId = Some(pageId),
+        uniquePostId = Some(summaryPost.uniqueId),
+        postNr = Some(summaryPost.id),
+        targetUniquePostId = Some(postToSummarize.uniqueId),
+        targetPostNr = Some(postToSummarize.id),
+        targetUserId = Some(postToSummarize.createdById))
+
+      transaction.insertPost(summaryPost)
+      transaction.updatePageMeta(newMeta, oldMeta = oldMeta)
+      insertAuditLogEntry(auditLogEntry, transaction)
+
+      // TODO a summary notification? So the one whose post got summarized can review and flag
+      // por summaries.
+      // val notifications = NotificationGenerator(transaction).generateForNewPost(page, summaryPost)
+      // transaction.saveDeleteNotifications(notifications)
+      postNr
+    }
+
+    refreshPageInAnyCache(pageId)
+    postNr
+  }
+
+
   def editPost(pageId: PageId, postId: PostId, editorId: UserId, browserIdData: BrowserIdData,
         newText: String) {
     readWriteTransaction { transaction =>

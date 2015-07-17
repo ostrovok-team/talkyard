@@ -454,6 +454,15 @@ export function saveEdits(postId: number, text: string, doneCallback: () => void
 }
 
 
+export function saveSummary(postId: number, text: string, success: (response: any) => void) {
+  postJsonSuccess('/-/add-summary', success, {
+    pageId: d.i.pageId,
+    postId: postId,
+    text: text
+  });
+}
+
+
 export function savePageTitleAndSettings(newTitle: string, settings: any, success: () => void,
         error: () => void) {
   var data = $.extend(settings, {

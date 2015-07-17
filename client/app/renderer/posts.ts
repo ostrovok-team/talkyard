@@ -20,6 +20,7 @@
 /// <reference path="../../typedefs/moment/moment.d.ts" />
 /// <reference path="../dialogs.ts" />
 /// <reference path="../editor/title-editor.ts" />
+/// <reference path="../editor/editor.ts" />
 /// <reference path="model.ts" />
 
 // Wrapping in a module causes an ArrayIndexOutOfBoundsException: null error, see:
@@ -840,6 +841,9 @@ var PostActions = createComponent({
   onPinClick: function(event) {
     debiki.internal.$showActionDialog('PinTree').call(event.target, event);
   },
+  onAddSummaryClick: function(event) {
+    debiki2.editor.openEditorToAddSummary(this.props.post.postId);
+  },
 
   render: function() {
     var post = this.props.post;
@@ -944,6 +948,11 @@ var PostActions = createComponent({
     if (post.isPostCollapsed && user.isAdmin)
       moreLinks.push(
         r.a({ className: 'dw-a dw-a-uncollapse-post' }, 'Uncollapse post'));
+
+    if (isStaff(user))
+      moreLinks.push(
+        r.a({ className: 'dw-a icon-edit', onClick: this.onAddSummaryClick },
+          'Add Title or Summary'));
 
     // ----- Close links
 

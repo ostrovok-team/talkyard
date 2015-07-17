@@ -110,6 +110,7 @@ POST  /-/create-page            controllers.CreatePageController.createPage
 POST  /-/reply                  controllers.ReplyController.handleReply
 POST  /-/vote                   controllers.VoteController.handleVotes
 POST  /-/flag                   controllers.Application.flag
+POST  /-/add-summary            controllers.ReplyController.addSummary
 GET   /-/edit                   controllers.EditController.loadCurrentText(pageId, postId)
 POST  /-/edit                   controllers.EditController.edit
 POST  /-/edit-title-save-settings controllers.PageTitleSettingsController.editTitleSaveSettings
