@@ -22,6 +22,10 @@ import Prelude._
 
 object Site {
 
+  /** Super-admin actions can be done only when logged in at the site with magic id 2.
+    */
+  val SuperAdminSiteId = "1"
+
   /** This site id is returned for any IPv4 address that doesn't match anything,
     * so it'll be possible to access the first site before a domain name has been
     * connected.

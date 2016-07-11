@@ -265,8 +265,20 @@ object DebikiHttp {
         throwForbidden("EsE5UYK2", "No first site hostname configured (debiki.hostname)")
       })
 
+    /*
+    def superAdminSiteIdAndHostname =
+      SiteIdHostname(
+        Site.SuperAdminSiteId,
+        hostname = Globals.config.superAdmin.hostname.getOrDie("EsE5KU02"))
+    */
+
     if (Globals.firstSiteHostname.contains(hostname))
       return firstSiteIdAndHostname
+
+    /*
+    if (Globals.config.superAdmin.hostname.contains(hostname))
+      return superAdminSiteIdAndHostname
+    */
 
     // If the hostname is like "site-123.example.com" then we'll just lookup id 123.
     hostname match {
