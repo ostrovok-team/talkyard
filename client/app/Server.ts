@@ -798,6 +798,12 @@ export function deletePostInPage(postId: number, repliesToo: boolean,
 }
 
 
+export function editPostSettings(postId: PostId, settings: PostSettings, success: () => void) {
+  var data = _.assign({ postId: postId }, settings);
+  postJsonSuccess('/-/edit-post-settings', ReactActions.patchTheStore, data);
+}
+
+
 export function changePostType(postId: number, newType: PostType, success: () => void) {
   postJsonSuccess('/-/change-post-type', success, {
     pageId: d.i.pageId,

@@ -759,6 +759,21 @@ trait PostsDao {
   }
 
 
+  def editPostSettings(postId: UniquePostId, branchSideways: Option[Byte]): JsValue = {
+    val (post, patch) = readWriteTransaction { transaction =>
+      val postBefore = transaction.loadPostsByUniqueId(Seq(postId)).headOption.getOrElse({
+        throwNotFound("EsE5KJ8W2", s"Post not found: $postId")
+      })._2
+      val postAfter = postBefore.copy(branchSideways = branchSideways)
+      transaction.updatePost(postAfter)
+      COULD_OPTIMIZE // try not to load the whole page in makeStorePatch2
+      (postAfter, ReactJson.makeStorePatch2(postId, postAfter.pageId, transaction))
+    }
+    refreshPageInMemCache(post.pageId)
+    patch
+  }
+
+
   def changePostType(pageId: PageId, postNr: PostNr, newType: PostType,
         changerId: UserId, browserIdData: BrowserIdData) {
     readWriteTransaction { transaction =>

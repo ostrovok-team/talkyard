@@ -751,9 +751,11 @@ var Thread = createComponent({
     var multireplyClass = post.multireplyPostIds.length ? ' dw-mr' : '';
     var collapsedClass = renderCollapsed ? ' dw-zd' : '';
 
+    var branchSidewaysClass = horizontalCss(!!post.branchSideways);
+
     return (
       baseElem({ className: 'dw-t' + depthClass + indentationDepthClass + multireplyClass +
-          is2dColumnClass + collapsedClass + avatarClass },
+          is2dColumnClass + branchSidewaysClass + collapsedClass + avatarClass },
         arrows,
         anyWrongWarning,
         anyAvatar,
