@@ -54,6 +54,13 @@ pages.loginDialog.createPasswordAccount = function(data) {
 };
 
 
+pages.loginDialog.loginWithPassword = function(data: { username: string, password: string }) {
+  browser.waitAndSetValue('#e2eUsername', data.username);
+  browser.waitAndSetValue('#e2ePassword', data.password);
+  browser.waitAndClick('#e2eSubmit');
+};
+
+
 pages.loginDialog.createGmailAccount = function(data) {
   pages.loginDialog.loginWithGmail(data);
   // This should be the first time we login with Gmail at this site, so we'll be asked
