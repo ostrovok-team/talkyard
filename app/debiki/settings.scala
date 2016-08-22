@@ -157,6 +157,8 @@ case class EffectiveSettings(
   def contribAgreement: ContribAgreement = firstInChain(_.contribAgreement) getOrElse default.contribAgreement
   def contentLicense: ContentLicense = firstInChain(_.contentLicense) getOrElse default.contentLicense
   def googleUniversalAnalyticsTrackingId: String = firstInChain(_.googleUniversalAnalyticsTrackingId) getOrElse default.googleUniversalAnalyticsTrackingId
+  def hideTopicFilter: Boolean = firstInChain(_.hideTopicFilter) getOrElse default.hideTopicFilter
+  def hideNumRepliesColumn: Boolean = firstInChain(_.hideNumRepliesColumn) getOrElse default.hideNumRepliesColumn
   def showComplicatedStuff: Boolean = firstInChain(_.showComplicatedStuff) getOrElse default.showComplicatedStuff
   def htmlTagCssClasses: String = firstInChain(_.htmlTagCssClasses) getOrElse default.htmlTagCssClasses
 

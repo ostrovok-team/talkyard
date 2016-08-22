@@ -617,6 +617,9 @@ interface Settings {
 
   googleUniversalAnalyticsTrackingId: string;
 
+  hideTopicFilter: boolean;
+  hideNumRepliesColumn: boolean;
+
   showComplicatedStuff: boolean;
 }
 

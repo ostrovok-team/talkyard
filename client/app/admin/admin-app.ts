@@ -67,8 +67,8 @@ export function routes() {
         Route({ path: 'login', component: LoginSettingsComponent }),
         Route({ path: 'moderation', component: ModerationSettingsComponent }),
         Route({ path: 'analytics', component: AnalyticsSettingsComponent }),
-        Route({ path: 'advanced', component: AdvancedSettingsComponent }),
-        Route({ path: 'experimental', component: ExperimentalSettingsComponent })),
+        Route({ path: 'simplify', component: SimplifySettingsComponent }),
+        Route({ path: 'advanced', component: AdvancedSettingsComponent })),
       Route({ path: 'users', component: UsersTabComponent },
         Route({ path: 'active', component: ActiveUsersPanelComponent }),
         Route({ path: 'new', component: NewUsersPanelComponent }),
@@ -242,8 +242,8 @@ var SettingsPanelComponent = React.createClass(<any> {
           NavLink({ to: AdminRoot + 'settings/login' }, "Login"),
           NavLink({ to: AdminRoot + 'settings/moderation'  }, "Moderation"),
           NavLink({ to: AdminRoot + 'settings/analytics' }, "Analytics"),
-          NavLink({ to: AdminRoot + 'settings/advanced' }, "Advanced"),
-          NavLink({ to: AdminRoot + 'settings/experimental' }, "Experimental")),
+          NavLink({ to: AdminRoot + 'settings/simplify' }, "Simplify"),
+          NavLink({ to: AdminRoot + 'settings/advanced' }, "Advanced")),
         r.div({ className: 'form-horizontal esAdmin_settings col-sm-10' },
           React.cloneElement(this.props.children, this.props))));
   }
@@ -394,6 +394,31 @@ var AnalyticsSettingsComponent = React.createClass(<any> {
 
 
 
+var SimplifySettingsComponent = React.createClass(<any> {
+  render: function() {
+    var props = this.props;
+    return (
+      r.div({},
+        Setting2(props, { type: 'checkbox', label: "Hide topic filter",
+          help: "Hides the show-all-topics / show-waiting-only topic filter, for non-staff users.",
+          getter: (s: Settings) => s.hideTopicFilter,
+          update: (newSettings: Settings, target) => {
+            newSettings.hideTopicFilter = target.checked;
+          }
+        }),
+
+        Setting2(props, { type: 'checkbox', label: "Hide num replies column",
+          help: "Hides the num replies column in the forum topic list, for non-staff users.",
+          getter: (s: Settings) => s.hideNumRepliesColumn,
+          update: (newSettings: Settings, target) => {
+            newSettings.hideNumRepliesColumn = target.checked;
+          }
+        })));
+  }
+});
+
+
+
 var AdvancedSettingsComponent = React.createClass(<any> {
   redirectExtraHostnames: function() {
     Server.redirectExtraHostnames(() => {
@@ -469,8 +494,16 @@ var AdvancedSettingsComponent = React.createClass(<any> {
       r.div({},
         changeHostnameFormGroup,
         duplicatingHostsFormGroup,
-        redirectingHostsFormGroup));
+        redirectingHostsFormGroup,
 
+        Setting2(props, { type: 'checkbox', label: "Experimental",
+          help: "Enables some currently not-well-tested features " +
+          "like Wiki MindMaps and custom HTML pages.",
+          getter: (s: Settings) => s.showComplicatedStuff,
+          update: (newSettings: Settings, target) => {
+            newSettings.showComplicatedStuff = target.checked;
+          }})
+      ));
   }
 });
 
@@ -566,24 +599,6 @@ var LegalSettingsComponent = React.createClass(<any> {
           r.option({ key: 4, value: ContentLicense.AllRightsReserved },
             "None. All Rights Reserved"),
         ])));
-  }
-});
-
-
-
-var ExperimentalSettingsComponent = React.createClass(<any> {
-  render: function() {
-    var props = this.props;
-    return (
-      r.div({},
-        Setting2(props, { type: 'checkbox', label: "Experimental",
-          help: "Enables some currently not-well-tested features " +
-          "like Wiki MindMaps and custom HTML pages.",
-          getter: (s: Settings) => s.showComplicatedStuff,
-          update: (newSettings: Settings, target) => {
-            newSettings.showComplicatedStuff = target.checked;
-          }
-        })));
   }
 });
 
