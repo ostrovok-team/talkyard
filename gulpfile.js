@@ -40,7 +40,44 @@ var es = require('event-stream');
 var fs = require("fs");
 var path = require("path");
 var exec = require('child_process').exec;
+//-------------
 
+
+
+var rollup = require('rollup-stream');
+var vinylSourceStream = require('vinyl-source-stream');
+var rollupPluginTypescript = require('rollup-plugin-typescript');
+var rollupPluginCommonjs = require('rollup-plugin-commonjs');
+var nodeResolve = require('rollup-plugin-node-resolve');
+
+gulp.task('rollup-client-deps', function() {
+  return rollup({
+      // All ? Rollup 'rollup' and 'generate' options can be placed here.
+      // Find options here: https://github.com/rollup/rollup/wiki/JavaScript-API
+      entry: './client/rollup-client.ts',
+      plugins: [
+        rollupPluginTypescript(),
+        nodeResolve({ browser: true }),
+        rollupPluginCommonjs({
+          exclude: ['node_modules/react/**']
+        })],
+      // One of 'amd', 'cjs', 'es', 'iife', 'umd'. 'iife' works stand alone in a <script> tag.
+      //format: 'iife',
+      targets: [{ dest: 'SATAN_dest', format: 'umd', moduleName: 'SATAN_Project' }],
+      format: 'umd',
+      exports: 'none',
+      //sourceMap: true,
+      banner: '// 3rd party bundle created via: ./client/app/rollup-main.ts [EsM4K87G]'
+    })
+    // Convert from one stream format to another "Vinyl" format that Gulp wants.
+    // See: http://stackoverflow.com/questions/30794356/why-do-i-have-to-use-vinyl-source-stream-with-gulp
+    .pipe(vinylSourceStream('app-rollup.js'))
+    .pipe(gulp.dest('./target/client/'));
+});
+
+
+
+//-------------
 var watchAndLiveForever = false;
 var currentDirectorySlash = __dirname + '/';
 
@@ -102,10 +139,11 @@ var debikiJavascriptFiles = [
       'bower_components/lodash/dist/lodash.js',
       'bower_components/moment/min/moment.min.js',
       'bower_components/eventemitter2/lib/eventemitter2.js',
-      'bower_components/react-bootstrap/react-bootstrap.js',
+      //'bower_components/react-bootstrap/react-bootstrap.js',
       'node_modules/react-router/umd/ReactRouter.js',
       'bower_components/react-router-active-component/index.js',
       'node_modules/jquery-resizable/resizable.js',
+      'target/client/app-rollup.js',
       'client/third-party/gifffer/gifffer.js',
       'client/third-party/jquery-cookie.js',
       'client/third-party/jquery-scrollable.js', //
@@ -249,7 +287,7 @@ function compileClientSideTypescript() {
 // Recompile only changed file, https://github.com/ivogabe/gulp-typescript/issues/228
 // (and use the IDE for type checking, + when building release)
 //
-gulp.task('compile-typescript', function () {
+gulp.task('compile-typescript', ['rollup-client-deps'], function () {
   return es.merge(
       compileServerSideTypescript(),
       compileClientSideTypescript());
@@ -391,7 +429,7 @@ function logChangeFn(fileType) {
 
 gulp.task('watch', ['default'], function() {
   watchAndLiveForever = true;
-  gulp.watch(['client/**/*.ts', '!client/test/**/*.ts'] ,['compile-typescript-concat-scripts']).on('change', logChangeFn('TypeScript'));
+  gulp.watch(['client/rollup-client.ts', 'client/**/*.ts', '!client/test/**/*.ts'] ,['compile-typescript-concat-scripts']).on('change', logChangeFn('TypeScript'));
   gulp.watch('client/**/*.js', ['wrap-javascript-concat-scripts']).on('change', logChangeFn('Javascript'));
   gulp.watch('client/**/*.styl', ['compile-stylus']).on('change', logChangeFn('Stylus'));
   gulp.watch('client/test/e2e/**/*.ts', ['build-e2e']).on('change', logChangeFn('TypeScript test files'));
