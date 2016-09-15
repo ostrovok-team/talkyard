@@ -99,8 +99,8 @@ var debikiJavascriptFiles = [
       // keymaster.js declares window.key, rename it to window.keymaster instead,
       // see comment in file for details.
       'client/third-party/rename-key-to-keymaster.js',
-      'bower_components/lodash/dist/lodash.js',
-      'bower_components/moment/min/moment.min.js',
+      'node_modules/lodash/lodash.min.js',
+      'node_modules/moment/min/moment.min.js',
       'bower_components/eventemitter2/lib/eventemitter2.js',
       'node_modules/react-bootstrap/dist/react-bootstrap.js',
       'node_modules/react-router/umd/ReactRouter.js',
@@ -137,7 +137,7 @@ var debikiJavascriptFiles = [
 
 
 var editorEtceteraScripts = [
-      'bower_components/markdown-it/dist/markdown-it.js',
+      'node_modules/markdown-it/dist/markdown-it.js',
       'bower_components/Caret.js/dist/jquery.caret.js',
       'bower_components/jquery.atwho/dist/js/jquery.atwho.js',
       'node_modules/classnames/index.js', // needed by react-select
@@ -206,8 +206,8 @@ function compileServerSideTypescript() {
         'node_modules/react-dom/dist/react-dom-server.min.js',
         'node_modules/react-bootstrap/dist/react-bootstrap.js',
         'node_modules/react-router/umd/ReactRouter.js',
-        'bower_components/markdown-it/dist/markdown-it.js',
-        'bower_components/lodash/dist/lodash.js',
+        'node_modules/markdown-it/dist/markdown-it.min.js',
+        'node_modules/lodash/lodash.min.js',
         'client/third-party/html-css-sanitizer-bundle.js',
         'client/third-party/non-angular-slugify.js',
         'client/app/editor/mentions-markdown-it-plugin.js',
@@ -363,7 +363,7 @@ gulp.task('compile-stylus', function () {
 
   return es.merge(
     makeStyleStream('public/res/', 'combined-debiki.css', [
-        'bower_components/bootstrap/dist/css/bootstrap.css',
+        'node_modules/bootstrap/dist/css/bootstrap.css',
         'bower_components/jquery.atwho/dist/css/jquery.atwho.css',
         'node_modules/react-select/dist/react-select.css',
         'node_modules/jquery-resizable/resizable.css',
