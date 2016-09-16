@@ -1552,6 +1552,11 @@
       "from": "jquery-resizable@1.0.3",
       "resolved": "https://registry.npmjs.org/jquery-resizable/-/jquery-resizable-1.0.3.tgz"
     },
+    "jquery.caret": {
+      "version": "0.3.1",
+      "from": "jquery.caret@*",
+      "resolved": "https://registry.npmjs.org/jquery.caret/-/jquery.caret-0.3.1.tgz"
+    },
     "js-tokens": {
       "version": "1.0.3",
       "from": "js-tokens@>=1.0.1 <2.0.0",
