@@ -56,8 +56,15 @@
     "minimist": "^1.2.0",
     "react-typescript-definitions": "0.0.6",
     "request": "^2.64.0",
+    "rollup": "^0.35.10",
+    "rollup-plugin-babel": "^2.6.1",
+    "rollup-plugin-commonjs": "^4.1.0",
+    "rollup-plugin-node-resolve": "^2.0.0",
+    "rollup-plugin-typescript": "^0.8.1",
+    "rollup-stream": "^1.13.0",
     "selenium-standalone": "^5.5.0",
     "sync-request": "^3.0.0",
+    "vinyl-source-stream": "^1.1.0",
     "wdio-mocha-framework": "=0.4.0",
     "webdriverio": "=4.2.7"
   }
