@@ -65,7 +65,7 @@ class SearchEngine(
         "<mark class='esHL7'>")
       .postTags("</mark>")
       // This escapes any <html> stuff in the text, and thus prevents XSS issues. [7YK24W]
-      .encoder("html")
+      .encoder("html"); SECURITY; TESTS_MISSING
 
     val requestBuilder: SearchRequestBuilder = elasticSearchClient.prepareSearch(IndexName)
       .setTypes(PostDocType)

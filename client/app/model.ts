@@ -552,6 +552,33 @@ interface Block {
 }
 
 
+interface SearchQuery {
+  fullTextQuery: string;
+}
+
+
+interface SearchResults {
+  thisIsAll: boolean;
+  pagesAndHits: PageAndHits[];
+}
+
+
+interface PageAndHits {
+  pageId: PageId;
+  pageTitle: string;
+  hits: SearchHit[];
+}
+
+
+interface SearchHit {
+  postId: PostId;
+  postNr: PostNr;
+  approvedRevisionNr: number;
+  approvedTextWithHighligtsHtml: string[];
+  currentRevisionNr: number;
+}
+
+
 /**
  * Describes how to update parts of the store. Can be e.g. a new chat message and the author.
  */

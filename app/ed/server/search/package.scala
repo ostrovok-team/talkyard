@@ -166,6 +166,7 @@ package object search {
         case null =>
           // Why no highlights? Oh well, just return the plain text then.
           val textUnsafe = (json \ Fields.ApprovedPlainText).as[String]
+          SECURITY; TESTS_MISSING
           Vector(org.owasp.encoder.Encode.forHtmlContent(textUnsafe))
         case highlightField: HighlightField =>
           // Html already escaped. [7YK24W]

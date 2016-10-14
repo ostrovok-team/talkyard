@@ -268,9 +268,9 @@ export var TopBar = createComponent({
     }
 
     var backToSiteButton;
-    if (this.props.showBackToSite) {
+    if (this.props.showBackToSite || this.props.backToSiteButtonTitle) {
       backToSiteButton = r.a({ className: 'esTopbar_custom_backToSite btn icon-reply',
-          onClick: goBackToSite }, "Back from admin area");
+          onClick: goBackToSite }, this.props.backToSiteButtonTitle || "Back from admin area");
     }
 
     // ------- Open Contextbar button

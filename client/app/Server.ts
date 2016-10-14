@@ -997,6 +997,12 @@ export function markCurrentPageAsSeen() {
 }
 
 
+
+export function search(query: SearchQuery, success: (results: SearchResults) => void) {
+  postJsonSuccess('/-/search2', success, query);
+}
+
+
 var longPollingState = {
   ongoingRequest: null,
   lastModified: null,

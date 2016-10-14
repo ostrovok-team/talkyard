@@ -18,8 +18,8 @@
 package controllers
 
 import com.debiki.core._
-import debiki.RateLimits
-import ed.server.search.PageAndHits
+import debiki.{RateLimits, SiteTpi}
+import ed.server.search._
 import io.efdi.server.http._
 import play.api._
 import play.api.mvc.Result
@@ -35,6 +35,42 @@ import Prelude._
 object SearchController extends mvc.Controller {
 
   private val SearchPhraseFieldName = "searchPhrase"
+
+
+  /** 'q' not 'query', so urls becomes a tiny bit shorter, because people will sometimes
+    * copy & paste search phrase urls in emails etc? Google uses 'q' not 'query' anyway.
+    */
+  def showSearchPage(q: Option[String]) = AsyncGetAction { request =>
+    val htmlStr = views.html.templates.search(SiteTpi(request)).body
+    Future.successful(Ok(htmlStr) as HTML)
+  }
+
+
+  def doSearch() = AsyncPostJsonAction(RateLimits.FullTextSearch, maxLength = 1000) {
+        request: JsonPostRequest =>
+    val body = request.body
+    val searchPhrase = (body \ "fullTextQuery").as[String]
+    request.dao.fullTextSearch(searchPhrase, None, request.user) map {
+      searchResults: Seq[PageAndHits] =>
+        import play.api.libs.json._
+        CLEAN_UP; COULD // move to ... ReactJson? & rename it to Jsonifier?
+        OkSafeJson(Json.obj(
+          "pagesAndHits" -> searchResults.map((pageAndHits: PageAndHits) => {
+            Json.obj(
+              "pageId" -> pageAndHits.pageId,
+              "pageTitle" -> pageAndHits.pageTitle,
+              "hits" -> JsArray(pageAndHits.hitsByScoreDesc.map((hit: SearchHit) => Json.obj(
+                "postId" -> hit.postId,
+                "postNr" -> hit.postNr,
+                "approvedRevisionNr" -> hit.approvedRevisionNr,
+                "approvedTextWithHighligtsHtml" -> Json.arr(hit.approvedTextWithHighligtsHtml),
+                "currentRevisionNr" -> hit.currentRevisionNr
+              ))))
+          })
+        ))
+    }
+  }
+
 
   def searchWholeSiteFor(phrase: String) = AsyncGetAction { apiReq =>
     searchImpl(phrase, anyRootPageId = None, apiReq)
