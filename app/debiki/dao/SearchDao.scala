@@ -21,17 +21,16 @@ import com.debiki.core._
 import com.debiki.core.Prelude._
 import controllers.ViewPageController
 import debiki._
-import ed.server.search.{PageAndHits, SearchHit, SearchEngine}
-import io.efdi.server.Who
-import io.efdi.server.http._
-import org.{elasticsearch => es}
-import play.api.Play.current
-import redis.RedisClient
+import ed.server.search.{PageAndHits, SearchHit}
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import SiteDao._
 
+
+case class SearchQuery(
+  fullTextQuery: String,
+  tagNames: Seq[String],
+  categoryNames: Seq[String])
 
 
 trait SearchDao {

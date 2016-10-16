@@ -998,8 +998,8 @@ export function markCurrentPageAsSeen() {
 
 
 
-export function search(query: SearchQuery, success: (results: SearchResults) => void) {
-  postJsonSuccess('/-/search2', success, query);
+export function search(rawQuery: string, success: (results: SearchResults) => void) {
+  postJsonSuccess('/-/search', success, { rawQuery: rawQuery });
 }
 
 

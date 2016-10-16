@@ -553,7 +553,8 @@ interface Block {
 
 
 interface SearchQuery {
-  fullTextQuery: string;
+  rawQuery: string;
+  tags: string[];
 }
 
 

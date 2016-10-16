@@ -12,6 +12,8 @@ declare namespace rb {
   var TabbedArea;
   var TabPane;
   var Alert;
+
+  var Expandable;
 }
 
 

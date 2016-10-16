@@ -48,9 +48,9 @@ object SearchController extends mvc.Controller {
 
   def doSearch() = AsyncPostJsonAction(RateLimits.FullTextSearch, maxLength = 1000) {
         request: JsonPostRequest =>
-    val body = request.body
-    val searchPhrase = (body \ "fullTextQuery").as[String]
-    request.dao.fullTextSearch(searchPhrase, None, request.user) map {
+    val rawQuery = (request.body \ "rawQuery").as[String]
+    // searchQuery = parseRawSearchQuery(...)
+    request.dao.fullTextSearch(rawQuery, None, request.user) map {
       searchResults: Seq[PageAndHits] =>
         import play.api.libs.json._
         CLEAN_UP; COULD // move to ... ReactJson? & rename it to Jsonifier?

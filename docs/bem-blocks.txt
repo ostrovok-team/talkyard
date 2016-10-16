@@ -78,6 +78,8 @@ SRP             = search result page -- no, instead, use SP
 SP              = search page
 SP_SRs          = search page, search results
 
+SR              = search result
+
 esTB            = top bar (with the breadcrump and login & signup, or user name)
 
 esTs            = page/post tags
