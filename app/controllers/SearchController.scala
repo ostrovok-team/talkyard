@@ -19,14 +19,15 @@ package controllers
 
 import com.debiki.core._
 import debiki.{RateLimits, SiteTpi}
+import debiki.DebikiHttp.throwBadRequest
 import ed.server.search._
 import io.efdi.server.http._
 import play.api._
-import play.api.mvc.Result
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import Prelude._
+import debiki.dao.SearchQuery
 
 
 /** Full text search, for a whole site, or for a site section, e.g. a single
@@ -41,7 +42,7 @@ object SearchController extends mvc.Controller {
     * copy & paste search phrase urls in emails etc? Google uses 'q' not 'query' anyway.
     */
   def showSearchPage(q: Option[String]) = AsyncGetAction { request =>
-    val htmlStr = views.html.templates.search(SiteTpi(request)).body
+    val htmlStr = views.html.templates.search(SiteTpi(request, isSearchPage = true)).body
     Future.successful(Ok(htmlStr) as HTML)
   }
 
@@ -49,11 +50,12 @@ object SearchController extends mvc.Controller {
   def doSearch() = AsyncPostJsonAction(RateLimits.FullTextSearch, maxLength = 1000) {
         request: JsonPostRequest =>
     val rawQuery = (request.body \ "rawQuery").as[String]
-    // searchQuery = parseRawSearchQuery(...)
-    request.dao.fullTextSearch(rawQuery, None, request.user) map {
+    val searchQuery = parseRawSearchQueryString(rawQuery, categorySlug => {
+      request.dao.loadCategoryBySlug(categorySlug).map(_.id)
+    })
+    request.dao.fullTextSearch(searchQuery, None, request.user) map {
       searchResults: Seq[PageAndHits] =>
         import play.api.libs.json._
-        CLEAN_UP; COULD // move to ... ReactJson? & rename it to Jsonifier?
         OkSafeJson(Json.obj(
           "pagesAndHits" -> searchResults.map((pageAndHits: PageAndHits) => {
             Json.obj(
@@ -72,42 +74,48 @@ object SearchController extends mvc.Controller {
   }
 
 
-  def searchWholeSiteFor(phrase: String) = AsyncGetAction { apiReq =>
-    searchImpl(phrase, anyRootPageId = None, apiReq)
-  }
+  SECURITY // can these regexes be DoS attacked?
+  // Regex syntax: *? means * but non-greedy — but doesn't work, selects "ccc,ddd" in this:
+  // "tags:aaa,bbb tags:ccc,ddd", why, wheird [4GPK032]
+  private val TagNamesRegex =        """^(?:.*? )?tags:([^ ]*) *(?:.*)$""".r
+  private val NotTagNamesRegex =     """^(?:.*? )?-tags:([^ ]*) *(?:.*)$""".r
+  private val CatSlugsRegex =        """^(?:.*? )?categories:([^ ]*) *(?:.*)$""".r
 
 
-  def searchWholeSite() = AsyncJsonOrFormDataPostAction(RateLimits.FullTextSearch,
-        maxBytes = 200) { apiReq: ApiRequest[JsonOrFormDataBody] =>
-    val searchPhrase = apiReq.body.getOrThrowBadReq(SearchPhraseFieldName)
-    searchImpl(searchPhrase, anyRootPageId = None, apiReq)
-  }
+  def parseRawSearchQueryString(rawQuery: String,
+        getCategoryIdFn: Function1[String, Option[CategoryId]]): SearchQuery = {
+    // Sync with parseSearchQueryInputText(text) in JS [5FK8W2R]
+    var fullTextQuery = rawQuery
 
-
-  def searchSiteSectionFor(phrase: String, pageId: String) = AsyncGetAction { apiReq =>
-    debiki.RateLimiter.rateLimit(RateLimits.FullTextSearch, apiReq)
-    searchImpl(phrase, anyRootPageId = Some(pageId), apiReq)
-  }
-
-
-  def searchSiteSection(pageId: String) = AsyncJsonOrFormDataPostAction(
-        RateLimits.FullTextSearch, maxBytes = 200) { apiReq =>
-    val searchPhrase = apiReq.body.getOrThrowBadReq(SearchPhraseFieldName)
-    searchImpl(searchPhrase, anyRootPageId = Some(pageId), apiReq)
-  }
-
-
-  private def searchImpl(phrase: String, anyRootPageId: Option[String],
-        apiReq:  DebikiRequest[_]): Future[Result] = {
-    apiReq.dao.fullTextSearch(phrase, anyRootPageId, apiReq.user) map {
-        searchResults: Seq[PageAndHits] =>
-      val siteTpi = debiki.SiteTpi(apiReq)
-      val htmlStr = views.html.templates.searchResults(
-          siteTpi, anyRootPageId, phrase, searchResults).body
-      Ok(htmlStr) as HTML
+    // Look for and replace "-tags" first, before "tags" (which would otherwise also match "-tags").
+    val notTagNames: Set[String] = NotTagNamesRegex.findGroupIn(rawQuery) match {
+      case None => Set.empty
+      case Some(commaSeparatedTags) =>
+        fullTextQuery = fullTextQuery.replaceAllLiterally(s"-tags:$commaSeparatedTags", "")
+        commaSeparatedTags.split(',').toSet.filter(_.nonEmpty)
     }
-  }
 
+    val tagNames: Set[String] = TagNamesRegex.findGroupIn(rawQuery) match {
+      case None => Set.empty
+      case Some(commaSeparatedTags) =>
+        fullTextQuery = fullTextQuery.replaceAllLiterally(s"tags:$commaSeparatedTags", "")
+        commaSeparatedTags.split(',').toSet.filter(_.nonEmpty)
+    }
+
+    val categoryIds: Set[CategoryId] = CatSlugsRegex.findGroupIn(rawQuery) match {
+      case None => Set.empty
+      case Some(commaSeparatedCats) =>
+        fullTextQuery = fullTextQuery.replaceAllLiterally(s"categories:$commaSeparatedCats", "")
+        val slugs = commaSeparatedCats.split(',').toSet.filter(_.nonEmpty)
+        slugs.flatMap(getCategoryIdFn(_))
+    }
+
+    SearchQuery(
+      fullTextQuery = fullTextQuery.trim, // ignore weird unicode blanks for now
+      tagNames = tagNames,
+      notTagNames = notTagNames,
+      categoryIds = categoryIds)
+  }
 
 }
 

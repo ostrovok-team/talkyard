@@ -26,12 +26,56 @@
 var r = React.DOM;
 
 
+// COULD config the router to avoid % encoding in the URL inside tag names,
+// e.g. ',' ':' '/' needn't be escaped in the query:
+//   http://stackoverflow.com/questions/75980/when-are-you-supposed-to-use-escape-instead-of-encodeuri-encodeuricomponent
+//   https://github.com/ReactTraining/react-router/issues/3764
 export function routes() {
   return (
     Route({ path: '/-/search', component: SearchPageComponent },
       IndexRoute({ component: SearchPageContentComponent })));
 }
 
+
+export function urlEncodeSearchQuery(query: string): string {
+  // encodeURIComponent encodes a query string param and escapes "everything", but we
+  // don't need to do that. Instead, use encodeURI, and then manually escape a few
+  // more chars. This is the difference between encodeURIComponent and encodeURI:
+  // for (var i = 0; i < 256; i++) {
+  //   var char = String.fromCharCode(i);
+  //   if (encodeURI(char) !== encodeURIComponent(char)) {
+  //     console.log(char + ': ' + encodeURI(char) + ' —> ' + encodeURIComponent(char));
+  //   }
+  // }
+  // (see http://stackoverflow.com/a/23842171/694469)
+  // ==>
+  // #: # —> %23
+  // $: $ —> %24
+  // &: & —> %26
+  // +: + —> %2B
+  // ,: , —> %2C
+  // /: / —> %2F
+  // :: : —> %3A
+  // ;: ; —> %3B
+  // =: = —> %3D
+  // ?: ? —> %3F
+  // @: @ —> %40
+
+  var encoded = encodeURI(query);
+  encoded = encoded.replace('#', '%23');
+  encoded = encoded.replace('$', '%24');
+  encoded = encoded.replace('&', '%26');
+  // '+' means space in a query param and is easier to read. First encode all "real" '+' to %2B,
+  // then decode spaces to '+':
+  encoded = encoded.replace('+', '%2B');
+  encoded = encoded.replace('%20', '+');
+  // leave , / :  — they're reserved for us to use as delimiters or whatever.
+  encoded = encoded.replace(';', '%3B');
+  encoded = encoded.replace('=', '%3D');
+  encoded = encoded.replace('?', '%3F');
+  // leave @  — it's reserved for us.
+  return encoded;
+}
 
 
 var SearchPageComponent = React.createClass(<any> {
@@ -78,7 +122,8 @@ var SearchPageContentComponent = React.createClass(<any> {
   componentWillMount: function() {
     let queryString = this.props.location.query;
     let queryParam = queryString.q || '';
-    let query = parseSearchQueryUrlParam(queryParam);
+    // queryParam has already been url decoded.
+    let query = parseSearchQueryInputText(queryParam);
     this.setState({ query: query });
     if (queryParam) {
       this.search(query);
@@ -137,10 +182,29 @@ var SearchPageContentComponent = React.createClass(<any> {
   },
 
   onTagsSelectionChange: function(labelsAndValues: any) {
+    // Dupl code [4S5KU02]
     // We got null if the clear-all [x] button was pressed.
     labelsAndValues = labelsAndValues || [];
     let newTags = <string[]> _.map(labelsAndValues, 'value');
     let newQuery = updateTags(this.state.query, newTags);
+    this.setState({ query: newQuery });
+  },
+
+  onNotTagsSelectionChange: function(labelsAndValues: any) {
+    // Dupl code [4S5KU02]
+    // We got null if the clear-all [x] button was pressed.
+    labelsAndValues = labelsAndValues || [];
+    let newTags = <string[]> _.map(labelsAndValues, 'value');
+    let newQuery = updateNotTags(this.state.query, newTags);
+    this.setState({ query: newQuery });
+  },
+
+  onCategoriesSelectionChange: function(labelsAndValues: any) {
+    // Dupl code [4S5KU02]
+    // We got null if the clear-all [x] button was pressed.
+    labelsAndValues = labelsAndValues || [];
+    let newCatSlugs = <string[]> _.map(labelsAndValues, 'value');
+    let newQuery = updateCategories(this.state.query, newCatSlugs);
     this.setState({ query: newQuery });
   },
 
@@ -155,7 +219,9 @@ var SearchPageContentComponent = React.createClass(<any> {
           openButtonId: 'e_SP_AdvB', className: 's_SP_Adv', isOpen: isAdvancedOpen },
         !isAdvancedOpen ? null :
           AdvancedSearchPanel({ store: store, query: query,
-            onTagsSelectionChange: this.onTagsSelectionChange }));
+            onTagsSelectionChange: this.onTagsSelectionChange,
+            onNotTagsSelectionChange: this.onNotTagsSelectionChange,
+            onCategoriesSelectionChange: this.onCategoriesSelectionChange }));
 
     let anyInfoText;
     let anyNothingFoundText;
@@ -203,17 +269,50 @@ var SearchPageContentComponent = React.createClass(<any> {
 
 
 function AdvancedSearchPanel(props: {
-      store: Store, query: SearchQuery, onTagsSelectionChange: any }) {
+      store: Store,
+      query: SearchQuery,
+      onTagsSelectionChange: any,
+      onNotTagsSelectionChange: any,
+      onCategoriesSelectionChange: any }) {
   return (
     r.div({},
       r.div({ className: 'form-group' },
-        r.label({ className: 'control-label' }, "With tags:"),
+        r.label({ className: 'control-label' }, "Search in these categories:"),
+        // UX SHOULD add a modal backdrop and close Select if clicked.
+        rb.ReactSelect({ multi: true, value: props.query.categorySlugs,
+          placeholder: "Select categories", autoBlur: true,
+          options: makeCategoryLabelValues(props.store.categories),
+          onChange: props.onCategoriesSelectionChange })),
+      r.div({ className: 'form-group' },
+        r.label({ className: 'control-label' }, "For posts with tags:"),
+        // UX SHOULD add a modal backdrop and close Select if clicked.
         rb.ReactSelect({ multi: true, value: props.query.tags,
           placeholder: "Select tags",
           options: makeTagLabelValues(props.store.tagsStuff),
-          onChange: props.onTagsSelectionChange }))));
+          onChange: props.onTagsSelectionChange })),
+      r.div({ className: 'form-group' },
+        r.label({ className: 'control-label' }, "But ", r.i({}, "without"), " these tags:"),
+        // UX SHOULD add a modal backdrop and close Select if clicked.
+        rb.ReactSelect({ multi: true, value: props.query.notTags,
+          placeholder: "Select tags",
+          options: makeTagLabelValues(props.store.tagsStuff),
+          onChange: props.onNotTagsSelectionChange }))
+      // On pages with tags:
+      // But without these tags:
+    ));
 }
 
+
+function makeCategoryLabelValues(categories: Category[]) {
+  if (!categories)
+    return [];
+  return categories.map((category: Category) => {
+    return {
+      label: category.name,
+      value: category.slug,
+    };
+  });
+}
 
 
 function makeTagLabelValues(tagsStuff: TagsStuff) {
@@ -267,40 +366,63 @@ function foundWhere(hit: SearchHit): string {
 }
 
 
-
-function parseSearchQueryUrlParam(urlParamValue: string): SearchQuery {
-  // We use '+' instead of '%20' for spaces in the url query string, so it becomes more readable.
-  let textWithSpacesNotPlus = urlParamValue.replace(/\+/, ' ');
-  let textDecoded = decodeURIComponent(textWithSpacesNotPlus);
-  return parseSearchQueryInputText(textDecoded);
-}
-
-
-const TagsRegex = /(.* )?tags:([^ ]*) *(.*)/;
+// Regex syntax: *? means * but non-greedy
+const TagNamesRegex = /^(.*? )?tags:([^ ]*) *(.*)$/;
+const NotTagNamesRegex = /^(.*? )?-tags:([^ ]*) *(.*)$/;
+const CategorySlugsRegex = /^(.*? )?categories:([^ ]*) *(.*)$/;
 
 function parseSearchQueryInputText(text: string): SearchQuery {
-  let tagNameMatchess = text.match(TagsRegex);
-  let tags = tagNameMatchess && tagNameMatchess[2] ? tagNameMatchess[2].split(',') : [];
+  // Sync with Scala [5FK8W2R]
+  function findMatches(regex): string[] {
+    let matches = text.match(regex);
+    return matches && matches[2] ? matches[2].split(',') : [];
+  }
+  let tagNames = findMatches(TagNamesRegex);
+  let notTagNames = findMatches(NotTagNamesRegex);
+  let categorySlugs = findMatches(CategorySlugsRegex);
   return {
     rawQuery: text,
-    tags: tags,
-    // categories:
+    tags: tagNames,
+    notTags: notTagNames,
+    categorySlugs: categorySlugs,
   };
 }
 
 
 function updateTags(oldQuery: SearchQuery, newTags: string[]): SearchQuery {
+  return updateListInQuery(oldQuery, 'tags', 'tags', TagNamesRegex, newTags);
+}
+
+
+function updateNotTags(oldQuery: SearchQuery, newTags: string[]): SearchQuery {
+  return updateListInQuery(oldQuery, 'notTags', '-tags', NotTagNamesRegex, newTags);
+}
+
+
+function updateCategories(oldQuery: SearchQuery, newCategorySlugs: string[]): SearchQuery {
+  return updateListInQuery(oldQuery, 'categorySlugs', 'categories', CategorySlugsRegex,
+      newCategorySlugs);
+}
+
+
+function updateListInQuery(oldQuery: SearchQuery, fieldName: string, what: string,
+      whatRegex, newThings: string[]): SearchQuery {
   let newRawQuery;
-  let spaceAndTags = newTags.length ? ' tags:' + newTags.join(',') : '';
-  let matches = oldQuery.rawQuery.match(TagsRegex);
+  let spaceAndThings = newThings.length ? ` ${what}:` + newThings.join(',') : '';
+  let matches = oldQuery.rawQuery.match(whatRegex);
   if (!matches) {
-    newRawQuery = oldQuery.rawQuery.trim() + spaceAndTags;
+    newRawQuery = oldQuery.rawQuery.trim() + spaceAndThings;
   }
   else {
-    newRawQuery = (matches[1] || '').trim() + spaceAndTags + ' ' + (matches[3] || '').trim();
+    let matches3 = (matches[3] || '').trim();
+    newRawQuery = (matches[1] || '').trim() + spaceAndThings + (matches3 ? ' ' : '') + matches3;
   }
-  return _.assign({}, oldQuery, { rawQuery: newRawQuery, tags: newTags });
+  let newQuery = _.clone(oldQuery);
+  newQuery.rawQuery = newRawQuery;
+  newQuery[fieldName] = newThings;
+  return newQuery;
 }
+
 
 //------------------------------------------------------------------------------
    }

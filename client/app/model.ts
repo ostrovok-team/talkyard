@@ -555,6 +555,8 @@ interface Block {
 interface SearchQuery {
   rawQuery: string;
   tags: string[];
+  notTags: string[];
+  categorySlugs: string[];
 }
 
 

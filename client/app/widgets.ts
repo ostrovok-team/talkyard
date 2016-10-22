@@ -32,6 +32,7 @@ export var DefaultRoute = reactCreateFactory(ReactRouter.DefaultRoute);
 
 export var PrimaryButton: any = makeWidget(r.button, ' btn btn-primary');
 export var Button: any = makeWidget(r.button, ' btn btn-default');
+export var PrimaryLinkButton: any = makeWidget(r.a, ' btn btn-primary');
 export var LinkButton: any = makeWidget(r.a, ' btn btn-default');
 export var InputTypeSubmit: any = makeWidget(r.input, ' btn btn-primary', { type: 'submit' });
 

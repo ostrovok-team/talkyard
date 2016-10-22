@@ -42,6 +42,11 @@ declare namespace debiki2 {
     var PageRoleDropdown;
   }
 
+  namespace search {
+    function routes(): any;
+    function urlEncodeSearchQuery(query: string): string;
+  }
+
   namespace help {
     function openHelpDialogUnlessHidden(message);
   }

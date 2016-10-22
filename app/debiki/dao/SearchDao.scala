@@ -29,17 +29,25 @@ import scala.concurrent.Future
 
 case class SearchQuery(
   fullTextQuery: String,
-  tagNames: Seq[String],
-  categoryNames: Seq[String])
+  tagNames: Set[String],
+  notTagNames: Set[String],
+  categoryIds: Set[CategoryId]) {
+
+  require(!tagNames.exists(_.isEmpty), "EsE6KWU80")
+
+  def isEmpty = fullTextQuery.trim.isEmpty && tagNames.isEmpty && categoryIds.isEmpty
+
+}
+
 
 
 trait SearchDao {
   this: SiteDao =>
 
 
-  def fullTextSearch(phrase: String, anyRootPageId: Option[PageId], user: Option[User])
+  def fullTextSearch(searchQuery: SearchQuery, anyRootPageId: Option[PageId], user: Option[User])
         : Future[Seq[PageAndHits]] = {
-    searchEngine.fullTextSearch(phrase, anyRootPageId, user) map { hits: Seq[SearchHit] =>
+    searchEngine.search(searchQuery, anyRootPageId, user) map { hits: Seq[SearchHit] =>
       groupByPageFilterAndSort(hits, user)
     }
   }
