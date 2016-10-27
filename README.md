@@ -49,6 +49,17 @@ Users online:
 Development stage: Between Alpha and Beta. So, don't use ED for anything that must be
 up-and-running always, or anything top secret (there might be security bugs), right now.
 
+%% Secure
+%%
+%% We use secure HTTP (HTTPS). We don't sell your data. However ED is under development,
+%% and there might be security bugs. Right now, don't use ED for anything top secret.
+
+Open source
+
+Tech users: Install with Docker on your own server. Automatic upgrades (coming soon).
+One installation can host many forums.
+
+
 ### How install?
 
 _This_ repository is for writing ED source code.

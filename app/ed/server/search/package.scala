@@ -20,7 +20,7 @@ package ed.server
 import com.debiki.core._
 import com.debiki.core.Prelude._
 import debiki.dao.PageStuff
-import org.elasticsearch.search.highlight.HighlightField
+import org.elasticsearch.search.fetch.subphase.highlight.HighlightField
 import org.{elasticsearch => es}
 import debiki.ReactJson._
 import play.api.libs.json._

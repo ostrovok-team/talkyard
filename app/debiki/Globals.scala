@@ -22,7 +22,7 @@ import akka.pattern.gracefulStop
 import com.codahale.metrics
 import com.debiki.core._
 import com.debiki.core.Prelude._
-import com.debiki.dao.rdb.{RdbDaoFactory, Rdb}
+import com.debiki.dao.rdb.{Rdb, RdbDaoFactory}
 import com.github.benmanes.caffeine
 import com.zaxxer.hikari.HikariDataSource
 import debiki.DebikiHttp.throwForbidden
@@ -34,7 +34,7 @@ import ed.server.search.SearchEngineIndexer
 import io.efdi.server.notf.Notifier
 import java.{lang => jl, net => jn}
 import java.util.concurrent.TimeUnit
-import io.efdi.server.pubsub.{PubSubApi, PubSub, StrangerCounterApi}
+import io.efdi.server.pubsub.{PubSub, PubSubApi, StrangerCounterApi}
 import org.{elasticsearch => es}
 import org.scalactic._
 import play.{api => p}
@@ -43,10 +43,11 @@ import play.api.Play
 import play.api.Play.current
 import redis.RedisClient
 import scala.concurrent.duration._
-import scala.concurrent.{Future, Await, TimeoutException}
+import scala.concurrent.{Await, Future, TimeoutException}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.matching.Regex
 import Globals._
+import org.elasticsearch.common.settings.Settings
 
 
 object Globals extends Globals {
@@ -465,7 +466,7 @@ class Globals {
     //
     val elasticSearchHost = "search"
 
-    val elasticSearchClient = es.client.transport.TransportClient.builder().build()
+    val elasticSearchClient = new es.transport.client.PreBuiltTransportClient(Settings.EMPTY)
       .addTransportAddress(
         new es.common.transport.InetSocketTransportAddress(
           jn.InetAddress.getByName(elasticSearchHost), 9300))

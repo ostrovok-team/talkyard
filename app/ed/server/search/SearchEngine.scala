@@ -24,8 +24,8 @@ import debiki.dao.SearchQuery
 import org.elasticsearch.action.search.{SearchRequestBuilder, SearchResponse}
 import org.elasticsearch.client.Client
 import org.elasticsearch.index.query.QueryBuilders
-import org.elasticsearch.search.highlight.HighlightBuilder
 import org.elasticsearch.action.ActionListener
+import org.elasticsearch.search.fetch.subphase.highlight.HighlightBuilder
 import org.{elasticsearch => es}
 import play.{api => p}
 import scala.collection.immutable
@@ -122,10 +122,10 @@ class SearchEngine(
         promise.success(hits.toVector)
       }
 
-      def onFailure(throwable: Throwable) {
+      def onFailure(exception: Exception) {
         p.Logger.error(o"""Error when searching for: $boolQuery,
-             search source: ${requestBuilder.toString}""", throwable)
-        promise.failure(throwable)
+             search source: ${requestBuilder.toString}""", exception)
+        promise.failure(exception)
       }
     })
 

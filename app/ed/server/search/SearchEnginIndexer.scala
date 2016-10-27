@@ -210,8 +210,8 @@ class IndexingActor(
         systemDao.deleteFromIndexQueue(post, siteId)
       }
 
-      def onFailure(throwable: Throwable) {
-        p.Logger.error(i"Error when indexing siteId:postId: $docId", throwable)
+      def onFailure(exception: Exception) {
+        p.Logger.error(i"Error when indexing siteId:postId: $docId", exception)
       }
     })
   }
@@ -246,8 +246,8 @@ class IndexingActor(
         }
       }
 
-      def onFailure(throwable: Throwable) {
-        p.Logger.error(s"Error when bulk unindexing ${posts.length} posts [EsE5YK02]", throwable)
+      def onFailure(exception: Exception) {
+        p.Logger.error(s"Error when bulk unindexing ${posts.length} posts [EsE5YK02]", exception)
       }
     })
   }
