@@ -59,12 +59,11 @@ object ApplicationBuild extends Build {
     // We use both an in-the-JVM-memory cache, and Redis:
     "com.github.ben-manes.caffeine" % "caffeine" % "2.2.6",
     "com.github.etaty" %% "rediscala" % "1.6.0",
-    // Search engine, in https://mvnrepository.com.
-    //("org.elasticsearch" % "elasticsearch" % "5.0.0-rc1")
-    //    .excludeAll(ExclusionRule(organization = "io.netty")),
-    "org.elasticsearch.client" % "transport" % "5.0.0-rc1",
+    // Search engine:
+    "org.elasticsearch.client" % "transport" % "5.0.0",
     // ElasticSearch needs log4j
-    "log4j" % "log4j" % "1.2.17",
+    "org.apache.logging.log4j" % "log4j-api" % "2.6.2",
+    "org.apache.logging.log4j" % "log4j-core" % "2.6.2",
     "org.apache.commons" % "commons-email" % "1.4",
     "com.google.guava" % "guava" % "19.0",
     "org.jsoup" % "jsoup" % "1.9.2",
@@ -87,7 +86,9 @@ object ApplicationBuild extends Build {
     "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1" % "test")
 
 
-  val main = Project(appName, file(".")).enablePlugins(play.sbt.Play, BuildInfoPlugin)
+  val main = Project(appName, file("."))
+    .enablePlugins(play.sbt.PlayAkkaHttpServer, BuildInfoPlugin)
+    .disablePlugins(play.sbt.PlayNettyServer)
     .settings(mainSettings: _*)
     .dependsOn(edCore % "test->test;compile->compile", edDaoRdb)
     .aggregate(edCore) // skip debikiDaoRdb for now, because old broken should-delete-them tests

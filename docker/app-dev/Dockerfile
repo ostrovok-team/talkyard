@@ -59,5 +59,6 @@ CMD ["cd /opt/ed/app/ && /opt/typesafe-activator/bin/activator \
   -Dcom.sun.management.jmxremote.authenticate=false \
   -Dhttp.port=9000 \
   -Dhttps.port=9443 \
+  -Dplay.server.provider=play.core.server.akkahttp.AkkaHttpServerProvider \
   run"]
 

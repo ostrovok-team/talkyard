@@ -58,7 +58,7 @@ services:
 
   search:
     mem_limit: 500M
-    image: elasticsearch:5.0.0-rc1
+    image: elasticsearch:5.0.0
     volumes:
       - ./docker/search/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
       - ./docker/data/search/:/usr/share/elasticsearch/data/
