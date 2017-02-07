@@ -634,7 +634,7 @@ function markPostAsRead(postId: number, manually: boolean) {
     store.me.marksByPostId[postId] = ManualReadMark;
   }
   else {
-    store.me.postIdsAutoReadNow.push(postId);
+    store.me.postNrsAutoReadNow.push(postId);
   }
   rememberPostsToQuickUpdate(postId);
 }
@@ -1167,8 +1167,8 @@ function makeStranger(): Myself {
     votes: {},
     unapprovedPosts: {},
     unapprovedPostAuthors: [],
-    postIdsAutoReadLongAgo: [],
-    postIdsAutoReadNow: [],
+    postNrsAutoReadLongAgo: [],
+    postNrsAutoReadNow: [],
     marksByPostId: {},
 
     closedHelpMessages: {},
@@ -1181,7 +1181,7 @@ function makeStranger(): Myself {
  * storing it client side only.
  */
 function addLocalStorageDataTo(me: Myself) {
-  me.postIdsAutoReadLongAgo = sidebar.UnreadCommentsTracker.getPostIdsAutoReadLongAgo();
+  me.postNrsAutoReadLongAgo = page.PostsReadTracker.getPostNrsAutoReadLongAgo();
   me.marksByPostId = {}; // not implemented: loadMarksFromLocalStorage();
   me.closedHelpMessages = getFromLocalStorage('closedHelpMessages') || {};
 

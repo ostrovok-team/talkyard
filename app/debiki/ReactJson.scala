@@ -605,8 +605,8 @@ object ReactJson {
     "votes" -> JsObject(Nil),
     "unapprovedPosts" -> JsObject(Nil),
     "unapprovedPostAuthors" -> JsArray(),
-    "postIdsAutoReadLongAgo" -> JsArray(Nil),
-    "postIdsAutoReadNow" -> JsArray(Nil),
+    "postNrsAutoReadLongAgo" -> JsArray(Nil),
+    "postNrsAutoReadNow" -> JsArray(Nil),
     "marksByPostId" -> JsObject(Nil),
     "closedHelpMessages" -> JsObject(Nil))
 
@@ -717,8 +717,8 @@ object ReactJson {
       // later: "flags" -> JsArray(...) [7KW20WY1]
       "unapprovedPosts" -> anyUnapprovedPosts,
       "unapprovedPostAuthors" -> anyUnapprovedAuthors,
-      "postIdsAutoReadLongAgo" -> JsArray(Nil),
-      "postIdsAutoReadNow" -> JsArray(Nil),
+      "postNrsAutoReadLongAgo" -> JsArray(Nil),
+      "postNrsAutoReadNow" -> JsArray(Nil),
       "marksByPostId" -> JsObject(Nil),
 
       "closedHelpMessages" -> JsObject(Nil))

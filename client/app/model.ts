@@ -211,9 +211,9 @@ interface Myself {
   votes: any; // RENAME to votesByPostNr?   CLEAN_UP also see just below:  id or nr
   unapprovedPosts: { [id: number]: Post };
   unapprovedPostAuthors: BriefUser[];
-  postIdsAutoReadLongAgo: number[];           // id or nr?
-  postIdsAutoReadNow: number[];               // id or nr?
-  marksByPostId: { [postId: number]: any };   // id or nr?
+  postNrsAutoReadLongAgo: number[];
+  postNrsAutoReadNow: number[];
+  marksByPostId: { [postId: number]: any }; // sleeping BUG: probably using with Nr (although the name implies ID), but should be ID
   pageHelpMessage?: HelpMessage;
   closedHelpMessages: { [id: string]: number };  // id --> closed version of message   — id or nr?
 }

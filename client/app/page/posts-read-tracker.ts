@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Kaj Magnus Lindberg (born 1979)
+ * Copyright (C) 2014, 2017 Kaj Magnus Lindberg
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -21,16 +21,33 @@
 /// <reference path="../ReactStore.ts" />
 
 //------------------------------------------------------------------------------
-   namespace debiki2.sidebar.UnreadCommentsTracker {
+   namespace debiki2.page.PostsReadTracker {
 //------------------------------------------------------------------------------
 
-var d = { i: debiki.internal, u: debiki.v0.util };
-var $: any = d.i.$;
+/*
+Marks:  Bookmark. UnreadMark. ActionMark.
 
-export var debugIntervalHandler = null;
+
+// topic time
+// PAUSE_UNLESS_SCROLLED
+  // MAX_TRACKING_TIME    const sinceScrolled = now - this._lastScrolled;
+  if (sinceScrolled > PAUSE_UNLESS_SCROLLED) {
+    return;
+  }
+  const diff = now - this._lastTick;
+  this._lastFlush += diff;
+  this._lastTick = now;
+  // Don't track timings if we're not in focus
+  if (!Discourse.get("hasFocus")) return;
+*/
+
+let d = { i: debiki.internal, u: debiki.v0.util };
+let $: any = d.i.$;
+
+export let debugIntervalHandler = null;
 
 interface ReadState {
-  postId: number;
+  postNr: number;
   mark?: number;
   charsRead?: number;
   hasBeenRead?: boolean;
@@ -38,75 +55,90 @@ interface ReadState {
 }
 
 
-var readStatesByPostId: { [postId: number]: ReadState } = {};
-var postsVisibleLastTick: { [postId: number]: boolean } = {};
+let readStatesByPostNr: { [postNr: number]: ReadState } = {};
+let postNrsVisibleLastTick: { [postNr: number]: boolean } = {};
+let pageId = debiki2.ReactStore.getPageId();
+let postNrsJustRead = [];
 
-var pageId = debiki2.ReactStore.getPageId();
-var charsReadPerSecond = 35;
-var maxCharsReadPerPost = charsReadPerSecond * 4.5;
-var secondsBetweenTicks = 0.5;
-var secondsSpentReading = 0;
-var secondsLostPerNewPostInViewport = 0.5;
-var maxConfusionSeconds = -1;
-var localStorageKey = 'debikiPostIdsReadByPageId';
-var brightnessWhenRead = 175; // 0-255
+// Most people read 200 words per minute with a reading comprehension of 60%.
+// 0.1% read 1 000 wpm with a comprehension of 85%.
+// A speed reading test article was 3692 chars, 597 words (www.readingsoft.com)
+// and a speed of 200 wpm means 3692 / 597.0 * 200 / 60 = 20.6 chars per second.
+// So 40 chars per second is fast, = 400 wpm, but on the other hand people frequently don't
+// read text online so very carefully (?) so might make sense. Anyway better err on the side of
+// assuming people read too fast, than too slow, because never-marking-a-post-as-read although
+// the user did read it, seems more annoying, than marking-as-read posts when the user has read
+// parts-of-it or most-of-it-but-not-all.
+let charsReadPerSecond = 40;
 
-var postIdsReadLongAgo: number[] = getPostIdsAutoReadLongAgo();
+// People usually (?) don't read everything in a long comment, so mark a comment as read after
+// some seconds.
+let maxCharsReadPerPost = charsReadPerSecond * 5.5;
+
+let secondsBetweenTicks = 1;
+let secondsSpentReading = 0;
+let secondsLostPerNewPostInViewport = 0.4;
+let maxConfusionSeconds = 0.8;
+let localStorageKey = 'debikiPostNrsReadByPageId';
 
 export function start() {
-  debugIntervalHandler = setInterval(trackUnreadComments, secondsBetweenTicks * 1000);
+  debugIntervalHandler = setInterval(trackReadingActivity, secondsBetweenTicks * 1000);
 }
 
 
-export function getPostIdsAutoReadLongAgo(): number[] {
+export function getPostNrsAutoReadLongAgo(): number[] {
   if (!localStorage)
     return [];
 
-  var postIdsReadByPageIdString = localStorage.getItem(localStorageKey) || '{}';
-  var postIdsReadByPageId = JSON.parse(postIdsReadByPageIdString);
-  var postIdsRead = postIdsReadByPageId[pageId] || [];
-  return postIdsRead;
+  let postNrsReadByPageId = getFromLocalStorage(localStorageKey) || {};
+  return postNrsReadByPageId[pageId] || [];
 }
 
 
-function trackUnreadComments() {
+function trackReadingActivity() {
+  // Don't remove posts read one tick ago until now, so they get time to fade away slowly.
+  _.each(postNrsJustRead, postNr => {
+    debiki2.ReactActions.markPostAsRead(postNr, false);
+  });
+  postNrsJustRead = [];
+
   if (!document.hasFocus()) {
-    secondsSpentReading = maxConfusionSeconds;
+    secondsSpentReading = -maxConfusionSeconds;
     return;
   }
 
-  var visibleUnreadPostsStats = [];
-  var numVisibleUnreadChars = 0;
-  var postsVisibleThisTick: { [postId: number]: boolean } = {};
+  let store: Store = ReactStore.allData();
+  let me: Myself = store.me;
+
+  if (!me.isLoggedIn)
+    return;
+
+  let visibleUnreadPostsStats = [];
+  let numVisibleUnreadChars = 0;
+  let postsVisibleThisTick: { [postNr: number]: boolean } = {};
 
   // PERFORMANCE COULD optimize: check top level threads first, only check posts in
   // thread if parts of the thread is inside the viewport? isInViewport() takes
   // really long if there are > 200 comments (not good for mobile phones' battery?).
-  $('.dw-p[id]').each(function() {
-    var post = $(this);
-    var postBody = post.children('.dw-p-bd');
+
+  let unreadPosts: Post[] = [];
+  _.each(store.postsByNr, (post: Post) => {
+    if (!me_hasRead(me, post)) {
+      unreadPosts.push(post);
+    }
+  });
+
+  _.each(unreadPosts, (post: Post) => {
+    let postBody = $('#post-' + post.nr).children('.dw-p-bd');
     if (!postBody.length || !isInViewport(postBody))
       return;
 
-    var postId: number = post.dwPostId();
-    postsVisibleThisTick[postId] = true;
-
-    var progress = readStatesByPostId[postId];
-
-    if (!progress && postIdsReadLongAgo.indexOf(postId) !== -1) {
-      progress = {
-        postId: postId,
-        hasBeenRead: true,
-      };
-      readStatesByPostId[postId] = progress;
-    }
+    postsVisibleThisTick[post.nr] = true;
+    let progress: ReadState = readStatesByPostNr[post.nr];
 
     if (!progress) {
-      progress = {
-        postId: postId,
-        charsRead: 0
-      };
-      readStatesByPostId[postId] = progress;
+      progress = { postNr: post.nr, charsRead: 0 };
+      readStatesByPostNr[post.nr] = progress;
     }
 
     if (progress.hasBeenRead)
@@ -120,60 +152,67 @@ function trackUnreadComments() {
     numVisibleUnreadChars += progress.textLength;
   });
 
-  var numPostsScrolledIntoViewport = 0;
-  for (var i$ = 0, len$ = visibleUnreadPostsStats.length; i$ < len$; ++i$) {
-    var stats = visibleUnreadPostsStats[i$];
-    if (!postsVisibleLastTick[stats.postId]) {
+  let numPostsScrolledIntoViewport = 0;
+  for (let i$ = 0, len$ = visibleUnreadPostsStats.length; i$ < len$; ++i$) {
+    let stats: ReadState = visibleUnreadPostsStats[i$];
+    if (!postNrsVisibleLastTick[stats.postNr]) {
       numPostsScrolledIntoViewport += 1;
     }
   }
 
-  postsVisibleLastTick = postsVisibleThisTick;
-  secondsSpentReading += secondsBetweenTicks - numPostsScrolledIntoViewport * secondsLostPerNewPostInViewport;
+  postNrsVisibleLastTick = postsVisibleThisTick;
+  secondsSpentReading +=
+      secondsBetweenTicks - numPostsScrolledIntoViewport * secondsLostPerNewPostInViewport;
 
   if (secondsBetweenTicks < secondsSpentReading) {
     secondsSpentReading = secondsBetweenTicks;
   }
 
-  if (secondsSpentReading < maxConfusionSeconds) {
-    secondsSpentReading = maxConfusionSeconds;
+  if (secondsSpentReading < -maxConfusionSeconds) {
+    secondsSpentReading = -maxConfusionSeconds;
   }
 
-  var charsReadThisTick = Math.max(0, charsReadPerSecond * secondsSpentReading);
-  var charsLeftThisTick = charsReadThisTick;
+  let charsLeftThisTick = Math.max(0, charsReadPerSecond * secondsSpentReading);
 
-  for (i$ = 0, len$ = visibleUnreadPostsStats.length; i$ < len$; ++i$) {
-    stats = visibleUnreadPostsStats[i$];
-    var charsToRead = Math.min(maxCharsReadPerPost, stats.textLength);
-    var charsReadNow = Math.min(charsLeftThisTick, charsToRead - stats.charsRead);
-    charsLeftThisTick -= charsReadNow;
+  for (let i$ = 0, len$ = visibleUnreadPostsStats.length; i$ < len$; ++i$) {
+    let stats: ReadState = visibleUnreadPostsStats[i$];
+    let charsToRead = Math.min(maxCharsReadPerPost, stats.textLength);
+    let charsReadNow = Math.min(charsLeftThisTick, charsToRead - stats.charsRead);
+
+    // Let's read all posts at the same time instead. We don't know which one the user is
+    // reading anyway, and feels a bit annoying to see reading-progress advancing for *the wrong*
+    // post. — Often the user scrolls into view only one post at a time? And then this approach
+    // will give ok results I think. Also, both Discourse and Gitter.im advance reading-progress
+    // for all posts on screen at once.
+    // So, don't:  charsLeftThisTick -= charsReadNow;
+
     stats.charsRead += charsReadNow;
     if (stats.charsRead >= charsToRead) {
       stats.hasBeenRead = true;
-      rememberHasBeenRead(stats.postId);
+      rememberHasBeenRead(stats.postNr);
     }
 
-    var fractionRead = !charsToRead ? 1.0 : stats.charsRead / charsToRead;
-    if (fractionRead >= 1) {
-      debiki2.ReactActions.markPostAsRead(stats.postId, false);
+    let fractionRead = !charsToRead ? 1.0 : stats.charsRead / charsToRead;
+    if (fractionRead) {
+      fadeUnreadMark(stats.postNr, fractionRead);
     }
-    else {
-      setColorOfPost(stats.postId, fractionRead);
+    if (fractionRead >= 1) {
+      // Don't remove until next tick, so a fade-out animation gets time to run. [8LKW204R]
+      postNrsJustRead.push(stats.postNr);
     }
   }
 }
 
 
-function rememberHasBeenRead(postId: number) {
+function rememberHasBeenRead(postNr: number) {
   if (!localStorage)
     return;
 
-  var postIdsReadByPageIdString = localStorage.getItem(localStorageKey) || '{}';;
-  var postIdsReadByPageId = JSON.parse(postIdsReadByPageIdString);
-  var postIdsRead = postIdsReadByPageId[pageId] || [];
-  postIdsReadByPageId[pageId] = postIdsRead;
-  postIdsRead.push(postId);
-  putInLocalStorage(localStorageKey, JSON.stringify(postIdsReadByPageId));
+  let postNrsReadByPageId = getFromLocalStorage(localStorageKey) || {};
+  let postNrsRead = postNrsReadByPageId[pageId] || [];
+  postNrsReadByPageId[pageId] = postNrsRead;
+  postNrsRead.push(postNr);
+  putInLocalStorage(localStorageKey, postNrsReadByPageId);
 }
 
 
@@ -184,49 +223,26 @@ function rememberHasBeenRead(postId: number) {
  * visible.
  */
 function isInViewport($postBody){
-  var bounds = $postBody[0].getBoundingClientRect();
-  var aBitDown = Math.min(bounds.bottom, bounds.top + 500);
-  var windowHeight = debiki.window.height();
-  var windowWidth = debiki.window.width();
-  var inViewportY = bounds.top >= 0 && aBitDown <= windowHeight;
-  var inViewportX = bounds.left >= 0 && bounds.right <= windowWidth;
-  var spansViewportY = bounds.top <= 0 && bounds.bottom >= windowHeight;
+  let bounds = $postBody[0].getBoundingClientRect();
+  // 100 px is 3-4 rows text. If that much is visible, feels OK to mark the post as read.
+  let aBitDown = Math.min(bounds.bottom, bounds.top + 100);
+  let windowHeight = debiki.window.height();
+  let windowWidth = debiki.window.width();
+  let inViewportY = bounds.top >= 0 && aBitDown <= windowHeight;
+  let inViewportX = bounds.left >= 0 && bounds.right <= windowWidth;
+  let spansViewportY = bounds.top <= 0 && bounds.bottom >= windowHeight;
   return (inViewportY || spansViewportY) && inViewportX;
 }
 
 
-function setColorOfPost(postId, fractionRead) {
-  var mark = $('#post-' + postId).find('.dw-p-mark');
-  setColorOfMark(mark, fractionRead);
+function fadeUnreadMark(postNr, fractionRead) {
+  // Map fractionRead to one of 10,30,50,70,90 %:
+  let percent = Math.floor(fractionRead * 5) * 20 + 10;
+  percent = Math.min(90, percent);
+  let selector = postNr === BodyNr ? '.dw-ar-p-hd' : '#post-' + postNr;
+  $(selector).find('.s_P_H_Unr').addClass('s_P_H_Unr-' + percent);  // [8LKW204R]
 }
 
-
-function setColorOfMark(mark, fractionRead) {
-  // I'm using React and CSS instead now.
-  /*
-  var fractionLeft = 1.0 - fractionRead;
-  // First black, then gray:
-  var whiteness = brightnessWhenRead - Math.ceil(brightnessWhenRead * fractionLeft);
-  var colorHex = whiteness.toString(16);
-  colorHex = ('0' + colorHex).slice(-2); // pad left with 0
-  var colorString = '#' + colorHex + colorHex + colorHex;
-  mark.css('color', colorString);
-  */
-
-  /* This outlines unread post ids in red, and the ones you've read in blue:
-  var outlineThickness = Math.max(0, Math.ceil(7 * fractionLeft));
-  var colorChange = Math.ceil(100 * fractionLeft);
-  var redColor = (155 + colorChange).toString(16);
-  var greenColor = colorChange.toString(16);
-  var blueColor = Math.ceil(80 + 100 * fractionRead).toString(16);
-  var color = '#' + redColor + greenColor + blueColor;
-  var link = $('#post-' + stats.postId).find('> .dw-p-hd > .dw-p-link');
-  link.css('outline', outlineThickness + "px " + color + " solid");
-  if (stats.hasBeenRead) {
-    link.css('outline', '2px blue solid');
-  }
-  */
-}
 
 //------------------------------------------------------------------------------
    }
