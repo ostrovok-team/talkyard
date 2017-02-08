@@ -20,26 +20,18 @@
 /// <reference path="../plain-old-javascript.d.ts" />
 /// <reference path="../ReactStore.ts" />
 
+/**
+ * Tracks which posts you've read, and also how long you've spent reading the page in total.
+ * Every now and then, reports reading progress to the server, so it can remember
+ * which posts you've read, and perhaps bump your trust level when you've spent enough
+ * time reading.
+ *
+ * If reading the same page more than once, total-seconds-spent-reading-that-page increases
+ * further, but posts already reported as read, won't be reported again.
+ */
 //------------------------------------------------------------------------------
    namespace debiki2.page.PostsReadTracker {
 //------------------------------------------------------------------------------
-
-/*
-Marks:  Bookmark. UnreadMark. ActionMark.
-
-
-// topic time
-// PAUSE_UNLESS_SCROLLED
-  // MAX_TRACKING_TIME    const sinceScrolled = now - this._lastScrolled;
-  if (sinceScrolled > PAUSE_UNLESS_SCROLLED) {
-    return;
-  }
-  const diff = now - this._lastTick;
-  this._lastFlush += diff;
-  this._lastTick = now;
-  // Don't track timings if we're not in focus
-  if (!Discourse.get("hasFocus")) return;
-*/
 
 let d = { i: debiki.internal, u: debiki.v0.util };
 let $: any = d.i.$;
@@ -81,6 +73,17 @@ let secondsLostPerNewPostInViewport = 0.4;
 let maxConfusionSeconds = 0.8;
 let localStorageKey = 'debikiPostNrsReadByPageId';
 
+let lastScrolledAtMs = Date.now();
+let lastScrollX = -1;
+let lastScrollY = -1;
+let lastReportedToServerAtMs = Date.now();
+let unreportedSecondsSpentReading = 0;
+let unreportedPostNrsRead = [];
+let maxSecondsSinceLastScroll = 3 * 60;
+let reportToServerIntervalSeconds = 20;  // dupl constant, in Scala too [6AK2WX0G]
+let talksWithSererAlready = false;
+
+
 export function start() {
   debugIntervalHandler = setInterval(trackReadingActivity, secondsBetweenTicks * 1000);
 }
@@ -97,12 +100,38 @@ export function getPostNrsAutoReadLongAgo(): number[] {
 
 function trackReadingActivity() {
   // Don't remove posts read one tick ago until now, so they get time to fade away slowly.
+  let hasReadMorePosts = postNrsJustRead.length;
   _.each(postNrsJustRead, postNr => {
     debiki2.ReactActions.markPostAsRead(postNr, false);
   });
   postNrsJustRead = [];
 
-  if (!document.hasFocus()) {
+  let nowMs = Date.now();
+
+  if (lastScrollX != window.scrollX || lastScrollY != window.scrollY) {
+    lastScrollX = window.scrollX;
+    lastScrollY = window.scrollY;
+    lastScrolledAtMs = nowMs;
+  }
+  let millisSinceLastScroll = nowMs - lastScrolledAtMs;
+  let hasStoppedReading = millisSinceLastScroll > maxSecondsSinceLastScroll * 1000;
+  if (!hasStoppedReading) {
+    unreportedSecondsSpentReading += secondsBetweenTicks;
+  }
+
+  let millisSinceLastReport = nowMs - lastReportedToServerAtMs;
+  if (!talksWithSererAlready && (hasReadMorePosts || (unreportedSecondsSpentReading > 0 &&
+        millisSinceLastReport * 1000 > reportToServerIntervalSeconds))) {
+    talksWithSererAlready = true;
+    Server.trackReadingActivity(unreportedSecondsSpentReading, unreportedPostNrsRead, () => {
+      talksWithSererAlready = false;
+    });
+    unreportedSecondsSpentReading = 0;
+    unreportedPostNrsRead = [];
+    lastReportedToServerAtMs = nowMs;
+  }
+
+  if (hasStoppedReading || !document.hasFocus()) {
     secondsSpentReading = -maxConfusionSeconds;
     return;
   }
@@ -199,6 +228,7 @@ function trackReadingActivity() {
     if (fractionRead >= 1) {
       // Don't remove until next tick, so a fade-out animation gets time to run. [8LKW204R]
       postNrsJustRead.push(stats.postNr);
+      unreportedPostNrsRead.push(stats.postNr);
     }
   }
 }

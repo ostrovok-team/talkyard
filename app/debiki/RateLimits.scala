@@ -136,6 +136,19 @@ object RateLimits {
   }
 
 
+  object TrackReadingActivity extends RateLimits {
+    private val IntervalSeconds = 20f // dupl constant, in js too [6AK2WX0G]
+    private val MaxReadersPerIp = 100
+    private val BurstFactor = 1.5
+    val key = "TRA"
+    val what = "sent too many I've-read-this-and-that messages"
+    def maxPerFifteenSeconds: Int = (15 / IntervalSeconds * MaxReadersPerIp * BurstFactor).toInt
+    def maxPerFifteenMinutes = Unlimited
+    def maxPerDay = Unlimited
+    def maxPerDayNewUser = Unlimited
+  }
+
+
   object CreateSite extends RateLimits {
     val key = "CrSt"
     val what = "created too many sites"

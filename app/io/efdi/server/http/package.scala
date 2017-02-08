@@ -114,7 +114,7 @@ package object http {
     PlainApiAction(NoRateLimits, isLogin = true)(BodyParsers.parse.empty)(f)
 
   def GetActionRateLimited(rateLimits: RateLimits, allowAnyone: Boolean = false)(
-        f: GetRequest => Result) =
+        f: GetRequest => Result): Action[Unit] =
     PlainApiAction(rateLimits, allowAnyone = allowAnyone)(BodyParsers.parse.empty)(f)
 
   def StaffGetAction(f: GetRequest => Result) =
@@ -140,7 +140,7 @@ package object http {
     BodyParsers.parse.json(maxLength = maxBytes))(f)
 
   def PostJsonAction(rateLimits: RateLimits, maxBytes: Int, allowAnyone: Boolean = false)(
-        f: JsonPostRequest => Result) =
+        f: JsonPostRequest => Result): Action[JsValue] =
     PlainApiAction(rateLimits, allowAnyone = allowAnyone)(
       BodyParsers.parse.json(maxLength = maxBytes))(f)
 

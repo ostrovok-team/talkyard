@@ -26,7 +26,7 @@ import io.efdi.server.http._
 import java.{util => ju}
 import play.api.mvc
 import play.api.libs.json._
-import play.api.mvc.{Action => _, _}
+import play.api.mvc.Action
 import scala.util.Try
 import DebikiHttp._
 
@@ -415,7 +415,17 @@ object UserController extends mvc.Controller {
   }
 
 
-  def loadNotifications(userId: String, upToWhenMs: String) =
+  def trackReadingActivity: Action[JsValue] = PostJsonAction(RateLimits.TrackReadingActivity,
+        maxBytes = 200) { request =>
+    val pageId = (request.body \ "pageId").as[PageId]
+    val secondsReading = (request.body \ "secondsReading").as[Int]
+    val postNrsRead = (request.body \ "postNrsRead").as[Set[PostNr]]
+    // request.dao.trackReadingActivity(request.theUserId, pageId, secondsReading, postNrsRead)
+    Ok
+  }
+
+
+  def loadNotifications(userId: String, upToWhenMs: String): Action[Unit] =
         GetActionRateLimited(RateLimits.ExpensiveGetRequest) { request =>
     val userIdInt = userId.toIntOrThrow("EsE5GYK2", "Bad userId")
     val upToWhenMsLong = upToWhenMs.toLongOrThrow("EsE2FUY7", "Bad upToWhenMs")

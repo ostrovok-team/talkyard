@@ -1066,7 +1066,19 @@ export function search(rawQuery: string, success: (results: SearchResults) => vo
 }
 
 
-var longPollingState = {
+// COULD perhaps merge with sendLongPollingRequest() a bit below? So reading activity is
+// reported whenever a new long-polling-request is started?
+export function trackReadingActivity(secondsReading: number, postNrsRead: PostNr[],
+    success: () => void) {
+  postJsonSuccess('/-/track-reading-activity', undefined, {
+    pageId: d.i.pageId,
+    secondsReading: secondsReading,
+    postNrsRead: postNrsRead,
+  });
+}
+
+
+let longPollingState = {
   ongoingRequest: null,
   lastModified: null,
   lastEtag: null,
