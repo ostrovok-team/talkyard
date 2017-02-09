@@ -394,7 +394,7 @@ object UserController extends mvc.Controller {
   }
 
 
-  def loadMyPageData(pageId: PageId) = GetAction { request =>
+  def loadMyPageData(pageId: PageId): Action[Unit] = GetAction { request =>
     SECURITY ; COULD // avoid revealing that a page exists: forPageThatExists below might throw
     // a unique NotFound for example.  [7C2KF24]
     val myPageData = PageRequest.forPageThatExists(request, pageId) match {
@@ -416,37 +416,24 @@ object UserController extends mvc.Controller {
   }
 
 
-  implicit object WhenFormat extends Format[When] {
-    def reads(json: JsValue): When = When.fromMillis(json.as[Long])
-    def writes(when: When): JsValue = JsNumber(when.millis)
-  }
-
-
-  implicit object OptWhenFormat extends Format[Option[When]] {
-    def reads(json: JsValue): Option[When] =
-      if (json == JsNull) None
-      else Some(When.fromMillis(json.as[Long]))
-
-    def writes(when: Option[When]): JsValue = when match {
-      case None => JsNull
-      case Some(w) => JsNumber(w.millis)
-    }
-  }
-
-
   def trackReadingProgress: Action[JsValue] = PostJsonAction(RateLimits.TrackReadingActivity,
         maxBytes = 200) { request =>
     SECURITY // how prevent an evil js client from saying "I've read everything everywhere",
     // by calling this endpoint many times, and listing all pages + all post nrs.
     // Could be used to speed up the trust level transition from New to Basic to Member.
 
+    import ed.server.{WhenFormat, OptWhenFormat}
+    val callerId = request.theUserId
     val pageId = (request.body \ "pageId").as[PageId]
     var visitStartedAt = (request.body \ "visitStartedAt").as[When]
     var lastReadAt = (request.body \ "lastReadAt").as[Option[When]]
     val secondsReading = (request.body \ "secondsReading").as[Int]
-    val lowPostNrsRead = (request.body \ "lowPostNrsRead").as[Set[PostNr]]
-    val lastPostNrsRead = (request.body \ "lastPostNrsRead").as[Vector[PostNr]]
+    val postNrsRead = (request.body \ "postNrsRead").as[Vector[PostNr]]
+
     val now = Globals.now
+    val lowPostNrsRead: Set[PostNr] = postNrsRead.filter(_ < ReadingProgress.MaxLowPostNr).toSet
+    val lastPostNrsReadRecentFirst =
+      postNrsRead.reverse.take(ReadingProgress.MaxLastPostsToRemember).distinct
 
     if (visitStartedAt.isAfter(now)) {
       // Bad browser date-time setting?
@@ -454,7 +441,7 @@ object UserController extends mvc.Controller {
       lastReadAt = Some(now)
     }
 
-    throwBadRequestIf(secondsReading == 0 && lastPostNrsRead.nonEmpty, "EdE4WSHM7")
+    throwBadRequestIf(secondsReading == 0 && lastPostNrsReadRecentFirst.nonEmpty, "EdE4WSHM7")
     lastReadAt foreach { at =>
       if (at.isAfter(now)) {
         // Bad browser date-time setting?
@@ -467,11 +454,11 @@ object UserController extends mvc.Controller {
       firstVisitedAt = visitStartedAt,
       lastVisitedAt = now,
       lastReadAt = lastReadAt,
-      lastPostNrsRead = lastPostNrsRead,
+      lastPostNrsReadRecentFirst = lastPostNrsReadRecentFirst,
       lowPostNrsRead = lowPostNrsRead.filter(_ <= ReadingProgress.MaxLowPostNr),
       secondsReading = secondsReading)
 
-    request.dao.trackReadingProgress(request.theUserId, pageId, readingProgress)
+    request.dao.trackReadingProgress(callerId, pageId, readingProgress)
     Ok
   }
 

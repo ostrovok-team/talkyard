@@ -78,18 +78,33 @@ let secondsLostPerNewPostInViewport = 0.4;
 let maxConfusionSeconds = 2;
 let localStorageKey = 'debikiPostNrsReadByPageId';
 
-let lastScrolledAtMs = Date.now();
-let lastScrollLeft = -1;
-let lastScrollTop = -1;
-let lastReportedToServerAtMs = Date.now();
-let unreportedSecondsSpentReading = 0;
-let unreportedPostNrsRead = [];
-let maxSecondsSinceLastScroll = 3 * 60;
-let reportToServerIntervalSeconds = 20;  // dupl constant, in Scala too [6AK2WX0G]
-let talksWithSererAlready = false;
+let lastUserId: number;
+let lastScrolledAtMs: number;
+let lastScrollLeft: number;
+let lastScrollTop: number;
+let lastReportedToServerAtMs: number;
+let unreportedSecondsSpentReading: number;
+let unreportedPostNrsRead: number[];
+let maxSecondsSinceLastScroll: number;
+let reportToServerIntervalSeconds: number;
+let talksWithSererAlready: boolean;
+
+
+function reset() {
+  lastScrolledAtMs = Date.now();
+  lastScrollLeft = -1;
+  lastScrollTop = -1;
+  lastReportedToServerAtMs = Date.now();
+  unreportedSecondsSpentReading = 0;
+  unreportedPostNrsRead = [];
+  maxSecondsSinceLastScroll = 3 * 60;
+  reportToServerIntervalSeconds = 20;  // dupl constant, in Scala too [6AK2WX0G]
+  talksWithSererAlready = false;
+}
 
 
 export function start() {
+  reset();
   debugIntervalHandler = setInterval(trackReadingActivity, secondsBetweenTicks * 1000);
 }
 
@@ -104,6 +119,17 @@ export function getPostNrsAutoReadLongAgo(): number[] {
 
 
 function trackReadingActivity() {
+  let store: Store = ReactStore.allData();
+  let me: Myself = store.me;
+
+  if (me.id !== lastUserId) {
+    reset();
+    lastUserId = me.id;
+  }
+
+  if (!me.isLoggedIn)
+    return;
+
   // Don't remove posts read one tick ago until now, so they get time to fade away slowly.
   let hasReadMorePosts = postNrsJustRead.length;
   // @ifdef DEBUG
@@ -158,12 +184,6 @@ function trackReadingActivity() {
     secondsSpentReading = -maxConfusionSeconds;
     return;
   }
-
-  let store: Store = ReactStore.allData();
-  let me: Myself = store.me;
-
-  if (!me.isLoggedIn)
-    return;
 
   let visibleUnreadPostsStats = [];
   let numVisibleUnreadChars = 0;

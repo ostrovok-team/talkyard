@@ -33,10 +33,25 @@ class SiteTransactionAppSpec extends DaoAppSuite {
 
     var admin: User = null
     var other: User = null
+    var pageId: PageId = null
+    var otherPageId: PageId = null
+    var thirdPageId: PageId = null
 
     "prepare: create users" in {
       admin = createPasswordOwner(s"txt_adm", dao)
       other = createPasswordUser(s"txt_otr", dao)
+    }
+
+    "prepare: create pages" in {
+      pageId = createPage(PageRole.Discussion, TextAndHtml.forTitle("Page Title XY 12 AB"),
+        TextAndHtml.forBodyOrComment("Page body."), authorId = admin.id, browserIdData,
+        dao, anyCategoryId = None)
+      otherPageId = createPage(PageRole.Discussion, TextAndHtml.forTitle("Other Page Title"),
+        TextAndHtml.forBodyOrComment("Other page body."), authorId = admin.id, browserIdData,
+        dao, anyCategoryId = None)
+      thirdPageId = createPage(PageRole.Discussion, TextAndHtml.forTitle("Third Page Title"),
+        TextAndHtml.forBodyOrComment("Third page body."), authorId = admin.id, browserIdData,
+        dao, anyCategoryId = None)
     }
 
     "load and save UserStats" in {
@@ -57,11 +72,11 @@ class SiteTransactionAppSpec extends DaoAppSuite {
 
       def stats(userId: UserId, number: Int) = UserStats(
         userId = userId,
-        lastSeenAt = Some(When.fromMillis(number + 1)),
+        lastSeenAt = When.fromMillis(number + 1),
         lastPostedAt = Some(When.fromMillis(number + 2)),
         lastEmailedAt = Some(When.fromMillis(number + 3)),
         emailBounceSum = number + 4,
-        firstSeenAt = Some(When.fromMillis(number + 5)),
+        firstSeenAt = When.fromMillis(number + 5),
         firstNewTopicAt = Some(When.fromMillis(number + 6)),
         firstDiscourseReplyAt = Some(When.fromMillis(number + 7)),
         firstChatMessageAt = Some(When.fromMillis(number + 8)),
@@ -125,6 +140,68 @@ class SiteTransactionAppSpec extends DaoAppSuite {
         numDiscourseTopicsEntered = number + 5,
         numChatMessagesRead = number + 8,
         numChatTopicsEntered = number + 10)
+    }
+
+    "load and save empty ReadingProgress" in {
+      dao.readWriteTransaction { transaction =>
+        val progress = ReadingProgress(
+          firstVisitedAt = When.fromMillis(100),
+          lastVisitedAt = When.fromMillis(101),
+          lastReadAt = None,
+          lastPostNrsReadRecentFirst = Vector.empty,
+          lowPostNrsRead = Set.empty,
+          secondsReading = 0)
+        transaction.upsertReadProgress(admin.id, pageId, progress)
+
+        transaction.loadReadProgress(admin.id, "wrong_page_id") mustBe None
+        transaction.loadReadProgress(admin.id, pageId) mustBe progress
+      }
+    }
+
+    "load and save ReadingProgress with low post nrs only" in {
+      dao.readWriteTransaction { transaction =>
+        val progress = ReadingProgress(
+          firstVisitedAt = When.fromMillis(200),
+          lastVisitedAt = When.fromMillis(201),
+          lastReadAt = Some(When.fromMillis(202)),
+          lastPostNrsReadRecentFirst = Vector.empty, // not yet implemented
+          lowPostNrsRead = Set(1, 2, 3, 8),
+          secondsReading = 203)
+        transaction.upsertReadProgress(admin.id, otherPageId, progress)
+        transaction.loadReadProgress(admin.id, otherPageId) mustBe progress
+      }
+    }
+
+    var progressBefore: ReadingProgress = null
+
+    "load and save ReadingProgress with high post nrs" in {
+      dao.readWriteTransaction { transaction =>
+        val progress = ReadingProgress(
+          firstVisitedAt = When.fromMillis(300),
+          lastVisitedAt = When.fromMillis(301),
+          lastReadAt = Some(When.fromMillis(302)),
+          lastPostNrsReadRecentFirst = Vector.empty, // not yet implemented
+          lowPostNrsRead = Set(1, 10, 100, 200, 300, 400, 500, 512),
+          secondsReading = 303)
+        transaction.upsertReadProgress(admin.id, thirdPageId, progress)
+        transaction.loadReadProgress(admin.id, thirdPageId) mustBe progress
+        progressBefore = progress
+      }
+    }
+
+    "overwrite ReadingProgress" in {
+      dao.readWriteTransaction { transaction =>
+        val progress = ReadingProgress(
+          firstVisitedAt = When.fromMillis(400),
+          lastVisitedAt = When.fromMillis(401),
+          lastReadAt = Some(When.fromMillis(402)),
+          lastPostNrsReadRecentFirst = Vector.empty, // not yet implemented
+          lowPostNrsRead = Set(1, 2, 3, 4, 5, 6, 7, 8),
+          secondsReading = 403)
+        transaction.loadReadProgress(admin.id, thirdPageId) mustBe progressBefore
+        transaction.upsertReadProgress(admin.id, thirdPageId, progress)
+        transaction.loadReadProgress(admin.id, thirdPageId) mustBe progress
+      }
     }
   }
 

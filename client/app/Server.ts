@@ -1072,6 +1072,8 @@ export function trackReadingActivity(secondsReading: number, postNrsRead: PostNr
     success: () => void) {
   postJsonSuccess('/-/track-reading-activity', success, {
     pageId: d.i.pageId,
+    visitStartedAt: nowMsUtc,
+    lastReadAt: secondsReading > 0 ? nowMsUtc : null,
     secondsReading: secondsReading,
     postNrsRead: postNrsRead,
   });

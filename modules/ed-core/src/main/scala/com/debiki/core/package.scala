@@ -17,9 +17,10 @@
 
 package com.debiki
 
+import com.debiki.core.Prelude.dieIf
 import org.apache.commons.validator.routines.EmailValidator
 import org.scalactic.{Bad, Good, Or}
-import scala.collection.{immutable, mutable}
+import scala.collection.immutable
 import java.{util => ju}
 
 
@@ -322,7 +323,7 @@ package object core {
     * @param firstVisitedAt The first time the user visited the page, perhaps without reading.
     * @param lastVisitedAt The last time the user visited the page, perhaps without reading.
     * @param lastReadAt The last time the user apparently read something on the page.
-    * @param lastPostNrsRead Which posts were the last ones the user read. The most recently
+    * @param lastPostNrsReadRecentFirst Which posts were the last ones the user read. The most recently
     *   read post nr is stored first, so .distinct keeps the most recently read occurrences
     *   of each post nr (rather than some old duplicate).
     *   Useful for remembering the most recently read comments in an endless stream of
@@ -341,7 +342,7 @@ package object core {
     firstVisitedAt: When,
     lastVisitedAt: When,
     lastReadAt: Option[When],
-    lastPostNrsRead: Vector[PostNr],
+    lastPostNrsReadRecentFirst: Vector[PostNr],
     lowPostNrsRead: immutable.Set[PostNr],
     secondsReading: Int) {
 
@@ -353,30 +354,76 @@ package object core {
       require(firstVisitedAt.millis <= lastReadAt.millis, "EdE5JTK28")
       require(lastReadAt.millis <= lastVisitedAt.millis, "EdE20UP6A")
     }
-    require(lowPostNrsRead.max <= MaxLowPostNr, s"Got max = ${lowPostNrsRead.max} [EdE2W4KA8]")
-    require(lastPostNrsRead.size <= MaxLastPostsToRemember, "EdE24GKF0")
-    require(lastReadAt.isDefined == lastPostNrsRead.nonEmpty, "EdE25SX7")
+    require(lowPostNrsRead.isEmpty || lowPostNrsRead.max <= MaxLowPostNr,
+      s"Got max = ${lowPostNrsRead.max} [EdE2W4KA8]")
+    require(lowPostNrsRead.isEmpty || lowPostNrsRead.min >= 1, // title (nr 0) shouldn't be included
+      s"Got min = ${lowPostNrsRead.min} [EdE4GHSU2]")
+    require(lastPostNrsReadRecentFirst.size <= MaxLastPostsToRemember, "EdE24GKF0")
+    //require(lastReadAt.isDefined == lastPostNrsReadRecentFirst.nonEmpty, "EdE25SX7")
+
 
     def addMore(moreProgress: ReadingProgress): ReadingProgress = {
       copy(
         firstVisitedAt = When.earliestOf(firstVisitedAt, moreProgress.firstVisitedAt),
         lastVisitedAt = When.latestOf(lastVisitedAt, moreProgress.lastVisitedAt),
         lastReadAt = When.anyLatestOf(lastReadAt, moreProgress.lastReadAt),
-        lastPostNrsRead = (
+        lastPostNrsReadRecentFirst = (
           // Note: most recently read is stored first, so .distinct keeps those.
-          if (moreProgress.lastReadAt.isEmpty) lastPostNrsRead
-          else if (lastReadAt.isEmpty) moreProgress.lastPostNrsRead
+          if (moreProgress.lastReadAt.isEmpty) lastPostNrsReadRecentFirst
+          else if (lastReadAt.isEmpty) moreProgress.lastPostNrsReadRecentFirst
           else if (moreProgress.lastReadAt.get isAfter lastReadAt.get)
-            moreProgress.lastPostNrsRead ++ lastPostNrsRead
+            moreProgress.lastPostNrsReadRecentFirst ++ lastPostNrsReadRecentFirst
           else
-            lastPostNrsRead ++ moreProgress.lastPostNrsRead).distinct take MaxLastPostsToRemember)
+            lastPostNrsReadRecentFirst ++ moreProgress.lastPostNrsReadRecentFirst).distinct take MaxLastPostsToRemember)
+    }
+
+
+    /** Can be stored in a Postgres bytea, or sent as base64 to the browser.
+      * There's a unit test.
+      */
+    def lowPostNrsReadAsBitsetBytes: Array[Byte] = {
+      var bytes = Array[Byte]()
+      if (lowPostNrsRead.isEmpty)
+        return bytes
+
+      // Perhaps could be done in a more efficient way by accessing the underlying Long:s in
+      // the BitSet, but then need to cast to $BitSet1 or $BitSet2 or $BitSetN = complicated.
+      var byteIndex = 0
+
+      // -1 because the first bit is post nr 1, not 0, that is, bits 0..7 store is-read flags
+      // for posts 1..8 (not posts 0..7).
+      // The maxIndex becomes = 0 if only posts 1..8 included, and 63 if posts 504..512 included.
+      val maxIndex = (lowPostNrsRead.max - 1) / 8
+
+      while (byteIndex <= maxIndex) {
+        var currentByte: Int = 0 // "byte" because only using the lowest 8 bits
+        var bitIndex = 0
+        while (bitIndex < 8) {
+          // +1 because first post nr is 1 (orig post) not 0 (the title).
+          val postNr = byteIndex * 8 + bitIndex + 1
+          // (Could use lowPostNrsRead.iterator instead to skip all zero bits, but barely matters.)
+          if (lowPostNrsRead.contains(postNr)) {
+            val more: Int = 1 << bitIndex
+            dieIf(more > 255, "EdE4FKG82")
+            currentByte += more
+          }
+          bitIndex += 1
+        }
+        bytes :+= currentByte.toByte  // casts from 0..255 to -128..127
+        byteIndex += 1
+      }
+      bytes
     }
   }
 
 
   object ReadingProgress {
     val MaxLastPostsToRemember = 100
-    val MaxLowPostNr = 511  // 8 Longs = 8 * 8 bytes * 8 bits/byte = 512 bits = post nrs 0...511
+    val MaxLowPostNr = 512  // 8 Longs = 8 * 8 bytes * 8 bits/byte = 512 bits = post nrs 1...512
+
+    def parseLowPostNrsReadBitsetBytes: Set[PostNr] = {
+      ???
+    }
   }
 
 
