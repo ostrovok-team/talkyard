@@ -23,6 +23,7 @@ import com.debiki.core.User.{isGuestId, MinUsernameLength}
 import debiki._
 import debiki.ReactJson._
 import io.efdi.server.http._
+import math.max
 import java.{util => ju}
 import play.api.mvc
 import play.api.libs.json._
@@ -415,12 +416,62 @@ object UserController extends mvc.Controller {
   }
 
 
-  def trackReadingActivity: Action[JsValue] = PostJsonAction(RateLimits.TrackReadingActivity,
+  implicit object WhenFormat extends Format[When] {
+    def reads(json: JsValue): When = When.fromMillis(json.as[Long])
+    def writes(when: When): JsValue = JsNumber(when.millis)
+  }
+
+
+  implicit object OptWhenFormat extends Format[Option[When]] {
+    def reads(json: JsValue): Option[When] =
+      if (json == JsNull) None
+      else Some(When.fromMillis(json.as[Long]))
+
+    def writes(when: Option[When]): JsValue = when match {
+      case None => JsNull
+      case Some(w) => JsNumber(w.millis)
+    }
+  }
+
+
+  def trackReadingProgress: Action[JsValue] = PostJsonAction(RateLimits.TrackReadingActivity,
         maxBytes = 200) { request =>
+    SECURITY // how prevent an evil js client from saying "I've read everything everywhere",
+    // by calling this endpoint many times, and listing all pages + all post nrs.
+    // Could be used to speed up the trust level transition from New to Basic to Member.
+
     val pageId = (request.body \ "pageId").as[PageId]
+    var visitStartedAt = (request.body \ "visitStartedAt").as[When]
+    var lastReadAt = (request.body \ "lastReadAt").as[Option[When]]
     val secondsReading = (request.body \ "secondsReading").as[Int]
-    val postNrsRead = (request.body \ "postNrsRead").as[Set[PostNr]]
-    // request.dao.trackReadingActivity(request.theUserId, pageId, secondsReading, postNrsRead)
+    val lowPostNrsRead = (request.body \ "lowPostNrsRead").as[Set[PostNr]]
+    val lastPostNrsRead = (request.body \ "lastPostNrsRead").as[Vector[PostNr]]
+    val now = Globals.now
+
+    if (visitStartedAt.isAfter(now)) {
+      // Bad browser date-time setting?
+      visitStartedAt = now
+      lastReadAt = Some(now)
+    }
+
+    throwBadRequestIf(secondsReading == 0 && lastPostNrsRead.nonEmpty, "EdE4WSHM7")
+    lastReadAt foreach { at =>
+      if (at.isAfter(now)) {
+        // Bad browser date-time setting?
+        lastReadAt = Some(now)
+      }
+      throwBadRequestIf(at.isBefore(visitStartedAt), "EdE2JKF063")
+    }
+
+    val readingProgress = ReadingProgress(
+      firstVisitedAt = visitStartedAt,
+      lastVisitedAt = now,
+      lastReadAt = lastReadAt,
+      lastPostNrsRead = lastPostNrsRead,
+      lowPostNrsRead = lowPostNrsRead.filter(_ <= ReadingProgress.MaxLowPostNr),
+      secondsReading = secondsReading)
+
+    request.dao.trackReadingProgress(request.theUserId, pageId, readingProgress)
     Ok
   }
 

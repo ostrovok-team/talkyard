@@ -101,7 +101,7 @@ POST  /-/complete-review-task   controllers.ModerationController.completeReviewT
 GET   /-/users/                 controllers.UserController.viewUserPage(whatever = "")
 GET   /-/users/*whatever        controllers.UserController.viewUserPage(whatever)
 GET   /-/load-my-page-data      controllers.UserController.loadMyPageData(pageId)
-POST  /-/track-reading-activity controllers.UserController.trackReadingActivity
+POST  /-/track-reading-activity controllers.UserController.trackReadingProgress
 GET   /-/load-notifications     controllers.UserController.loadNotifications(userId, upToWhenMs)
 POST  /-/mark-notf-as-seen      controllers.UserController.markNotificationAsSeen
 POST  /-/set-page-notf-level    controllers.UserController.savePageNotfLevel

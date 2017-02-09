@@ -18,9 +18,9 @@
 package com.debiki
 
 import org.apache.commons.validator.routines.EmailValidator
-import org.scalactic.{Good, Bad, Or}
-import scala.collection.immutable
-import java.{ util => ju }
+import org.scalactic.{Bad, Good, Or}
+import scala.collection.{immutable, mutable}
+import java.{util => ju}
 
 
 package object core {
@@ -86,6 +86,7 @@ package object core {
   /** Change this to a Long before year 2038. /KajMagnus, Jan 2015 */
   type UnixTime = Int    // don't use, I always forget if it's seconds or millis
   type UnixMillis = Long // this is millis :-)
+  type UnixMinutes = Int
   type UnixDays = Int
 
 
@@ -94,6 +95,7 @@ package object core {
     def toJavaDate = new ju.Date(unixMillis)
     def toDays = WhenDay.fromMillis(unixMillis)
     def millis = unixMillis
+    def unixMinutes: Int = (unixMillis / 1000 / 60).toInt
     def toUnixMillis = unixMillis
     def daysSince(other: When) = (unixMillis - other.unixMillis) / OneMinuteInMillis / 60 / 24
     def daysBetween(other: When) = math.abs(daysSince(other))
@@ -112,6 +114,7 @@ package object core {
     def numSeconds = unixMillis / 1000
 
     def isAfter(other: When): Boolean = unixMillis > other.unixMillis
+    def isBefore(other: When): Boolean = unixMillis < other.unixMillis
     def isNotBefore(other: When): Boolean = unixMillis >= other.unixMillis
   }
 
@@ -120,7 +123,53 @@ package object core {
     def fromDate(date: ju.Date) = new When(date.getTime)
     def fromOptDate(anyDate: Option[ju.Date]): Option[When] = anyDate.map(When.fromDate)
     def fromMillis(millis: UnixMillis) = new When(millis)
+    def fromOptMillis(millis: Option[UnixMillis]): Option[When] = millis.map(new When(_))
+
+    def latestOf(whenA: When, whenB: When): When =
+      if (whenA.millis > whenB.millis) whenA else whenB
+
+    def anyLatestOf(whenA: Option[When], whenB: Option[When]): Option[When] = {
+      if (whenA.isDefined && whenB.isDefined) {
+        if (whenA.get.millis > whenB.get.millis) whenA
+        else whenB
+      }
+      else whenA orElse whenB
+    }
+
+    def earliestOf(whenA: When, whenB: When): When =
+      if (whenA.millis < whenB.millis) whenA else whenB
+
+    def earliestOfButNot0(whenA: When, whenB: When): When =
+      if (whenA.millis < whenB.millis && whenA.millis != 0) whenA else whenB
+
+    def anyEarliestOf(whenA: Option[When], whenB: Option[When]): Option[When] = {
+      if (whenA.isDefined && whenB.isDefined)
+        Some(earliestOf(whenA.get, whenB.get))
+      else
+        whenA orElse whenB
+    }
+
+    def anyEarliestOfButNot0(whenA: Option[When], whenB: Option[When]): Option[When] = {
+      if (whenA.isDefined && whenB.isDefined)
+        Some(earliestOfButNot0(whenA.get, whenB.get))
+      else
+        whenA orElse whenB
+    }
   }
+
+
+  /*
+  class WhenMins(val unixMinutes: UnixMinutes) extends AnyVal {
+    def toJavaDate = new ju.Date(OneMinuteInMillis * unixMinutes)
+  }
+
+  object WhenMins {
+    def now(): WhenMins = fromMillis(System.currentTimeMillis())
+    def fromDate(date: ju.Date): WhenMins = fromMillis(date.getTime)
+    def fromDays(unixDays: Int) = new WhenMins(unixDays * 24 * 60)
+    def fromMinutes(unixMinutes: Int) = new WhenMins(unixMinutes)
+    def fromMillis(unixMillis: Long) = new WhenMins((unixMillis / OneMinuteInMillis).toInt)
+  }*/
 
 
   class WhenDay(val unixDays: UnixDays) extends AnyVal {
@@ -268,6 +317,67 @@ package object core {
     def siteUserId = SiteUserId(siteId, who.id)
   }
 
+
+  /**
+    * @param firstVisitedAt The first time the user visited the page, perhaps without reading.
+    * @param lastVisitedAt The last time the user visited the page, perhaps without reading.
+    * @param lastReadAt The last time the user apparently read something on the page.
+    * @param lastPostNrsRead Which posts were the last ones the user read. The most recently
+    *   read post nr is stored first, so .distinct keeps the most recently read occurrences
+    *   of each post nr (rather than some old duplicate).
+    *   Useful for remembering the most recently read comments in an endless stream of
+    *   comments — that is, in a chat topic.
+    * @param lowPostNrsRead Suitable for storing as a bit set in the database, e.g. 8*8 bytes
+    *   would remember which ones of post nrs 1 - 512 the user has read.
+    *   If any post nr is > MaxLowPostNr, an error is thrown.
+    *   Useful for remembering which posts have been read in a discussion that ends after a while,
+    *   i.e. all kinds of topics (questions, ideas, discussions, ...) except for never-ending-chats.
+    *   ("low" = post nrs 1 ... something, but not high post nrs like 3456 or 9999 — they
+    *   would be stored in lastPostNrsRead instead, and only like the 100 most recent.)
+    * @param secondsReading Also includes time the user spends re-reading old posts hen has
+    *   read already.
+    */
+  case class ReadingProgress(
+    firstVisitedAt: When,
+    lastVisitedAt: When,
+    lastReadAt: Option[When],
+    lastPostNrsRead: Vector[PostNr],
+    lowPostNrsRead: immutable.Set[PostNr],
+    secondsReading: Int) {
+
+    import ReadingProgress._
+
+    require(secondsReading >= 0, "EdE26SRY8")
+    require(firstVisitedAt.millis <= lastVisitedAt.millis, "EdE3WKB4U0")
+    lastReadAt foreach { lastReadAt =>
+      require(firstVisitedAt.millis <= lastReadAt.millis, "EdE5JTK28")
+      require(lastReadAt.millis <= lastVisitedAt.millis, "EdE20UP6A")
+    }
+    require(lowPostNrsRead.max <= MaxLowPostNr, s"Got max = ${lowPostNrsRead.max} [EdE2W4KA8]")
+    require(lastPostNrsRead.size <= MaxLastPostsToRemember, "EdE24GKF0")
+    require(lastReadAt.isDefined == lastPostNrsRead.nonEmpty, "EdE25SX7")
+
+    def addMore(moreProgress: ReadingProgress): ReadingProgress = {
+      copy(
+        firstVisitedAt = When.earliestOf(firstVisitedAt, moreProgress.firstVisitedAt),
+        lastVisitedAt = When.latestOf(lastVisitedAt, moreProgress.lastVisitedAt),
+        lastReadAt = When.anyLatestOf(lastReadAt, moreProgress.lastReadAt),
+        lastPostNrsRead = (
+          // Note: most recently read is stored first, so .distinct keeps those.
+          if (moreProgress.lastReadAt.isEmpty) lastPostNrsRead
+          else if (lastReadAt.isEmpty) moreProgress.lastPostNrsRead
+          else if (moreProgress.lastReadAt.get isAfter lastReadAt.get)
+            moreProgress.lastPostNrsRead ++ lastPostNrsRead
+          else
+            lastPostNrsRead ++ moreProgress.lastPostNrsRead).distinct take MaxLastPostsToRemember)
+    }
+  }
+
+
+  object ReadingProgress {
+    val MaxLastPostsToRemember = 100
+    val MaxLowPostNr = 511  // 8 Longs = 8 * 8 bytes * 8 bits/byte = 512 bits = post nrs 0...511
+  }
 
 
   def ifThenSome[A](condition: Boolean, value: A) =

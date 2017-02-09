@@ -1070,7 +1070,7 @@ export function search(rawQuery: string, success: (results: SearchResults) => vo
 // reported whenever a new long-polling-request is started?
 export function trackReadingActivity(secondsReading: number, postNrsRead: PostNr[],
     success: () => void) {
-  postJsonSuccess('/-/track-reading-activity', undefined, {
+  postJsonSuccess('/-/track-reading-activity', success, {
     pageId: d.i.pageId,
     secondsReading: secondsReading,
     postNrsRead: postNrsRead,

@@ -943,31 +943,12 @@ case class UserStats(
     numLikesGiven >= 0, "EdE4S0A7M")
 
 
-  /** Ignores `UserStats.firstSeenAt` if == 0 millis == year 1970.
+  /** Ignores dates with 0 millis (= year 1970), considers that = no date.
     */
   def addMoreStats(moreStats: UserStats): UserStats = {
     require(userId == moreStats.userId, "EdE4WKB1W9")
 
-    def latestOf(whenA: When, whenB: When): When =
-      if (whenA.millis > whenB.millis) whenA else whenB
-
-    def anyLatestOf(whenA: Option[When], whenB: Option[When]): Option[When] = {
-      if (whenA.isDefined && whenB.isDefined) {
-        if (whenA.get.millis > whenB.get.millis) whenA
-        else whenB
-      }
-      else whenA orElse whenB
-    }
-
-    def earliestOf(whenA: When, whenB: When): When =
-      if (whenA.millis < whenB.millis && whenA.millis != 0) whenA else whenB
-
-    def anyEarliestOf(whenA: Option[When], whenB: Option[When]): Option[When] = {
-      if (whenA.isDefined && whenB.isDefined)
-        Some(earliestOf(whenA.get, whenB.get))
-      else
-        whenA orElse whenB
-    }
+    import When.{latestOf, anyLatestOf, earliestOfButNot0, anyEarliestOfButNot0}
 
     // Dupl code, also in SQL [7FKTU02], perhaps add param `addToOldstat: Boolean` to SQL fn?
     copy(
@@ -976,10 +957,10 @@ case class UserStats(
       lastEmailedAt = anyLatestOf(lastEmailedAt, moreStats.lastEmailedAt),
       // Hmm, how should the bounce sum be updated? For now:
       emailBounceSum = (moreStats.emailBounceSum >= 0) ? moreStats.emailBounceSum | emailBounceSum,
-      firstSeenAt = earliestOf(firstSeenAt, moreStats.firstSeenAt),
-      firstNewTopicAt = anyEarliestOf(firstNewTopicAt, moreStats.firstNewTopicAt),
-      firstDiscourseReplyAt = anyEarliestOf(firstDiscourseReplyAt, moreStats.firstDiscourseReplyAt),
-      firstChatMessageAt = anyEarliestOf(firstChatMessageAt, moreStats.firstChatMessageAt),
+      firstSeenAt = earliestOfButNot0(firstSeenAt, moreStats.firstSeenAt),
+      firstNewTopicAt = anyEarliestOfButNot0(firstNewTopicAt, moreStats.firstNewTopicAt),
+      firstDiscourseReplyAt = anyEarliestOfButNot0(firstDiscourseReplyAt, moreStats.firstDiscourseReplyAt),
+      firstChatMessageAt = anyEarliestOfButNot0(firstChatMessageAt, moreStats.firstChatMessageAt),
       topicsNewSince = latestOf(moreStats.topicsNewSince, topicsNewSince),
       notfsNewSinceId = (moreStats.notfsNewSinceId > notfsNewSinceId) ?
         moreStats.notfsNewSinceId | notfsNewSinceId,

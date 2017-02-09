@@ -36,6 +36,10 @@
 let d = { i: debiki.internal, u: debiki.v0.util };
 let $: any = d.i.$;
 
+// @ifdef DEBUG
+let debug = location.hash.match("debug=(t|true|all|trackReadingActivity)");
+// @endif
+
 export let debugIntervalHandler = null;
 
 interface ReadState {
@@ -62,20 +66,21 @@ let postNrsJustRead = [];
 // the user did read it, seems more annoying, than marking-as-read posts when the user has read
 // parts-of-it or most-of-it-but-not-all.
 let charsReadPerSecond = 40;
+let contextSwitchCostChars = charsReadPerSecond * 0.5;
 
 // People usually (?) don't read everything in a long comment, so mark a comment as read after
 // some seconds.
-let maxCharsReadPerPost = charsReadPerSecond * 5.5;
+let maxCharsReadPerPost = charsReadPerSecond * 5;
 
 let secondsBetweenTicks = 1;
 let secondsSpentReading = 0;
 let secondsLostPerNewPostInViewport = 0.4;
-let maxConfusionSeconds = 0.8;
+let maxConfusionSeconds = 2;
 let localStorageKey = 'debikiPostNrsReadByPageId';
 
 let lastScrolledAtMs = Date.now();
-let lastScrollX = -1;
-let lastScrollY = -1;
+let lastScrollLeft = -1;
+let lastScrollTop = -1;
 let lastReportedToServerAtMs = Date.now();
 let unreportedSecondsSpentReading = 0;
 let unreportedPostNrsRead = [];
@@ -101,6 +106,9 @@ export function getPostNrsAutoReadLongAgo(): number[] {
 function trackReadingActivity() {
   // Don't remove posts read one tick ago until now, so they get time to fade away slowly.
   let hasReadMorePosts = postNrsJustRead.length;
+  // @ifdef DEBUG
+  !debug || !hasReadMorePosts || console.debug(`Marking as read: ${postNrsJustRead}`);
+  // @endif
   _.each(postNrsJustRead, postNr => {
     debiki2.ReactActions.markPostAsRead(postNr, false);
   });
@@ -108,27 +116,42 @@ function trackReadingActivity() {
 
   let nowMs = Date.now();
 
-  if (lastScrollX != window.scrollX || lastScrollY != window.scrollY) {
-    lastScrollX = window.scrollX;
-    lastScrollY = window.scrollY;
+  let $pageColumn = $('#esPageColumn');
+  let curScrollLeft = $pageColumn.scrollLeft();
+  let curScrollTop = $pageColumn.scrollTop();
+  if (lastScrollLeft != curScrollLeft || lastScrollTop != curScrollTop) {
+    lastScrollLeft = curScrollLeft;
+    lastScrollTop = curScrollTop;
     lastScrolledAtMs = nowMs;
+    // @ifdef DEBUG
+    !debug || console.debug(`Scroll detected, at ms: ${lastScrolledAtMs}`);
+    // @endif
   }
   let millisSinceLastScroll = nowMs - lastScrolledAtMs;
   let hasStoppedReading = millisSinceLastScroll > maxSecondsSinceLastScroll * 1000;
   if (!hasStoppedReading) {
     unreportedSecondsSpentReading += secondsBetweenTicks;
   }
+  // @ifdef DEBUG
+  !debug || !hasStoppedReading || console.debug(`Not reading, at ms: ${lastScrolledAtMs}`);
+  // @endif
 
   let millisSinceLastReport = nowMs - lastReportedToServerAtMs;
   if (!talksWithSererAlready && (hasReadMorePosts || (unreportedSecondsSpentReading > 0 &&
-        millisSinceLastReport * 1000 > reportToServerIntervalSeconds))) {
+        millisSinceLastReport > reportToServerIntervalSeconds * 1000))) {
+    // @ifdef DEBUG
+    !debug || console.debug(`Reporting to server: ${unreportedSecondsSpentReading} seconds, ` +
+        `these posts: ${unreportedPostNrsRead}`);
+    // @endif
     talksWithSererAlready = true;
     Server.trackReadingActivity(unreportedSecondsSpentReading, unreportedPostNrsRead, () => {
       talksWithSererAlready = false;
+      // In case the server is slow because under heavy load, better reset this here in
+      // the done-callback, when the response arrives, rather than when the request is being sent.
+      lastReportedToServerAtMs = Date.now();
     });
     unreportedSecondsSpentReading = 0;
     unreportedPostNrsRead = [];
-    lastReportedToServerAtMs = nowMs;
   }
 
   if (hasStoppedReading || !document.hasFocus()) {
@@ -156,6 +179,10 @@ function trackReadingActivity() {
       unreadPosts.push(post);
     }
   });
+
+  // @ifdef DEBUG
+  !debug || console.debug(`Num unread posts = ${unreadPosts.length}`);
+  // @endif
 
   _.each(unreadPosts, (post: Post) => {
     let postBody = $('#post-' + post.nr).children('.dw-p-bd');
@@ -205,7 +232,7 @@ function trackReadingActivity() {
 
   for (let i$ = 0, len$ = visibleUnreadPostsStats.length; i$ < len$; ++i$) {
     let stats: ReadState = visibleUnreadPostsStats[i$];
-    let charsToRead = Math.min(maxCharsReadPerPost, stats.textLength);
+    let charsToRead = contextSwitchCostChars + Math.min(maxCharsReadPerPost, stats.textLength);
     let charsReadNow = Math.min(charsLeftThisTick, charsToRead - stats.charsRead);
 
     // Let's read all posts at the same time instead. We don't know which one the user is
@@ -229,6 +256,10 @@ function trackReadingActivity() {
       // Don't remove until next tick, so a fade-out animation gets time to run. [8LKW204R]
       postNrsJustRead.push(stats.postNr);
       unreportedPostNrsRead.push(stats.postNr);
+
+      // @ifdef DEBUG
+      !debug || console.debug(`Just read post nr ${stats.postNr}`);
+      // @endif
     }
   }
 }

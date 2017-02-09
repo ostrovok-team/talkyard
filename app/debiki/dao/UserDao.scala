@@ -542,6 +542,18 @@ trait UserDao {
   }
 
 
+  def trackReadingProgress(userId: UserId, pageId: PageId, readingProgress: ReadingProgress) {
+    readWriteTransaction { transaction =>
+      val oldProgress = transaction.loadReadProgress(userId = userId, pageId = pageId)
+      val resultingProgress = oldProgress match {
+        case Some(old) => old.addMore(readingProgress)
+        case None => readingProgress
+      }
+      transaction.upsertReadProgress(userId = userId, pageId = pageId, resultingProgress)
+    }
+  }
+
+
   def loadNotifications(userId: UserId, upToWhen: Option[When], me: Who) = {
     readOnlyTransaction { transaction =>
       if (me.id != userId) {
