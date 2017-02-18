@@ -218,7 +218,7 @@ trait SiteTransaction {
 
   def insertPagePath(pagePath: PagePath): Unit
   def insertPagePath(pagePath: PagePathWithId): Unit =
-    insertPagePath(PagePath(tenantId = this.siteId, folder = pagePath.folder,
+    insertPagePath(PagePath(siteId = this.siteId, folder = pagePath.folder,
       pageId = Some(pagePath.pageId), showId = pagePath.showId, pageSlug = pagePath.slug))
 
   def loadPagePath(pageId: PageId): Option[PagePath]

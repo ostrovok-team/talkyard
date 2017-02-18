@@ -46,7 +46,8 @@ package object core {
   type CategoryId = Int
   val NoCategoryId = 0
 
-  type SiteId = String
+  type SiteId = Int
+  val NoSiteId = 0
 
   type SiteVersion = Int
 
@@ -207,9 +208,10 @@ package object core {
   val OneDayInMillis: Long = MillisPerDay
   val OneWeekInMillis: Long = 7 * MillisPerDay
 
-  val Megabyte = 1000 * 1000
+  val Megabyte: Int = 1000 * 1000
   val Megabytes = Megabyte
 
+  def MaxTestSiteId = Site.MaxTestSiteId
   def FirstSiteId = Site.FirstSiteId
   val NoUserId = 0
   def SystemUserId = User.SystemUserId
