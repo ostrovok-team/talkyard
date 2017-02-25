@@ -40,7 +40,7 @@
 // not using AMD/CommonJS, see https://github.com/borisyankov/DefinitelyTyped/issues/3075.
 
 const ChangeEvent = 'ChangeEvent';
-const htmlElem = $h.byTag1('html');
+const htmlElem = document.getElementsByTagName('html')[0];
 
 export const ReactStore: any = new EventEmitter2();
 
@@ -337,7 +337,7 @@ ReactStore.initialize = function() {
 
   // Init page overlay, shown if sidebars open.
   debiki.v0.util.addZoomOrResizeListener(updateShallSidebarsOverlayPage);
-  const overlay = $h.id('theSidebarPageOverlay');
+  const overlay = $byId('theSidebarPageOverlay');
   if (overlay) overlay.addEventListener('click', function() {
     setWatchbarOpen(false);
     setContextbarOpen(false);
@@ -715,7 +715,7 @@ function summarizeReplies() {
       return;
 
     // offsetHeight = outer height, no margin
-    const isTooHigh = () => $h.id('post-' + post.nr).offsetHeight > 150;
+    const isTooHigh = () => $byId('post-' + post.nr).offsetHeight > 150;
     if (post.childIdsSorted.length || isTooHigh()) {
       post.isTreeCollapsed = 'Truncated';
       post.summarize = true;
@@ -781,7 +781,7 @@ function showPostNr(postNr: PostNr, showChildrenToo?: boolean) {
     post = store.postsByNr[post.parentNr];
   }
   setTimeout(() => {
-    debiki.internal.showAndHighlightPost($h.id('post-' + postNr));
+    debiki.internal.showAndHighlightPost($byId('post-' + postNr));
     page.Hacks.processPosts();
   }, 1);
 }

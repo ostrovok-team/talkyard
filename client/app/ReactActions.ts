@@ -436,12 +436,12 @@ export function loadAndScrollToAnyUrlAnchorPost() {
     // No #post-X in the URL.
     return;
   }
-  const $post = debiki.internal.findPost$(anchorPostNr);
-  if (!$post.length) {
+  const postElem = $byId('post-' + anchorPostNr);
+  if (!postElem) {
     loadAndShowPost(anchorPostNr, undefined, () => markAnyNotificationAsSeen(anchorPostNr));
   }
   else {
-    debiki.internal.showAndHighlightPost($post);
+    debiki.internal.showAndHighlightPost(postElem);
     markAnyNotificationAsSeen(anchorPostNr);
   }
 }

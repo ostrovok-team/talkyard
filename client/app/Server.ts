@@ -26,21 +26,15 @@
 // Not important to fix right now — everything works fine anyway.
 
 //------------------------------------------------------------------------------
-   module debiki2.Server {
+   namespace debiki2.Server {
 //------------------------------------------------------------------------------
 
-var d: any = { i: debiki.internal, u: debiki.v0.util };
-var $: JQueryStatic = d.i.$;
+const d: any = { i: debiki.internal, u: debiki.v0.util };
 
 // In embedded comments <iframes>, we cannot use relative paths.
-var origin = d.i.serverOrigin;
+const origin = d.i.serverOrigin;
 
-enum HttpStatusCode {
-  Forbidden = 403,
-}
-
-var BadNameOrPasswordErrorCode = 'EsE403BPWD';
-declare var theStore: Store; // for assertions only
+const BadNameOrPasswordErrorCode = 'EsE403BPWD';
 
 
 interface OngoingRequest {
@@ -50,7 +44,7 @@ interface OngoingRequest {
 interface RequestData {
   data: any;
   success: (response: any) => void;
-  error?: (jqXhr: any, textStatus?: string, errorThrown?: string) => any;
+  error?: (xhr: XMLHttpRequest) => any;
   showLoadingOverlay?: boolean;
 }
 
@@ -60,74 +54,81 @@ function postJson(urlPath: string, requestData: RequestData) {
   if (requestData.showLoadingOverlay !== false) {
     showLoadingOverlay();
   }
-  postJsonImpl({
-    url: url,
-    data: requestData.data,
-    success: requestData.success,
-    error: (jqXhr: any, textStatus: string, errorThrown: string) => {
-      if (requestData.error) {
-        const perhapsIgnoreError = requestData.error(jqXhr, textStatus, errorThrown);
-        if (perhapsIgnoreError === IgnoreThisError)
-          return;
-      }
-      console.error('Error calling ' + urlPath + ': ' + JSON.stringify(jqXhr));
-      pagedialogs.getServerErrorDialog().open(jqXhr);
-    }
-  });
-}
 
-
-function postJsonImpl(options) {
   let timeoutHandle = setTimeout(function() {
     showServerJustStartedMessage();
     timeoutHandle = setTimeout(showErrorIfNotComplete, 23 * 1000);
   }, 7 * 1000);
 
-  // Interpret the response using the data type specified by the server. Don't
-  // specify 'json' because then jQuery complains if the server sends back nothing
-  // (an empty string isn't ok JSON).
-  return $.ajax({
-    url: options.url,
-    type: 'POST',
-    data: JSON.stringify(options.data),
-    contentType: 'application/json; charset=utf-8',
-    headers: { 'X-XSRF-TOKEN': getSetCookie('XSRF-TOKEN') },
-    error: options.error,
-    success: options.success,
-    complete: function() {
-      clearTimeout(timeoutHandle);
-      if (options.showLoadingOverlay !== false) {
-        removeLoadingOverlay();
-      }
+  function removeTimeoutAndOverlay() {
+    clearTimeout(timeoutHandle);
+    if (requestData.showLoadingOverlay !== false) {
+      removeLoadingOverlay();
+    }
+  }
+
+  Bliss.fetch(url, {
+    method: 'POST',
+    data: JSON.stringify(requestData.data),
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'X-XSRF-TOKEN': getSetCookie('XSRF-TOKEN'),
+    }
+  }).then(xhr => {
+    removeTimeoutAndOverlay();
+    // Remove any AngularJS safe json prefix. [5LKW02D4]
+    let response = xhr.response.replace(/^\)]}',\n/, '');
+    response = response ? JSON.parse(response) : null;
+    requestData.success(response);
+  }).catch(errorObj => {
+    removeTimeoutAndOverlay();
+    const errorAsJson = JSON.stringify(errorObj);
+    const details = errorObj.xhr ? errorObj.xhr.responseText : errorObj.stack;
+    // error: (jqXhr: any, textStatus: string, errorThrown: string) => {
+    if (requestData.error) {
+      const perhapsIgnoreError = requestData.error(errorObj.xhr);
+      if (perhapsIgnoreError === IgnoreThisError)
+        return;
+    }
+    console.error(`Error calling ${urlPath}: ${errorAsJson}, details: ${details}`);
+    if (errorObj.xhr) {
+      pagedialogs.getServerErrorDialog().open(errorObj.xhr);
+    }
+    else {
+      pagedialogs.getServerErrorDialog().openForBrowserError(
+          errorObj.stack || 'Unknown error [EdEUNK1]');
     }
   });
 }
 
 
 function showLoadingOverlay() {
-  $('body').append(
-    $.parseHTML('<div id="theLoadingOverlay"><div class="icon-loading"></div></div>'));
+  document.body.appendChild(
+      $h.parseHtml('<div id="theLoadingOverlay"><div class="icon-loading"></div></div>')[0]);
 }
 
 
 function showServerJustStartedMessage() {
-  const messageText = "Sorry that this takes long. Perhaps the server was " +
-    "just started, and is slow right now.";
-  const messageElem = $($.parseHTML('<div id="theServerJustStarted"></div>')).text(messageText);
-  $('#theLoadingOverlay').addClass('esLoadingSlow').append(messageElem);
+  const overlayElem = $byId('theLoadingOverlay');
+  if (!overlayElem) return;
+  const messageElem = $h.parseHtml('<div id="theServerJustStarted"></div>')[0];
+  messageElem.textContent = "Sorry that this takes long. Perhaps the server was " +
+      "just started, and is slow right now.";
+  $h.addClasses(overlayElem, 'esLoadingSlow');
+  overlayElem.appendChild(messageElem);
 }
 
 
 function removeLoadingOverlay() {
-  $('#theLoadingOverlay').remove();
+  $byId('theLoadingOverlay').remove();
 }
 
 
 function showErrorIfNotComplete() {
-  const complete = !$('#theLoadingOverlay').length;
-  if (!complete) {
+  const stillLoading = !!$byId('theLoadingOverlay');
+  if (stillLoading) {
     // Remove the spinner before showing the dialog.
-    $('#theLoadingOverlay .icon-loading').remove();
+    Bliss('#theLoadingOverlay .icon-loading').remove();
     alert("Error: Server too slow [EsE5YK0W24]");
     removeLoadingOverlay();
   }
@@ -181,13 +182,19 @@ function get(uri: string, options, success?: (response, xhr?: JQueryXHR) => void
     success(response, xhr);
   }).catch(errorObj => {
     const errorAsJson = JSON.stringify(errorObj);
-    const text = errorObj.xhr ? errorObj.xhr.responseText : undefined;
+    const details = errorObj.xhr ? errorObj.xhr.responseText : errorObj.stack;
     if (options.suppressErrorDialog) {
-      console.log(`As expected, error calling ${uri}: ${errorAsJson}, xhr.responseText: ${text}`);
+      console.log(`As expected, error calling ${uri}: ${errorAsJson}, details: ${details}`);
     }
     else {
-      console.error(`Error calling ${uri}: ${errorAsJson}, xhr.responseText: ${text}`);
-      pagedialogs.getServerErrorDialog().open(errorObj.xhr);
+      console.error(`Error calling ${uri}: ${errorAsJson}, details: ${details}`);
+      if (errorObj.xhr) {
+        pagedialogs.getServerErrorDialog().open(errorObj.xhr);
+      }
+      else {
+        pagedialogs.getServerErrorDialog().openForBrowserError(
+          errorObj.stack || 'Unknown error [EdEUNK2]');
+      }
     }
     error && error();
   });
@@ -201,9 +208,9 @@ function get(uri: string, options, success?: (response, xhr?: JQueryXHR) => void
 
 
 function appendE2eAndForbiddenPassword(url: string) {
-  var newUrl = url;
-  var e2eTestPassword = anyE2eTestPassword();
-  var forbiddenPassword = anyForbiddenPassword();
+  let newUrl = url;
+  const e2eTestPassword = anyE2eTestPassword();
+  const forbiddenPassword = anyForbiddenPassword();
   if (e2eTestPassword || forbiddenPassword) {
     if (newUrl.indexOf('?') === -1) newUrl += '?';
     if (e2eTestPassword) newUrl += '&e2eTestPassword=' + e2eTestPassword;
@@ -235,7 +242,7 @@ export function loadMoreScriptsBundle(callback) {
     setTimeout(() => moreScriptsPromise.then(callback), 0);
     return;
   }
-  moreScriptsPromise = new Promise(function(resolve, reject) {
+  moreScriptsPromise = new Promise(function(resolve) {
     window['yepnope']({
       both: [d.i.assetUrlPrefix + 'more-bundle.' + d.i.minMaxJs],
       complete: () => {
@@ -255,7 +262,7 @@ export function loadStaffScriptsBundle(callback) {
     setTimeout(() => staffScriptsPromise.then(callback), 0);
     return;
   }
-  staffScriptsPromise = new Promise(function(resolve, reject) {
+  staffScriptsPromise = new Promise(function(resolve) {
     // The staff scripts bundle requires both more-bundle.js and editor-bundle.js (to render
     // previews of CommonMark comments [7PKEW24]). This'll load them both.
     loadEditorAndMoreBundles(() => {
@@ -284,7 +291,7 @@ export function loadEditorAndMoreBundlesGetDeferred(): Promise<void> {
     debug: debiki.isDev,
   };
 
-  editorScriptsPromise = new Promise(function(resolve, reject) {
+  editorScriptsPromise = new Promise(function(resolve) {
     // The editor scripts bundle requires more-bundle.js.
     loadMoreScriptsBundle(() => {
       window['yepnope']({
@@ -302,10 +309,9 @@ export function loadEditorAndMoreBundlesGetDeferred(): Promise<void> {
 export function createSite(emailAddress: string, localHostname: string,
     anyEmbeddingSiteAddress: string, organizationName: string,
     pricePlan: PricePlan, doneCallback: (string) => void) {
-  var url = '/-/create-site';
-  var isTestSite = window.location.search.indexOf('testSiteOkDelete=true') !== -1 ||
+  const isTestSite = window.location.search.indexOf('testSiteOkDelete=true') !== -1 ||
     window.location.pathname === '/-/create-test-site';
-  postJson(url, {
+  postJson('/-/create-site', {
     data: {
       acceptTermsAndPrivacy: true,
       emailAddress: emailAddress,
@@ -365,7 +371,7 @@ export function loadSpecialContent(rootPageId: string, contentId: string,
 
 
 export function saveSpecialContent(specialContent: SpecialContent, success: () => void) {
-  var data: any = {
+  const data: any = {
     rootPageId: specialContent.rootPageId,
     contentId: specialContent.contentId,
     useDefaultText: specialContent.anyCustomText === specialContent.defaultText
@@ -406,8 +412,8 @@ export function createPasswordUser(data, success: (response) => void,
 
 export function loginWithPassword(emailOrUsername: string, password: string, success: () => void,
     denied: () => void) {
-  function onError(jqXhr: any, textStatus?: string, errorThrown?: string) {
-    if (jqXhr.responseText.indexOf(BadNameOrPasswordErrorCode) !== -1) {
+  function onError(xhr?: XMLHttpRequest) {
+    if (xhr && xhr.responseText.indexOf(BadNameOrPasswordErrorCode) >= 0) {
       denied();
       return IgnoreThisError;
     }
@@ -434,7 +440,7 @@ export function logout(success: () => void) {
 
 export function makeImpersionateUserAtOtherSiteUrl(siteId: SiteId, userId: UserId,
       success: (url: string) => void) {
-  var url = '/-/make-impersonate-other-site-url?siteId=' + siteId + '&userId=' + userId;
+  const url = '/-/make-impersonate-other-site-url?siteId=' + siteId + '&userId=' + userId;
   postJsonSuccess(url, success, null);
 }
 
@@ -547,7 +553,7 @@ export function lockThreatLevel(userId: UserId, threatLevel: ThreatLevel, succes
 
 export function savePageNoftLevel(newNotfLevel) {
   postJsonSuccess('/-/set-page-notf-level', () => {
-    var me: Myself = ReactStore.allData().me;
+    const me: Myself = ReactStore.allData().me;
     me.rolePageSettings = { notfLevel: newNotfLevel };  // [redux] modifying state in place
     ReactActions.patchTheStore({ me: me });
   }, {
@@ -564,7 +570,7 @@ export function loadMyself(callback: (user: any) => void) {
 
 export function loadNotifications(userId: UserId, upToWhenMs: number,
       success: (notfs: Notification[]) => void, error: () => void) {
-  var query = '?userId=' + userId + '&upToWhenMs=' + upToWhenMs;
+  const query = '?userId=' + userId + '&upToWhenMs=' + upToWhenMs;
   get('/-/load-notifications' + query, success, error);
 }
 
@@ -576,8 +582,8 @@ export function markNotificationAsSeen(notfId: number, success?: () => void, err
 
 export function setTagNotfLevel(tagLabel: TagLabel, newNotfLevel: NotfLevel) {
   postJsonSuccess('/-/set-tag-notf-level', () => {
-    var store: Store = ReactStore.allData();
-    var newLevels = _.clone(store.tagsStuff.myTagNotfLevels);
+    const store: Store = ReactStore.allData();
+    const newLevels = _.clone(store.tagsStuff.myTagNotfLevels);
     newLevels[tagLabel] = newNotfLevel;
     ReactActions.patchTheStore({
       tagsStuff: { myTagNotfLevels: newLevels }
@@ -629,7 +635,7 @@ export function createForum(title: string, folder: string, success: (urlPath: st
 
 export function loadForumCategoriesTopics(forumPageId: string, topicFilter: string,
       success: (categories: Category[]) => void) {
-  var url = '/-/list-categories-topics?forumId=' + forumPageId;
+  let url = '/-/list-categories-topics?forumId=' + forumPageId;
   if (topicFilter) {
     url += '&filter=' + topicFilter;
   }
@@ -639,7 +645,7 @@ export function loadForumCategoriesTopics(forumPageId: string, topicFilter: stri
 
 export function loadForumTopics(categoryId: string, orderOffset: OrderOffset,
       doneCallback: (topics: Topic[]) => void) {
-  var url = '/-/list-topics?categoryId=' + categoryId + '&' +
+  const url = '/-/list-topics?categoryId=' + categoryId + '&' +
       ServerApi.makeForumTopicsQueryParams(orderOffset);
   get(url, (response: any) => {
     ReactActions.patchTheStore({ usersBrief: response.users });
@@ -650,7 +656,7 @@ export function loadForumTopics(categoryId: string, orderOffset: OrderOffset,
 
 export function loadTopicsByUser(userId: UserId,
         doneCallback: (topics: Topic[]) => void) {
-  var url = `/-/list-topics-by-user?userId=${userId}`;
+  const url = `/-/list-topics-by-user?userId=${userId}`;
   get(url, (response: any) => {
     ReactActions.patchTheStore({ usersBrief: response.users });
     doneCallback(response.topics);
@@ -659,7 +665,7 @@ export function loadTopicsByUser(userId: UserId,
 
 
 export function listAllUsernames(prefix: string, doneCallback: (usernames: BriefUser) => void) {
-  var url = '/-/list-all-users?usernamePrefix='+ prefix;
+  const url = '/-/list-all-users?usernamePrefix='+ prefix;
   get(url, doneCallback);
 }
 
@@ -681,7 +687,7 @@ export function loadDraftAndGuidelines(writingWhat: WritingWhat, categoryId: num
     success(null);
     return;
   }
-  var categoryParam = categoryId ? '&categoryId=' + categoryId : '';
+  const categoryParam = categoryId ? '&categoryId=' + categoryId : '';
   get('/-/load-draft-and-guidelines?writingWhat=' + writingWhat + categoryParam +
        '&pageRole=' + pageRole, (response) => {
     success(response.guidelinesSafeHtml);
@@ -897,8 +903,7 @@ export function loadPostByNr(pageId: PageId, postNr: PostNr, success: (patch: St
 }
 
 
-export function loadPostsByAuthor(authorId: UserId, success: (response) => void,
-    error?: () => void) {
+export function loadPostsByAuthor(authorId: UserId, success: (response) => void) {
   get(`/-/list-posts?authorId=${authorId}`, success);
 }
 
@@ -931,8 +936,8 @@ export function deletePostInPage(postNr: number, repliesToo: boolean,
 }
 
 
-export function editPostSettings(postId: PostId, settings: PostSettings, success: () => void) {
-  var data = _.assign({ postId: postId }, settings);
+export function editPostSettings(postId: PostId, settings: PostSettings) {
+  const data = _.assign({ postId: postId }, settings);
   postJsonSuccess('/-/edit-post-settings', ReactActions.patchTheStore, data);
 }
 
@@ -977,7 +982,7 @@ export function movePost(postId: PostId, newHost: SiteId, newPageId: PageId,
       newParentNr: PostNr, success: (post: Post) => void) {
   postJsonSuccess('/-/move-post', (patch: StorePatch) => {
     ReactActions.patchTheStore(patch);
-    var post = _.values(patch.postsByPageId)[0][0];
+    const post = _.values(patch.postsByPageId)[0][0];
     dieIf(!post, 'EsE7YKGW2');
     success(post);
   }, {
@@ -1085,7 +1090,7 @@ export function trackReadingProgress(lastViewedPostNr: PostNr, secondsReading: n
       // 3. There's no way to add a xsrf header — so include a xsrf token in the request body.
       let xsrfTokenLine = getSetCookie('XSRF-TOKEN') + '\n';  // [7GKW20TD]
       let json = JSON.stringify(data);
-      let wasQueued = (<any> navigator).sendBeacon(url + '-text', xsrfTokenLine + json);
+      (<any> navigator).sendBeacon(url + '-text', xsrfTokenLine + json);
     }
   }
   else {
@@ -1107,7 +1112,7 @@ let longPollingState = {
 export function sendLongPollingRequest(userId: UserId, success: (event: any) => void,
       error: () => void) {
   dieIf(longPollingState.ongoingRequest, "Already long-polling the server [EsE7KYUX2]");
-  var options: any = {
+  const options: any = {
     dataType: 'json',
     // Firefox always calls the error callback if a long polling request is ongoing when
     // navigating away / closing the tab. So the dialog would be visible for 0.1 confusing seconds.
@@ -1122,7 +1127,7 @@ export function sendLongPollingRequest(userId: UserId, success: (event: any) => 
   // This is an easy-to-guess channel id, but in order to subscribe, the session cookie
   // must also be included in the request. So this should be safe.
   // The site id is included, because users at different sites can have the same id. [7YGK082]
-  var channelId = debiki.siteId + '-' + userId;
+  const channelId = debiki.siteId + '-' + userId;
   longPollingState.ongoingRequest =
       get('/-/pubsub/subscribe/' + channelId, options, (response, xhr) => {
         longPollingState.ongoingRequest = null;
@@ -1170,7 +1175,7 @@ export function updateSites(sites: SASite[]) {
 }
 
 
-var pendingErrors = [];
+let pendingErrors = [];
 
 export function logError(errorMessage: string) {
   pendingErrors.push(errorMessage);
@@ -1178,7 +1183,7 @@ export function logError(errorMessage: string) {
 }
 
 
-var postPendingErrorsThrottled = _.throttle(function() {
+const postPendingErrorsThrottled = _.throttle(function() {
   if (!pendingErrors.length)
     return;
   postJsonSuccess('/-/log-browser-errors', () => {}, pendingErrors, null, { showLoadingOverlay: false });

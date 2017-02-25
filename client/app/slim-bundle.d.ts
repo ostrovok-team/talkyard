@@ -11,6 +11,10 @@ declare function getSetCookie(cookieName: string, value?: string, options?: any)
 
 declare namespace debiki2 {
 
+  function $byId(elemId: string): HTMLElement;
+  function $$byClass(className: string): HTMLCollectionOf<Element>;
+  const $h: any;
+
   // ReactRouter:
   var Route;
   var IndexRoute;
