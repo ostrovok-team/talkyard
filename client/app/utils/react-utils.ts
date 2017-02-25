@@ -24,9 +24,6 @@
 //------------------------------------------------------------------------------
 
 
-export var Link = reactCreateFactory(ReactRouter.Link);
-
-
 export function createComponent(componentDefinition) { // oops should obviously be named createFactory
   if (isServerSide()) {
     // The mere presence of these functions cause an unknown error when rendering
@@ -44,15 +41,17 @@ export function createClassAndFactory(componentDefinition) { // rename createCom
 }
 
 
-export var NavLink = createComponent({
+export const NavLink = createComponent({
   contextTypes: {
     router: React.PropTypes.object
   },
 
   render: function () {
-    var isActive = this.context.router.isActive(this.props.to, true);
-    var className = isActive ? 'active ' : '';
-    if (this.props.listItemClassName) className += this.props.listItemClassName;
+    const isActive = this.context.router.isActive(this.props.to, true);
+    let className = isActive ? 'active ' : '';
+    if (this.props.listItemClassName) {
+      className += this.props.listItemClassName;
+    }
 
     return (
       r.li({ className: className },
