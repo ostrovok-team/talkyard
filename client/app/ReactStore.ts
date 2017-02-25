@@ -38,10 +38,10 @@
 // DefinitelyTyped has defined EventEmitter2 in the wrong module? Unusable when
 // not using AMD/CommonJS, see https://github.com/borisyankov/DefinitelyTyped/issues/3075.
 
-var ChangeEvent = 'ChangeEvent';
-var $html = $('html');
+const ChangeEvent = 'ChangeEvent';
+const htmlElem = $h.byTag1('html');
 
-export var ReactStore: any = new EventEmitter2();
+export const ReactStore: any = new EventEmitter2();
 
 // Avoid a harmless "possible EventEmitter memory leak detected" warning.
 ReactStore.setMaxListeners(20);
@@ -51,7 +51,7 @@ ReactStore.setMaxListeners(20);
 // because the server serves cached HTML with no user specific data. Later on,
 // we'll insert user specific data into the store, and re-render. See
 // ReactStore.activateMyself().
-var store: Store = debiki.pageDataFromServer;
+const store: Store = debiki.pageDataFromServer;
 window['theStore'] = store; // simplifies inspection in Dev Tools
 
 store.postsToUpdate = {};
@@ -64,7 +64,7 @@ store.user = store.me; // try to remove
 
 
 ReactDispatcher.register(function(payload) {
-  var action = payload.action;
+  const action = payload.action;
   switch (action.actionType) {
 
     case ReactActions.actionTypes.NewMyself:
@@ -83,7 +83,7 @@ ReactDispatcher.register(function(payload) {
         location.assign('/');
       }
 
-      $html.removeClass('dw-is-admin, dw-is-staff, dw-is-authenticated');
+      $h.removeClasses(htmlElem, 'dw-is-admin dw-is-staff dw-is-authenticated');
 
       if (store.userIdsOnline) delete store.userIdsOnline[store.me.id];
       store.numOnlineStrangers += 1;
@@ -160,32 +160,36 @@ ReactDispatcher.register(function(payload) {
 
     case ReactActions.actionTypes.EditTitleAndSettings:
       if (action.htmlTagCssClasses) {
-        $html.removeClass(store.pageHtmlTagCssClasses);
-        $html.addClass(action.htmlTagCssClasses);
+        $h.removeClasses(htmlElem, store.pageHtmlTagCssClasses);
+        $h.addClasses(htmlElem, action.htmlTagCssClasses);
         store.pageHtmlTagCssClasses = action.htmlTagCssClasses;
       }
       store.pageHtmlHeadTitle = firstDefinedOf(action.htmlHeadTitle, store.pageHtmlHeadTitle);
       store.pageHtmlHeadDescription =
         firstDefinedOf(action.htmlHeadDescription, store.pageHtmlHeadDescription);
       store.ancestorsRootFirst = action.newAncestorsRootFirst;
-      var parent: Ancestor = <Ancestor> _.last(action.newAncestorsRootFirst);
+      const parent: Ancestor = <Ancestor> _.last(action.newAncestorsRootFirst);
       store.categoryId = parent ? parent.categoryId : null;
-      var was2dTree = store.horizontalLayout;
+      const was2dTree = store.horizontalLayout;
       store.pageRole = action.newPageRole || store.pageRole;
       store.horizontalLayout = action.newPageRole === PageRole.MindMap || store.is2dTreeDefault;
-      var is2dTree = store.horizontalLayout;
+      const is2dTree = store.horizontalLayout;
       updatePost(action.newTitlePost);
       if (was2dTree !== is2dTree) {
         // Rerender the page with the new layout.
         store.quickUpdate = false;
         if (is2dTree) {
-          $html.removeClass('dw-vt').addClass('dw-hz');
+          $h.removeClasses(htmlElem, 'dw-vt');
+          $h.addClasses(htmlElem, 'dw-hz');
           debiki.internal.layoutThreads();
           debiki2.utils.onMouseDetected(debiki.internal.initUtterscrollAndTips);
         }
         else {
-          $html.removeClass('dw-hz').addClass('dw-vt');
-          $('.dw-t.dw-depth-1').css('width', 'auto'); // 2d columns had a certain width
+          $h.removeClasses(htmlElem, 'dw-hz');
+          $h.addClasses(htmlElem, 'dw-vt');
+          $$('.dw-t.dw-depth-1').forEach((elem: Element) => {
+            Bliss.style(elem, { width: 'auto' }); // 2d columns had a certain width
+          });
         }
         debiki2.removeSidebar();
         setTimeout(debiki2.createSidebar, 1);
@@ -195,8 +199,8 @@ ReactDispatcher.register(function(payload) {
     case ReactActions.actionTypes.ShowForumIntro:
       store.hideForumIntro = !action.visible;
       putInLocalStorage('hideForumIntro', action.visible ? 'false' : 'true');
-      if (store.hideForumIntro) $html.addClass('dw-hide-forum-intro');
-      else $html.removeClass('dw-hide-forum-intro');
+      if (store.hideForumIntro) $h.addClasses(htmlElem, 'dw-hide-forum-intro');
+      else $h.removeClasses(htmlElem, 'dw-hide-forum-intro');
       break;
 
     case ReactActions.actionTypes.UpdatePost:
@@ -256,8 +260,8 @@ ReactDispatcher.register(function(payload) {
 
     case ReactActions.actionTypes.HideHelpMessage:
       dieIf(!store.me, 'EsE8UGM5');
-      var messageId = action.message ? action.message.id : action.messageId;
-      var version = action.message ? action.message.version : 1;
+      const messageId = action.message ? action.message.id : action.messageId;
+      const version = action.message ? action.message.version : 1;
       store.me.closedHelpMessages[messageId] = version;
       putInLocalStorage('closedHelpMessages', store.me.closedHelpMessages);
       break;
@@ -325,7 +329,7 @@ ReactDispatcher.register(function(payload) {
 ReactStore.initialize = function() {
   findAnyAcceptedAnswerPostNr();
   store.usersByIdBrief = store.usersByIdBrief || {};
-  let impCookie = $['cookie'](ImpersonationCookieName);
+  let impCookie = getSetCookie(ImpersonationCookieName);
   if (impCookie) {
     // This 'VAO' string constant, server side: [8AXFC0J2]
     store.isViewingAs = impCookie.indexOf('.VAO.') >= 0;
@@ -334,7 +338,8 @@ ReactStore.initialize = function() {
 
   // Init page overlay, shown if sidebars open.
   debiki.v0.util.addZoomOrResizeListener(updateShallSidebarsOverlayPage);
-  $('#theSidebarPageOverlay').click(function() {
+  const overlay = $h.id('theSidebarPageOverlay');
+  if (overlay) overlay.addEventListener('click', function() {
     setWatchbarOpen(false);
     setContextbarOpen(false);
     ReactStore.emitChange();
@@ -374,7 +379,7 @@ ReactStore.activateMyself = function(anyNewMe: Myself) {
   store.now = new Date().getTime();
 
   setTimeout(function() {
-    $html.addClass('e2eMyDataAdded');
+    $h.addClasses(htmlElem, 'e2eMyDataAdded');
   }, 1);
 
   const newMe = anyNewMe;
@@ -387,13 +392,13 @@ ReactStore.activateMyself = function(anyNewMe: Myself) {
   }
 
   if (newMe.isAdmin) {
-    $html.addClass('dw-is-admin, dw-is-staff');
+    $h.addClasses(htmlElem, 'dw-is-admin dw-is-staff');
   }
   if (newMe.isModerator) {
-    $html.addClass('dw-is-staff');
+    $h.addClasses(htmlElem, 'dw-is-staff');
   }
   if (newMe.isAuthenticated) {
-    $html.addClass('dw-is-authenticated');
+    $h.addClasses(htmlElem, 'dw-is-authenticated');
   }
 
   // Add Everyone's permissions to newMe's permissions (Everyone's permissions aren't included
@@ -720,7 +725,8 @@ function summarizeReplies() {
     if (post.nr === BodyNr || post.nr === TitleNr || post.parentNr === BodyNr)
       return;
 
-    var isTooHigh = () => $('#post-' + post.nr).height() > 150;
+    // offsetHeight = outer height, no margin
+    const isTooHigh = () => $h.id('post-' + post.nr).offsetHeight > 150;
     if (post.childIdsSorted.length || isTooHigh()) {
       post.isTreeCollapsed = 'Truncated';
       post.summarize = true;
@@ -731,9 +737,9 @@ function summarizeReplies() {
 
 
 function makeSummaryFor(post: Post, maxLength?: number): string {
-  var text = $(post.sanitizedHtml).text();
-  var firstParagraph = text.split('\n');
-  var summary = firstParagraph[0] || '';
+  const text = $h.wrapParseHtml(post.sanitizedHtml).textContent;
+  const firstParagraph = text.split('\n');
+  let summary = firstParagraph[0] || '';
   if (summary.length > maxLength || 200) {
     summary = summary.substr(0, maxLength || 140);
   }
@@ -743,12 +749,12 @@ function makeSummaryFor(post: Post, maxLength?: number): string {
 
 function unsquashTrees(postNr: number) {
   // Mark postNr and its nearest subsequent siblings as not squashed.
-  var post: Post = store.postsByNr[postNr];
-  var parent = store.postsByNr[post.parentNr];
-  var numLeftToUnsquash = -1;
-  for (var i = 0; i < parent.childIdsSorted.length; ++i) {
-    var childId = parent.childIdsSorted[i];
-    var child: Post = store.postsByNr[childId];
+  const post: Post = store.postsByNr[postNr];
+  const parent = store.postsByNr[post.parentNr];
+  let numLeftToUnsquash = -1;
+  for (let i = 0; i < parent.childIdsSorted.length; ++i) {
+    const childId = parent.childIdsSorted[i];
+    const child: Post = store.postsByNr[childId];
     if (!child)
       continue; // deleted
     if (child.nr == postNr) {
@@ -786,7 +792,7 @@ function showPostNr(postNr: PostNr, showChildrenToo?: boolean) {
     post = store.postsByNr[post.parentNr];
   }
   setTimeout(() => {
-    debiki.internal.showAndHighlightPost($('#post-' + postNr));
+    debiki.internal.showAndHighlightPost($h.id('post-' + postNr));
     page.Hacks.processPosts();
   }, 1);
 }
@@ -1292,16 +1298,16 @@ function stopGifsPlayOnClick() {
 
 
 function setWatchbarOpen(open: boolean) {
-  if (open) $html.addClass('es-watchbar-open');
-  else $html.removeClass('es-watchbar-open');
+  if (open) $h.addClasses(htmlElem, 'es-watchbar-open');
+  else $h.removeClasses(htmlElem, 'es-watchbar-open');
   putInLocalStorage('isWatchbarOpen', open);
   store.isWatchbarOpen = open;
 }
 
 
 function setContextbarOpen(open: boolean) {
-  if (open) $html.addClass('es-pagebar-open');
-  else $html.removeClass('es-pagebar-open');
+  if (open) $h.addClasses(htmlElem, 'es-pagebar-open');
+  else $h.removeClasses(htmlElem, 'es-pagebar-open');
   putInLocalStorage('isContextbarOpen', open);
   store.isContextbarOpen = open;
 }
@@ -1310,12 +1316,12 @@ function setContextbarOpen(open: boolean) {
 function updateShallSidebarsOverlayPage() {
   if (window.innerWidth < 780) { // dupl constant, see debikiScriptsHead.scala.html [5YKT42]
     if (store.shallSidebarsOverlayPage) return;
-    $('html').addClass('esSidebarsOverlayPage');
+    $h.addClasses(htmlElem, 'esSidebarsOverlayPage');
     store.shallSidebarsOverlayPage = true;
   }
   else {
     if (!store.shallSidebarsOverlayPage) return;
-    $('html').removeClass('esSidebarsOverlayPage');
+    $h.removeClasses(htmlElem, 'esSidebarsOverlayPage');
     store.shallSidebarsOverlayPage = false;
   }
   ReactStore.emitChange();

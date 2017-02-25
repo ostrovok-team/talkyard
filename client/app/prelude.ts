@@ -19,16 +19,26 @@
 /// <reference path="model.ts" />
 /// <reference path="constants.ts" />
 
-var React = window['React'];
-var ReactDOM = window['ReactDOM'];
-var ReactDOMServer = window['ReactDOMServer'];
-var ReactCSSTransitionGroup = isServerSide() ? null :
+// Don't <reference>, causes lots of TS errors.
+declare const Bliss: any;
+declare function $$(selector: string): Element[];
+
+// Defined in client/third-party/smoothscroll-tiny.js.
+declare function smoothScroll(elem: Element, x: number, y: number);
+
+// Defined in client/third-party/get-set-cookie.js.
+declare function getSetCookie(cookieName: string, value?: string, options?: any): string;
+
+const React = window['React'];
+const ReactDOM = window['ReactDOM'];
+const ReactDOMServer = window['ReactDOMServer'];
+const ReactCSSTransitionGroup = isServerSide() ? null :
   reactCreateFactory(React.addons.CSSTransitionGroup);
-var ReactRouter = window['ReactRouter'];
-var Router = reactCreateFactory(ReactRouter.Router);
+const ReactRouter = window['ReactRouter'];
+const Router = reactCreateFactory(ReactRouter.Router);
 
 // backw compat, later, do once per file instead (don't want a global 'r').
-var r = React.DOM;
+const r = React.DOM;
 
 // Let this be a function, not a variable, so it can be used directly.
 // (Otherwise there's a server side reactCreateFactory-not-yet-inited error)
@@ -58,18 +68,18 @@ function doNextFrameOrNow(something: () => void) {
  * Basic stuff needed by essentially all modules / files.
  */
 //------------------------------------------------------------------------------
-   module debiki2 {
+   namespace debiki2 {
 //------------------------------------------------------------------------------
 
 // E2e tests won't compile without this. Why not, React.js already included above? Oh well.
 //declare var React;
 // declare var ReactRouter;
 
-export var Link = reactCreateFactory(ReactRouter.Link);
+export const Link = reactCreateFactory(ReactRouter.Link);
 
 
 export function die(errorMessage: string) {
-  var dialogs: any = debiki2['pagedialogs'];
+  const dialogs: any = debiki2['pagedialogs'];
   // I don't remember why I added setTimeout() but there was a good reason.
   setTimeout(() => {
     debiki2['Server'].logError(errorMessage);
@@ -120,7 +130,7 @@ export function anyForbiddenPassword() {
 }
 
 
-export var findDOMNode = isServerSide() ? null : window['ReactDOM'].findDOMNode;
+export const findDOMNode = isServerSide() ? null : window['ReactDOM'].findDOMNode;
 dieIf(!isServerSide() && !findDOMNode, 'EsE6UMGY2');
 
 
@@ -131,7 +141,7 @@ export function hasErrorCode(request: HttpRequest, statusCode: string) {
 
 export function toId(x: number | { id: number } | { uniqueId: number }): number {
   if (_.isNumber(x)) return <number> x;
-  var nr = x['id'];
+  const nr = x['id'];
   if (_.isNumber(nr)) return <number> nr;
   return x['uniqueId'];
 }
@@ -204,7 +214,35 @@ export function deleteById(itemsWithId: any[], idToDelete) {
 }
 
 
+export const $h = {
+  id: function(elemId) {
+    return document.getElementById(elemId);
+  },
+
+  byTag1: function(tagName: string): Element {
+    return document.getElementsByTagName(tagName)[0];
+  },
+
+  // classesString should be a space and/or comma separated class name string.
+  addClasses: function(elem: Element, classesString: string) {
+    const classes = classesString.replace(/ *, */g, ',').replace(/ +/g, ',').split(',');
+    elem.classList.add(...classes);
+  },
+
+  removeClasses: function(elem: Element, classesString: string) {
+    const classes = classesString.replace(' ', '').split(',');
+    elem.classList.remove(...classes);
+  },
+
+  wrapParseHtml: function(htmlText: string): Element {
+    const doc = document.implementation.createHTMLDocument(''); // empty dummy title
+    doc.body.innerHTML = '<div>' + htmlText + '</div>';
+    return doc.body.children[0];
+  }
+};
+
+
 //------------------------------------------------------------------------------
-}
+   }
 //------------------------------------------------------------------------------
 // vim: fdm=marker et ts=2 sw=2 tw=0 fo=r list
