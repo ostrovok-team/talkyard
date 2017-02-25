@@ -6,6 +6,7 @@ declare var ReactCSSTransitionGroup: any;
 declare var Router: any;
 declare function reactCreateFactory(x);
 declare function doNextFrameOrNow(x);
+declare function getSetCookie(cookieName: string, value?: string, options?: any): string;
 
 
 declare namespace debiki2 {

@@ -2,6 +2,10 @@
 # yarn lockfile v1
 
 
+"@types/core-js@^0.9.35":
+  version "0.9.35"
+  resolved "https://registry.yarnpkg.com/@types/core-js/-/core-js-0.9.35.tgz#444064e63711cdcc62ea844d27642f6efc2285f2"
+
 "@types/node@*", "@types/node@^7.0.0":
   version "7.0.0"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-7.0.0.tgz#c081147b109da5f9c57af70571771be97ce9c0ba"
@@ -253,6 +257,10 @@ bl@^1.0.0, bl@~1.1.2:
 blacklist@^1.1.4:
   version "1.1.4"
   resolved "https://registry.yarnpkg.com/blacklist/-/blacklist-1.1.4.tgz#b2dd09d6177625b2caa69835a37b28995fa9a2f2"
+
+blissfuljs@^1.0.3:
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/blissfuljs/-/blissfuljs-1.0.3.tgz#9dc6ff15905a91d9c63cc5e9a5304d17ac3aadd8"
 
 bluebird@^3.1.1:
   version "3.4.7"
