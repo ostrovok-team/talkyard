@@ -27,10 +27,12 @@ const TagsRoot = '/-/tags/';
 
 
 export function routes() {
+  /*
   return [
     Redirect({ key: 'redir', from: TagsRoot, to: TagsRoot + '/all' }),
     Route({ key: 'routes', path: TagsRoot, component: TagsAppComponent },
       Route({ path: 'all', component: AllTagsPanelComponent }))];
+      */
 }
 
 

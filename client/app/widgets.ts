@@ -23,11 +23,19 @@
 
 const r = React.DOM;
 
-declare const ReactRouter: any;
-export const Route: any = reactCreateFactory(ReactRouter.Route);
-export const IndexRoute: any = reactCreateFactory(ReactRouter.IndexRoute);
-export const Redirect: any = reactCreateFactory(ReactRouter.Redirect);
-export const DefaultRoute: any = reactCreateFactory(ReactRouter.DefaultRoute);
+declare const ReactRouter: any;    // server side
+declare const ReactRouterDOM: any; // browser side
+const TheRouter: any = window['ReactRouterDOM'] || ReactRouter;
+export const rr = {
+  BrowserRouter: <any>(TheRouter.BrowserRouter ? reactCreateFactory(TheRouter.BrowserRouter) : null),
+  StaticRouter: <any>(TheRouter.StaticRouter ? reactCreateFactory(TheRouter.StaticRouter) : null),
+  Switch: <any> reactCreateFactory(TheRouter.Switch),
+  Route: <any> reactCreateFactory(TheRouter.Route),
+  Link: <any> reactCreateFactory(TheRouter.Link),
+};
+export const IndexRoute: any = null; //reactCreateFactory(ReactRouter.IndexRoute);
+export const Redirect: any = null; //reactCreateFactory(ReactRouter.Redirect);
+export const DefaultRoute: any = null; //reactCreateFactory(ReactRouter.DefaultRoute);
 
 export const PrimaryButton: any = makeWidget(r.button, ' btn btn-primary');
 export const Button: any = makeWidget(r.button, ' btn btn-default');

@@ -33,9 +33,6 @@ const Nav = reactCreateFactory(ReactBootstrap.Nav);
 const NavItem = reactCreateFactory(ReactBootstrap.NavItem);
 const Alert = reactCreateFactory(ReactBootstrap.Alert);
 
-const ReactRouter = window['ReactRouter'];
-const Route = reactCreateFactory(ReactRouter.Route);
-const Redirect = reactCreateFactory(ReactRouter.Redirect);
 const PageUnloadAlerter = utils.PageUnloadAlerter;
 
 
@@ -43,6 +40,7 @@ const AdminRoot = '/-/admin/';
 
 // Make the components async? So works also if more-bundle.js hasn't yet been loaded? [4WP7GU5]
 export function routes() {
+  /*
   return [
     Redirect({ key: 'redir', from: AdminRoot, to: AdminRoot + 'settings' }), // later: --> /dashboard
     Route({ key: 'routes', path: AdminRoot, component: AdminAppComponent },
@@ -70,6 +68,7 @@ export function routes() {
         Route({ path: 'css-js', component: CustomizeCssJsPanelComponent })),
       Route({ path: 'review', component: ReviewPanelComponent },
         Route({ path: 'all', component: ReviewAllPanelComponent })))];
+        */
 }
 
 

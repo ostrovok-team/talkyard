@@ -113,7 +113,8 @@ export function renderTitleBodyComments() {
   if (store.pageRole === PageRole.Forum) {
     // scrollBehavior: debiki2.forum.ForumScrollBehavior,
     ReactDOM.render(
-        Router({ history: ReactRouter.browserHistory }, debiki2.forum.buildForumRoutes()), root);
+        rr.BrowserRouter({},
+          debiki2.forum.buildForumRoutes()), root);
   }
   else {
     ReactDOM.render(PageWithState(), root);
@@ -135,7 +136,7 @@ export function renderTitleBodyCommentsToString() {
     var store: Store = debiki2.ReactStore.allData();
     var path = store.pagePath.value + 'latest';
     return ReactDOMServer.renderToString(
-        Router({ history: ReactRouter.createMemoryHistory(path) }, routes));
+        rr.StaticRouter({ history: ReactRouter.createMemoryHistory(path) }, routes));
   }
   else {
     return ReactDOMServer.renderToString(Page(store));

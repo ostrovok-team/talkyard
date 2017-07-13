@@ -23,7 +23,7 @@
 //------------------------------------------------------------------------------
 
 
-export var Link = reactCreateFactory(ReactRouter.Link);
+// export var Link = reactCreateFactory(ReactRouter.Link);
 
 
 export function createComponent(componentDefinition): any { // oops should obviously be named createFactory

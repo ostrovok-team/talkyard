@@ -63,6 +63,11 @@ export function buildForumRoutes() {
   // later, COULD incl top period in URL, perhaps: top/ —> top-past-day/
   // Or  /top/bugs/past-day/ ?
 
+  return rr.Switch({},
+    //Redirect({ from: rootSlash, to: defaultPath }),
+    //Redirect({ from: rootNoSlash, to: defaultPath }),
+    rr.Route({ path: rootSlash, component: ForumComponent }));
+  /*
   return [
     Redirect({ key: 'redirA', from: rootSlash, to: defaultPath }),
     Redirect({ key: 'redirB', from: rootNoSlash, to: defaultPath }),
@@ -76,7 +81,7 @@ export function buildForumRoutes() {
       Route({ path: RoutePathTop, component: LoadAndListTopicsComponent },
         IndexRoute({ component: LoadAndListTopicsComponent }),
         Route({ path: ':categorySlug', component: LoadAndListTopicsComponent })),
-      Route({ path: RoutePathCategories, component: LoadAndListCategoriesComponent }))];
+      Route({ path: RoutePathCategories, component: LoadAndListCategoriesComponent }))]; */
 }
 
 
@@ -144,7 +149,7 @@ const ForumComponent = React.createClass(<any> {
   getActiveCategory: function() {
     var store: Store = this.state.store;
     var activeCategory: any;
-    var activeCategorySlug = this.props.params.categorySlug;
+    var activeCategorySlug = this.props.match.params.categorySlug;
     if (activeCategorySlug) {
       activeCategory = _.find(store.categories, (category: Category) => {
         return category.slug === activeCategorySlug;
@@ -227,7 +232,7 @@ const ForumComponent = React.createClass(<any> {
       route: this.props.route,
       routes: this.props.routes,
       location: this.props.location,
-      params: this.props.params,
+      params: this.props.match.params,
     });
 
     /* Remove this? Doesn't look nice & makes the categories page look complicated.
@@ -235,6 +240,7 @@ const ForumComponent = React.createClass(<any> {
       ? HelpMessageBox({ message: topicsAndCatsHelpMessage, className: 'esForum_topicsCatsHelp' })
       : null; */
 
+    const zzz = LoadAndListTopicsFactory(childProps);
     return (
      r.div({},
       debiki2.reactelements.TopBar({}),
@@ -246,7 +252,18 @@ const ForumComponent = React.createClass(<any> {
         helpMessage,
         ForumButtons(forumButtonProps),
         //topsAndCatsHelp,
-        React.cloneElement(this.props.children, childProps))));
+
+        //Redirect({ from: RoutePathLatest + '/', to: rootSlash + RoutePathLatest }),
+        //Redirect({ from: RoutePathTop + '/', to: rootSlash + RoutePathTop }),
+        //Redirect({ from: RoutePathCategories + '/', to: rootSlash + RoutePathCategories }),
+        rr.Route({ path: RoutePathLatest, component: zzz }),
+          //IndexRoute({ component: LoadAndListTopicsComponent }),
+          //Route({ path: ':categorySlug', component: LoadAndListTopicsComponent })),
+        rr.Route({ path: RoutePathTop, component: zzz }),
+          //IndexRoute({ component: LoadAndListTopicsComponent }),
+          //Route({ path: ':categorySlug', component: LoadAndListTopicsComponent })),
+        rr.Route({ path: RoutePathCategories, component: LoadAndListCategoriesComponent }))));
+        //React.cloneElement(this.props.children, childProps))));
   }
 });
 
@@ -468,7 +485,7 @@ var ForumButtons = createComponent({
   },
 
   slashCategorySlug: function() {
-    return this.props.params.categorySlug ? '/' + this.props.params.categorySlug : '';
+    return this.props.match.params.categorySlug ? '/' + this.props.match.params.categorySlug : '';
   },
 
   render: function() {
@@ -717,7 +734,7 @@ const LoadAndListTopicsComponent = React.createClass(<any> {
   isAllLatestTopicsView: function() {
     dieIf(this.props.routes.length < 2, 'EsE5YPFK23');
     return this.props.routes[SortOrderRouteIndex].path === RoutePathLatest &&
-        !this.props.params.categorySlug;
+        !this.props.match.params.categorySlug;
   },
 
   componentDidMount: function() {
@@ -849,6 +866,8 @@ const LoadAndListTopicsComponent = React.createClass(<any> {
     });
   },
 });
+
+const LoadAndListTopicsFactory = reactCreateFactory(LoadAndListTopicsComponent);
 
 
 

@@ -25,7 +25,6 @@
 //------------------------------------------------------------------------------
 
 var r = React.DOM;
-var reactCreateFactory = React['createFactory'];
 
 var EmailInput = util.EmailInput;
 var PatternInput = utils.PatternInput;
@@ -33,18 +32,20 @@ var PatternInput = utils.PatternInput;
 
 
 export function routes() {
+  /*
   return [
     Redirect({ key: 'redir', from: '/-/create-site/', to: '/-/create-site' }),
     Route({ key: 'routes', path: '/-/create-site', component: CreateSomethingComponent },
       /* Later, if one should choose between a site and embedded comments:
        IndexRoute({ handler: ChooseSiteTypeComponent }),
        Route({ path: 'website', handler: CreateWebsiteComponent }),
-       */
+       * /
       IndexRoute({ component: CreateWebsiteComponent }),
       Route({ path: 'embedded-comments', component: CreateEmbeddedSiteComponent })),
     Route({ key: 'test-routes', path: '/-/create-test-site', component: CreateSomethingComponent },
       IndexRoute({ component: CreateWebsiteComponent }),
       Route({ path: 'embedded-comments', component: CreateEmbeddedSiteComponent }))];
+      */
 }
 
 

@@ -84,6 +84,7 @@ var slimJsFiles = [
       // Includes Rea.ReactCSSTransitionGroup:
       // COULD_OPTIMIZE SMALLER_BUNDLE or perhaps even remove? add pure CSS anims instead?
       'node_modules/react-transition-group/dist/react-transition-group.js',  // try to move to more-bundle
+      'node_modules/react-router-dom/umd/react-router-dom.js',
       // About Modernizr:
       // Concerning when/how to use a CDN for Modernizr, see:
       // http://www.modernizr.com/news/modernizr-and-cdns
@@ -105,7 +106,6 @@ var slimJsFiles = [
       'client/third-party/rename-key-to-keymaster.js',
       'client/third-party/lodash-custom.js',
       'node_modules/eventemitter2/lib/eventemitter2.js',
-      'node_modules/react-router/umd/ReactRouter.js',
       'node_modules/jquery-resizable/resizable.js',
       'client/third-party/gifffer/gifffer.js',
       'client/third-party/jquery-cookie.js',
@@ -221,7 +221,7 @@ function compileServerTypescript() {
         'node_modules/react-dom/dist/react-dom-server.min.js',
         'node_modules/create-react-class/create-react-class.min.js',
         // Don't need React CSS transitions server side.
-        'node_modules/react-router/umd/ReactRouter.js',
+        'node_modules/react-router/umd/react-router.min.js',
         'node_modules/markdown-it/dist/markdown-it.min.js',
         'client/third-party/lodash-custom.js',
         'client/third-party/non-angular-slugify.js',

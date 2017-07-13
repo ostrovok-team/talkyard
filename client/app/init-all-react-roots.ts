@@ -32,17 +32,17 @@ export function startRemainingReactRoots() {
   var adminAppElem = document.getElementById('dw-react-admin-app');
   if (adminAppElem)
     ReactDOM.render(
-        Router({ history: ReactRouter.browserHistory }, admin.routes()), adminAppElem);
+        rr.BrowserRouter({ history: ReactRouter.browserHistory }, admin.routes()), adminAppElem);
 
   var superAdminAppElem = document.getElementById('theSuperAdminApp');
   if (superAdminAppElem)
     ReactDOM.render(
-      Router({ history: ReactRouter.browserHistory }, superadmin.routes()), superAdminAppElem);
+      rr.BrowserRouter({ history: ReactRouter.browserHistory }, superadmin.routes()), superAdminAppElem);
 
   var tagsAppElem = document.getElementById('theTagsApp');
   if (tagsAppElem)
     ReactDOM.render(
-      Router({ history: ReactRouter.browserHistory }, tags.routes()), tagsAppElem);
+      rr.BrowserRouter({ history: ReactRouter.browserHistory }, tags.routes()), tagsAppElem);
 
   var nonExistingPageElem = document.getElementById('dw-non-existing-page');
   if (nonExistingPageElem)
@@ -66,20 +66,20 @@ export function startRemainingReactRoots() {
   if (userPageElem) {
     ReactDOM.render(
         // .routes() always available, because the more-bundle.js is loaded on non-pages. [5WKE24]
-        Router({ history: ReactRouter.browserHistory }, users.routes()), userPageElem);
+        rr.BrowserRouter({ history: ReactRouter.browserHistory }, users.routes()), userPageElem);
   }
 
   let searchPageElem = document.getElementById('t_SearchPage');
   if (searchPageElem) {
     ReactDOM.render(
       // .routes() always available, because the more-bundle.js is loaded on non-pages. [5WKE24]
-      Router({ history: ReactRouter.browserHistory }, debiki2['search'].routes()), searchPageElem);
+      rr.BrowserRouter({ history: ReactRouter.browserHistory }, debiki2['search'].routes()), searchPageElem);
   }
 
   var createSiteElem = document.getElementById('dw-react-create-site');
   if (createSiteElem) {
     ReactDOM.render(
-        Router({ history: ReactRouter.browserHistory }, createsite.routes()), createSiteElem);
+        rr.BrowserRouter({ history: ReactRouter.browserHistory }, createsite.routes()), createSiteElem);
   }
 }
 

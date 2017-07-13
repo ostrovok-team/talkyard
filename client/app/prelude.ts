@@ -26,7 +26,6 @@ declare const createReactClass: any;
 var ReactCSSTransitionGroup: any = isServerSide() ? null :
   reactCreateFactory(window['ReactTransitionGroup'].CSSTransitionGroup);
 
-var Router: any = reactCreateFactory(ReactRouter.Router);
 
 // backw compat, later, do once per file instead (don't want a global 'r').
 var r = React.DOM;
@@ -66,7 +65,7 @@ function doNextFrameOrNow(something: () => void) {
 //declare var React;
 // declare var ReactRouter;
 
-export var Link: any = reactCreateFactory(ReactRouter.Link);
+export var Link: any = r.p({}, "LINK UNIMPL"); // reactCreateFactory(ReactRouter.Link);
 
 
 export function die(errorMessage: string) {

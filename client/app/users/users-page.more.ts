@@ -33,14 +33,11 @@ const Nav = rb.Nav;
 const NavItem = rb.NavItem;
 
 const UsersRoot = '/-/users/';
-const ReactRouter = window['ReactRouter'];
-const Route = reactCreateFactory(ReactRouter.Route);
-const IndexRoute = reactCreateFactory(ReactRouter.IndexRoute);
-const Redirect = reactCreateFactory(ReactRouter.Redirect);
 
 
 // Make the components async? So works also if more-bundle.js not yet loaded? [4WP7GU5]
 export function routes() {
+  /*
   return (
     Route({ path: UsersRoot, component: UsersHomeComponent },
       IndexRoute({ component: DefaultComponent }),
@@ -60,6 +57,7 @@ export function routes() {
         Route({ path: 'notifications', component: UserNotificationsComponent }),
         Route({ path: 'preferences', component: debiki2.users.UserPreferencesComponent }),
         Route({ path: 'invites', component: debiki2.users.UserInvitesComponent }))));
+        */
 }
 
 

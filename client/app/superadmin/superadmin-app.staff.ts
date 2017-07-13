@@ -23,20 +23,16 @@
 //------------------------------------------------------------------------------
 
 const r = React.DOM;
-const reactCreateFactory = React.createFactory;
-
-const ReactRouter = window['ReactRouter'];
-const Route: any = reactCreateFactory(ReactRouter.Route);
-const Redirect: any = reactCreateFactory(ReactRouter.Redirect);
-
 
 const SuperAdminRoot = '/-/superadmin/';
 
 export function routes() {
+  /*
   return [
     Redirect({ key: 'redir', from: SuperAdminRoot, to: SuperAdminRoot + '/dashboard' }),
     Route({ key: 'routes', path: SuperAdminRoot, component: AdminAppComponent },
       Route({ path: 'dashboard', component: DashboardPanelComponent }))];
+      */
 }
 
 
