@@ -40,6 +40,8 @@ var es = require('event-stream');
 var fs = require("fs");
 var path = require("path");
 var preprocess = require('gulp-preprocess');
+var plumber = require('gulp-plumber');
+
 
 var watchAndLiveForever = false;
 var currentDirectorySlash = __dirname + '/';
@@ -189,20 +191,27 @@ gulp.task('wrap-javascript', function () {
 });
 
 
-var serverTypescriptProject = typeScript.createProject({
+var serverTypescriptProject;
+var serverTypescriptProjectProps = {
   target: 'ES5',
   outFile: 'server-bundle.js',
+  isolatedModules: true,
   lib: ['es5', 'es2015', 'dom'],
   // react-dom needed to compile, but isn't actually used, server side.
   types: ['react', 'react-dom', 'lodash', 'core-js'],
-});
+};
 
 
 function compileServerTypescript() {
   var typescriptStream = gulp.src([
         'client/server/**/*.ts',
         'client/shared/plain-old-javascript.d.ts',
-        'client/typedefs/**/*.ts'])
+        'client/typedefs/**/*.ts']);
+
+  if (serverTypescriptProjectProps.isolatedModules) {
+    typescriptStream = typescriptStream.pipe(plumber());
+  }
+  typescriptStream = typescriptStream
     .pipe(wrap(nextFileTemplate))
     .pipe(serverTypescriptProject());
 
@@ -235,35 +244,43 @@ function compileServerTypescript() {
 }
 
 
-var slimTypescriptProject = typeScript.createProject({
+var slimTypescriptProject;
+var slimTypescriptProjectProps = {
   target: 'ES5',
   outFile: 'slim-typescript.js',
+  isolatedModules: true,
   lib: ['es5', 'es2015', 'dom'],
   types: ['react', 'react-dom', 'lodash', 'core-js'],
   sourceMap: true,     // ??
   inlineSources: true  // include source code in mapping file
-});
+};
 
-var moreTypescriptProject = typeScript.createProject({
+var moreTypescriptProject;
+var moreTypescriptProjectProps = {
   target: 'ES5',
   outFile: 'more-typescript.js',
+  isolatedModules: true,
   lib: ['es5', 'es2015', 'dom'],
-  types: ['react', 'react-dom', 'lodash', 'core-js']
-});
+  types: ['react', 'react-dom', 'lodash', 'core-js'],
+};
 
-var staffTypescriptProject = typeScript.createProject({
+var staffTypescriptProject;
+var staffTypescriptProjectProps = {
   target: 'ES5',
   outFile: 'staff-typescript.js',
+  isolatedModules: true,
   lib: ['es5', 'es2015', 'dom'],
   types: ['react', 'react-dom', 'lodash', 'core-js']
-});
+};
 
-var editorTypescriptProject = typeScript.createProject({
+var editorTypescriptProject;
+var editorTypescriptProjectProps = {
   target: 'ES5',
   outFile: 'editor-typescript.js',
+  isolatedModules: true,
   lib: ['es5', 'es2015', 'dom'],
   types: ['react', 'react-dom', 'lodash', 'core-js']
-});
+};
 
 
 function compileSlimTypescript() {
@@ -285,7 +302,7 @@ function compileSlimTypescript() {
   return stream.pipe(gulp.dest('target/client/'));
 }
 
-function compileOtherTypescript(what, typescriptProject) {
+function compileOtherTypescript(what, theTypescriptProject) {
   var stream = gulp.src([
     'client/app/**/*.d.ts',
     '!client/app/**/*.' + what + '.d.ts',
@@ -295,7 +312,7 @@ function compileOtherTypescript(what, typescriptProject) {
     'client/app/**/*.' + what + '.ts',
     'client/typedefs/**/*.ts'])
     .pipe(wrap(nextFileTemplate))
-    .pipe(typescriptProject());
+    .pipe(theTypescriptProject());
   if (watchAndLiveForever) {
     stream.on('error', function() {
       console.log('\n!!! Error compiling ' + what + ' TypeScript [EsE3G6P8S]!!!\n');
@@ -306,6 +323,14 @@ function compileOtherTypescript(what, typescriptProject) {
 
 
 gulp.task('compile-typescript', function () {
+  if (!serverTypescriptProject) {
+    // Create lazily here, so enable-careful-types gets time to clear the isolatedModules setting.
+    serverTypescriptProject = typeScript.createProject(serverTypescriptProjectProps);
+    slimTypescriptProject = typeScript.createProject(slimTypescriptProjectProps);
+    moreTypescriptProject = typeScript.createProject(moreTypescriptProjectProps);
+    staffTypescriptProject = typeScript.createProject(staffTypescriptProjectProps);
+    editorTypescriptProject = typeScript.createProject(editorTypescriptProjectProps);
+  }
   return es.merge(
       compileServerTypescript(),
       compileSlimTypescript(),
@@ -376,6 +401,15 @@ gulp.task('enable-prod-stuff', function() {
   slimJsFiles[1] = 'node_modules/react-dom/dist/react-dom.min.js';
   slimJsFiles[2] = 'node_modules/create-react-class/create-react-class.min.js';
   slimJsFiles[3] = 'node_modules/react-transition-group/dist/react-transition-group.min.js';
+});
+
+
+gulp.task('enable-careful-types', function () {
+  delete serverTypescriptProjectProps.isolatedModules;
+  delete slimTypescriptProjectProps.isolatedModules;
+  delete moreTypescriptProjectProps.isolatedModules;
+  delete staffTypescriptProjectProps.isolatedModules;
+  delete editorTypescriptProjectProps.isolatedModules;
 });
 
 
@@ -454,7 +488,7 @@ function logChangeFn(fileType) {
 }
 
 
-gulp.task('watch', ['default'], function() {
+gulp.task('watch', ['quick-build'], function() {
   watchAndLiveForever = true;
   gulp.watch(['client/**/*.ts', '!client/test/**/*.ts'] ,['compile-typescript-concat-scripts']).on('change', logChangeFn('TypeScript'));
   gulp.watch('client/**/*.js', ['wrap-javascript-concat-scripts']).on('change', logChangeFn('Javascript'));
@@ -463,11 +497,13 @@ gulp.task('watch', ['default'], function() {
   gulp.watch('tests/security/**/*.ts', ['build-security-tests']).on('change', logChangeFn('security test files'));
 });
 
-gulp.task('default', ['compile-concat-scripts', 'compile-stylus', 'build-e2e', 'build-security-tests'], function () {
+gulp.task('quick-build', ['compile-concat-scripts', 'compile-stylus', 'build-e2e', 'build-security-tests'], function () {
 });
 
+gulp.task('default', ['enable-careful-types', 'quick-build'], function () {
+});
 
-gulp.task('release', ['enable-prod-stuff', 'minify-scripts', 'compile-stylus'], function() {
+gulp.task('release', ['enable-prod-stuff', 'enable-careful-types', 'minify-scripts', 'compile-stylus'], function() {
 });
 
 
