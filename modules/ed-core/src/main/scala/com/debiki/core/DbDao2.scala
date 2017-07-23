@@ -43,6 +43,28 @@ class DbDao2(val dbDaoFactory: DbDaoFactory) {
     */
   def readWriteSiteTransaction[R](siteId: SiteId, allowOverQuota: Boolean = false)(
         fn: (SiteTransaction) => R): R = {
+
+    // Check quota in a separate read-only transaction, because otherwise there's high risk
+    // that there'll be a transaction serealization error, when combining quota check of lots of
+    // tables, with writing stuff, + updating quota too.
+    // For simplicity, we'll check if quota has been *exceeded* already, rather than
+    // if the stuff we're going to add, would exceed.
+    COULD // add a willDeleteOnly param, so can still delete stuff, even if over quota.
+    if (!allowOverQuota) {
+      val tx = dbDaoFactory.newSiteTransaction(siteId, readOnly = true, mustBeSerializable = false)
+      try {
+        val resourceUsage = tx.loadResourceUsage()
+        resourceUsage.quotaLimitMegabytes foreach { limitMb =>
+          val quotaExceededBytes = resourceUsage.estimatedBytesUsed - limitMb * 1000L * 1000L
+          if (quotaExceededBytes > 0)
+            throw OverQuotaException(siteId, resourceUsage)
+        }
+      }
+      finally {
+        tx.rollback()
+      }
+    }
+
     val transaction = dbDaoFactory.newSiteTransaction(siteId, readOnly = false,
       mustBeSerializable = true)
     var committed = false
@@ -50,14 +72,7 @@ class DbDao2(val dbDaoFactory: DbDaoFactory) {
     def tryCheckQuotaAndCommit() {
       if (transaction.hasBeenRolledBack)
         return
-      if (!allowOverQuota) {
-        val resourceUsage = transaction.loadResourceUsage()
-        resourceUsage.quotaLimitMegabytes foreach { limit =>
-          val quotaExceededBytes = resourceUsage.estimatedBytesUsed - limit * 1000L * 1000L
-          if (quotaExceededBytes > 0)
-            throw OverQuotaException(siteId, resourceUsage)
-        }
-      }
+
       transaction.commit()
       committed = true
     }
