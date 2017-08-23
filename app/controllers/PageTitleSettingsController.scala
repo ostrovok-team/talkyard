@@ -24,6 +24,7 @@ import debiki._
 import debiki.DebikiHttp._
 import debiki.ReactJson.JsStringOrNull
 import ed.server.http._
+import javax.inject.Inject
 import play.api._
 import play.api.libs.json._
 import play.api.mvc.{Action => _, _}
@@ -33,7 +34,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 /** Edits the page title and changes settings like forum category, URL path,
   * which layout to use, <html><head><title> and description.
   */
-object PageTitleSettingsController extends mvc.Controller {
+class PageTitleSettingsController @Inject()(cc: ControllerComponents)
+  extends AbstractController(cc) {
 
 
   def editTitleSaveSettings = PostJsonAction(RateLimits.EditPost, maxBytes = 2000) {

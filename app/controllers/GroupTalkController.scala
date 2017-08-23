@@ -22,9 +22,10 @@ import com.debiki.core.Prelude._
 import debiki._
 import debiki.DebikiHttp._
 import ed.server.http._
+import javax.inject.Inject
 import play.api._
-import play.api.mvc.{Action => _, _}
-import play.api.libs.json.{JsString, Json}
+import play.api.mvc._
+import play.api.libs.json.{JsString, JsValue}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 
@@ -33,10 +34,11 @@ import scala.concurrent.ExecutionContext.Implicits.global
   * Read more about how to build a good message handling system here:
   *   https://meta.discourse.org/t/discourse-as-a-private-email-support-portal/34444
   */
-object GroupTalkController extends mvc.Controller {
+class GroupTalkController @Inject()(cc: ControllerComponents)
+  extends AbstractController(cc) {
 
 
-  def sendMessage = PostJsonAction(RateLimits.PostReply, maxBytes = MaxPostSize) {
+  def sendMessage: Action[JsValue] = PostJsonAction(RateLimits.PostReply, maxBytes = MaxPostSize) {
         request: JsonPostRequest =>
     val body = request.body
     val title = (body \ "title").as[String].trim

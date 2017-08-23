@@ -30,10 +30,21 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 
+object EdHttp {
+
+  def withGlobals(theGlobals: Globals) = new DebikiHttp {
+    val globals: Globals = theGlobals
+  }
+
+}
+
+
 /**
  * HTTP utilities.
  */
-object DebikiHttp {
+trait DebikiHttp {
+
+  def globals: Globals
 
 
   // ----- Limits
@@ -128,7 +139,7 @@ object DebikiHttp {
     // ScalaTest prints the stack trace but not the exception message. However this is
     // a QuickException — it has no stack trace. Let's create a helpful fake stack trace
     // that shows the exception message, so one knows what happened.
-    if (Globals.isOrWasTest) {
+    if (false) { // if (isTest) {
       val message = s"ResultException, status $statusCode [EsMRESEX]:\n$bodyToString"
       setStackTrace(Array(new StackTraceElement(message, "", "", 0)))
     }
@@ -227,15 +238,15 @@ object DebikiHttp {
 
 
   def originOf(request: GetRequest) =
-    Globals.originOf(request.underlying)
+    globals.originOf(request.underlying)
 
   def originOf(request: Request[_]) =
-    Globals.originOf(request)
+    globals.originOf(request)
 
 
   def daoFor(request: Request[_]) = {
-    val site = lookupSiteOrThrow(originOf(request), debiki.Globals.systemDao)
-    debiki.Globals.siteDao(site.id)
+    val site = lookupSiteOrThrow(originOf(request), globals.systemDao)
+    globals.siteDao(site.id)
   }
 
 
@@ -267,19 +278,19 @@ object DebikiHttp {
     // to include any port number when looking up a site.
     val hostname = if (host contains ':') host.span(_ != ':')._1 else host
     def firstSiteIdAndHostname = {
-      val hostname = Globals.firstSiteHostname getOrElse throwForbidden(
+      val hostname = globals.firstSiteHostname getOrElse throwForbidden(
         "EsE5UYK2", o"""No first site hostname configured (config value:
             ${Globals.FirstSiteHostnameConfigValue})""")
       val firstSite = systemDao.getOrCreateFirstSite()
       SiteBrief(Site.FirstSiteId, hostname, firstSite.status)
     }
 
-    if (Globals.firstSiteHostname.contains(hostname))
+    if (globals.firstSiteHostname.contains(hostname))
       return firstSiteIdAndHostname
 
     // If the hostname is like "site-123.example.com" then we'll just lookup id 123.
     hostname match {
-      case debiki.Globals.siteByIdHostnameRegex(siteIdString: String) =>
+      case globals.siteByIdHostnameRegex(siteIdString: String) =>
         val siteId = siteIdString.toIntOrThrow("EdE5PJW2", s"Bad site id: $siteIdString")
         systemDao.getSite(siteId) match {
           case None =>
@@ -287,8 +298,8 @@ object DebikiHttp {
           case Some(site) =>
             COULD // link to canonical host if (site.hosts.exists(_.role == SiteHost.RoleCanonical))
             // Let the config file hostname have precedence over the database.
-            if (site.id == FirstSiteId && Globals.firstSiteHostname.isDefined)
-              return site.brief.copy(hostname = Globals.firstSiteHostname.get)
+            if (site.id == FirstSiteId && globals.firstSiteHostname.isDefined)
+              return site.brief.copy(hostname = globals.firstSiteHostname.get)
             else
               return site.brief
         }
@@ -304,7 +315,7 @@ object DebikiHttp {
           case SiteHost.RoleDuplicate =>
             result
           case SiteHost.RoleRedirect =>
-            throwPermanentRedirect(Globals.originOf(result.canonicalHost.hostname) + pathAndQuery)
+            throwPermanentRedirect(globals.originOf(result.canonicalHost.hostname) + pathAndQuery)
           case SiteHost.RoleLink =>
             die("DwE2KFW7", "Not implemented: <link rel='canonical'>")
           case _ =>
@@ -327,10 +338,12 @@ object DebikiHttp {
 
   def SecureCookie(name: String, value: String, maxAgeSeconds: Option[Int] = None,
         httpOnly: Boolean = false) =
-    Cookie(name, value, maxAge = maxAgeSeconds, secure = Globals.secure, httpOnly = httpOnly)
+    Cookie(name, value, maxAge = maxAgeSeconds, secure = globals.secure, httpOnly = httpOnly)
 
   def DiscardingSecureCookie(name: String) =
-    DiscardingCookie(name, secure = Globals.secure)
+    DiscardingCookie(name, secure = globals.secure)
+
+  def DiscardingSessionCookie = DiscardingSecureCookie("dwCoSid")
 
   // Two comments on the encoding of the cookie value:
   // 1. If the cookie contains various special characters
@@ -355,7 +368,7 @@ object DebikiHttp {
       maxAge = maxAgeSecs,
       path = "/",
       domain = None,
-      secure = Globals.secure,
+      secure = globals.secure,
       httpOnly = false)
 
   def urlDecodeCookie(name: String, request: Request[_]): Option[String] =

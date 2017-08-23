@@ -31,13 +31,15 @@ import scala.collection.{immutable, mutable}
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Try
 import Utils.ValidationImplicits._
-import DebikiHttp.{throwBadReq, throwBadRequest, throwNotFound}
+import ed.server.EdController
 import ed.server.auth.ForumAuthzContext
+import javax.inject.Inject
 
 
 /** Handles requests related to forums and forum categories.
  */
-object ForumController extends mvc.Controller {
+class ForumController @Inject()(cc: ControllerComponents, globals: Globals)
+  extends EdController(cc, globals) {
 
   /** Keep synced with client/forum/list-topics/ListTopicsController.NumNewTopicsPerRequest. */
   val NumTopicsToList = 40
@@ -204,7 +206,7 @@ object ForumController extends mvc.Controller {
       } getOrElse {
         throwBadRequest("EsE7KPE0", "No category id")
       }
-    DebikiHttp.throwTemporaryRedirect("/-" + pageId)
+    throwTemporaryRedirect("/-" + pageId)
   }
 
 

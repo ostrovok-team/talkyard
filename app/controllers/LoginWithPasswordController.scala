@@ -25,6 +25,7 @@ import ed.server.security.createSessionIdAndXsrfToken
 import debiki.dao.SiteDao
 import debiki.DebikiHttp._
 import ed.server.http._
+import javax.inject.Inject
 import org.scalactic.{Bad, Good}
 import play.api._
 import play.api.mvc._
@@ -35,7 +36,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 /** Logs in users via username and password.
   */
-object LoginWithPasswordController extends mvc.Controller {
+class LoginWithPasswordController @Inject()(cc: ControllerComponents, globals: Globals)
+  extends AbstractController(cc) {
 
   private val MaxAddressVerificationEmailAgeInHours = 25
 
@@ -46,8 +48,8 @@ object LoginWithPasswordController extends mvc.Controller {
     val password = request.body.getOrThrowBadReq("password")
     val anyReturnToUrl = request.body.getFirst("returnToUrl")
 
-    val site = DebikiHttp.lookupSiteOrThrow(request.request, Globals.systemDao)
-    val dao = Globals.siteDao(site.id)
+    val site = globals.lookupSiteOrThrow(request.request, globals.systemDao)
+    val dao = globals.siteDao(site.id)
 
     val cookies = doLogin(request, dao, email, password)
 
@@ -104,7 +106,7 @@ object LoginWithPasswordController extends mvc.Controller {
       throwBadReq("DwE85FX1", "Password missing")
     val anyReturnToUrl = (body \ "returnToUrl").asOpt[String]
 
-    val dao = daoFor(request.request)
+    val dao = globals.daoFor(request.request)
     val siteSettings = dao.getWholeSiteSettings()
 
     // Some dupl code. [2FKD05]
@@ -121,17 +123,17 @@ object LoginWithPasswordController extends mvc.Controller {
     if (ed.server.security.ReservedNames.isUsernameReserved(username))
       throwForbidden("EdE5PKW01", s"Username is reserved: '$username'; choose another username")
 
-    Globals.spamChecker.detectRegistrationSpam(request, name = username, email = emailAddress) map {
+    globals.spamChecker.detectRegistrationSpam(request, name = username, email = emailAddress) map {
         isSpamReason =>
       SpamChecker.throwForbiddenIfSpam(isSpamReason, "EdE7KVF2_")
 
       // Password strength tested in createPasswordUserCheckPasswordStrong() below.
 
-      val becomeOwner = LoginController.shallBecomeOwner(request, emailAddress)
+      val becomeOwner = LoginController.shallBecomeOwner(request, emailAddress, globals)
 
       val userData =
         NewPasswordUserData.create(name = fullName, email = emailAddress, username = username,
-            password = password, createdAt = Globals.now(),
+            password = password, createdAt = globals.now(),
             isAdmin = becomeOwner, isOwner = becomeOwner) match {
           case Good(data) => data
           case Bad(errorMessage) =>
@@ -192,14 +194,14 @@ object LoginWithPasswordController extends mvc.Controller {
     val emailId = Email.generateRandomId()
 
     val emailAddrVerifUrl =
-      debiki.Globals.originOf(host) +
+      globals.originOf(host) +
         routes.LoginWithPasswordController.confirmEmailAddressAndLogin(
           emailId, returnToUrlEscapedHash)
 
     val email = Email.newWithId(
       emailId,
       EmailType.CreateAccount,
-      createdAt = Globals.now(),
+      createdAt = globals.now(),
       sendTo = user.email,
       toUserId = Some(user.id),
       subject = s"[$siteName] Confirm your email address",
@@ -229,7 +231,7 @@ object LoginWithPasswordController extends mvc.Controller {
   def sendEmailAddressVerificationEmail(user: Member, anyReturnToUrl: Option[String],
         host: String, dao: SiteDao) {
     val email = createEmailAddrVerifEmailLogDontSend(user, anyReturnToUrl, host, dao)
-    Globals.sendEmail(email, dao.siteId)
+    globals.sendEmail(email, dao.siteId)
   }
 
 
@@ -237,7 +239,7 @@ object LoginWithPasswordController extends mvc.Controller {
         dao: SiteDao, emailAddress: String, siteHostname: String, siteId: SiteId) {
     val email = Email(
       EmailType.Notification,
-      createdAt = Globals.now(),
+      createdAt = globals.now(),
       sendTo = emailAddress,
       toUserId = None,
       subject = s"[${dao.theSiteName()}] You already have an account at " + siteHostname,
@@ -247,7 +249,7 @@ object LoginWithPasswordController extends mvc.Controller {
           siteAddress = siteHostname).body
       })
     dao.saveUnsentEmail(email)
-    Globals.sendEmail(email, siteId)
+    globals.sendEmail(email, siteId)
   }
 
 

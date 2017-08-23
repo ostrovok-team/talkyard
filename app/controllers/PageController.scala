@@ -25,14 +25,16 @@ import debiki.ReactJson.JsLongOrNull
 import ed.server.auth.Authz
 import ed.server.http._
 import java.{util => ju}
+import javax.inject.Inject
 import play.api._
 import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.Action
+import play.api.mvc.{AbstractController, Action, ControllerComponents}
 
 
 /** Creates pages, toggles is-done, deletes them.
   */
-object PageController extends mvc.Controller {
+class PageController @Inject()(cc: ControllerComponents)
+  extends AbstractController(cc) {
 
 
   def createPage: Action[JsValue] = PostJsonAction(RateLimits.CreateTopic, maxBytes = 20 * 1000) {

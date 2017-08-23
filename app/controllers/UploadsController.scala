@@ -29,7 +29,7 @@ import play.api.libs.json.{Json, JsString}
 
 
 /** Uploads files and serves uploaded files.
-  */
+
 object UploadsController extends mvc.Controller {
 
   import Globals.{maxUploadSizeBytes, anyPublicUploadsDir, LocalhostUploadsDirConfigValueName}
@@ -207,4 +207,4 @@ object UploadsController extends mvc.Controller {
   }
 
 }
-
+  */

@@ -18,14 +18,17 @@
 package controllers
 
 import com.debiki.core._
-import debiki.{ReactJson, RateLimits, SiteTpi}
+import debiki.{Globals, RateLimits, ReactJson, SiteTpi}
 import ed.server.http._
 import play.{api => p}
 import play.api.libs.json._
 import debiki.DebikiHttp.throwBadRequest
+import javax.inject.Inject
+import play.api.mvc.{AbstractController, ControllerComponents}
 
 
-object TagsController extends p.mvc.Controller {
+class TagsController @Inject()(cc: ControllerComponents)
+  extends AbstractController(cc) {
 
   def redirect = GetAction { apiReq =>
     Redirect(routes.TagsController.tagsApp("").url)

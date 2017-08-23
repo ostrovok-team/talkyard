@@ -25,19 +25,19 @@ import ed.server.spam.SpamChecker
 import ed.server._
 import ed.server.security.createSessionIdAndXsrfToken
 import ed.server.http._
-import java.{util => ju}
+import javax.inject.Inject
 import play.api._
-import play.api.mvc.{Action => _, _}
-import play.api.libs.json.JsObject
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.mvc.{Action, Action => _, _}
+import play.api.libs.json.{JsObject, JsValue}
 
 
 /** Logs in guest users.
   */
-object LoginAsGuestController extends mvc.Controller {
+class LoginAsGuestController @Inject()(cc: ControllerComponents, globals: Globals)
+  extends AbstractController(cc) {
 
 
-  def loginGuest = AsyncPostJsonAction(RateLimits.Login, maxBytes = 1000) { request =>
+  def loginGuest: Action[JsValue] = AsyncPostJsonAction(RateLimits.Login, maxBytes = 1000) { request =>
     val json = request.body.as[JsObject]
     val name = (json \ "name").as[String].trim
     val email = (json \ "email").as[String].trim
@@ -52,13 +52,13 @@ object LoginAsGuestController extends mvc.Controller {
     if (email.nonEmpty && User.emailIsWeird(email))
       throwForbidden("DwE04HK83", "Weird email. Please use a real email address")
 
-    Globals.spamChecker.detectRegistrationSpam(request, name = name, email = email) map {
+    globals.spamChecker.detectRegistrationSpam(request, name = name, email = email) map {
         isSpamReason =>
       SpamChecker.throwForbiddenIfSpam(isSpamReason, "EdE5KJU3_")
 
       val loginAttempt = GuestLoginAttempt(
         ip = request.ip,
-        date = Globals.now().toJavaDate,
+        date = globals.now().toJavaDate,
         name = name,
         email = email,
         guestCookie = request.theBrowserIdData.idCookie)

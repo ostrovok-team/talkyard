@@ -30,11 +30,13 @@ import play.api.mvc.{Action => _, _}
 import scala.concurrent.ExecutionContext.Implicits.global
 import Utils.parseIntOrThrowBadReq
 import ed.server.auth.Authz
+import javax.inject.Inject
 
 
 /** Edits pages and posts.
   */
-object EditController extends mvc.Controller {
+class EditController @Inject()(cc: ControllerComponents)
+  extends AbstractController(cc) {
 
   val EmptyPostErrorMessage =
     o"""Cannot save empty posts. If you want to delete this post, please click

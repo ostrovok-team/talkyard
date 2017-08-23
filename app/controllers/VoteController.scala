@@ -25,14 +25,16 @@ import debiki.ReactJson.JsUser
 import debiki.DebikiHttp._
 import ed.server.auth.Authz
 import ed.server.http._
+import javax.inject.Inject
 import play.api._
 import play.api.libs.json._
-import play.api.mvc.Action
+import play.api.mvc.{AbstractController, Action, ControllerComponents}
 
 
 /** Handles votes, e.g. "I like this comment" or "this comment is faulty" votes.
  */
-object VoteController extends mvc.Controller {
+class VoteController @Inject()(cc: ControllerComponents, globals: Globals)
+  extends AbstractController(cc) {
 
 
   /** Currently handles only one vote at a time. Example post data, in Yaml:

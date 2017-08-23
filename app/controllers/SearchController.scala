@@ -18,8 +18,7 @@
 package controllers
 
 import com.debiki.core._
-import debiki.{RateLimits, SiteTpi}
-import debiki.DebikiHttp.throwBadRequest
+import debiki.{Globals, RateLimits, SiteTpi}
 import ed.server.search._
 import ed.server.http._
 import play.api._
@@ -28,12 +27,16 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import Prelude._
 import debiki.dao.SearchQuery
+import javax.inject.Inject
+import play.api.libs.json.JsValue
+import play.api.mvc.{AbstractController, Action, ControllerComponents}
 
 
 /** Full text search, for a whole site, or for a site section, e.g. a single
   * forum (including all sub forums and topics), a single blog, or wiki.
   */
-object SearchController extends mvc.Controller {
+class SearchController @Inject()(cc: ControllerComponents)
+  extends AbstractController(cc) {
 
   private val SearchPhraseFieldName = "searchPhrase"
 
@@ -47,7 +50,7 @@ object SearchController extends mvc.Controller {
   }
 
 
-  def doSearch() = AsyncPostJsonAction(RateLimits.FullTextSearch, maxBytes = 1000) {
+  def doSearch(): Action[JsValue] = AsyncPostJsonAction(RateLimits.FullTextSearch, maxBytes = 1000) {
         request: JsonPostRequest =>
     val rawQuery = (request.body \ "rawQuery").as[String]
     val searchQuery = parseRawSearchQueryString(rawQuery, categorySlug => {

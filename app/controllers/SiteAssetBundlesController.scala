@@ -21,7 +21,9 @@ import com.debiki.core._
 import debiki._
 import debiki.DebikiHttp._
 import ed.server.http._
+import javax.inject.Inject
 import play.api._
+import play.api.mvc.{AbstractController, ControllerComponents}
 import scala.util.matching.Regex
 
 
@@ -33,7 +35,8 @@ import scala.util.matching.Regex
  * (So whenever the bundle contents changes, the URL also changes — and
  * we can ask the browser to cache forever. This is asset versioning.)
  */
-object SiteAssetBundlesController extends mvc.Controller {
+class SiteAssetBundlesController @Inject()(cc: ControllerComponents, globals: Globals)
+  extends AbstractController(cc) {
 
 
   /**
@@ -56,7 +59,7 @@ object SiteAssetBundlesController extends mvc.Controller {
 
 
   private def customAssetImpl(siteId: SiteId, fileName: String, request: DebikiRequest[_]) = {
-    val dao = Globals.siteDao(siteId)
+    val dao = globals.siteDao(siteId)
     // `fileName` is like: bundle-name.<version>.css.
     fileName match {
       case AssetBundleFileNameRegex(nameNoSuffix, _, suffix) =>

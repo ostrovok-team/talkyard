@@ -21,14 +21,14 @@ import debiki._
 import ed.server._
 import ed.server.http._
 import javax.inject.Inject
-import play.api._
-import DebikiHttp._
+import play.api.mvc.ControllerComponents
 
 
 
 /** Loads the admin app page.
   */
-class AdminController @Inject() extends mvc.InjectedController {
+class AdminController @Inject()(cc: ControllerComponents, globals: Globals)
+  extends EdController(cc, globals) {
 
 
   def redirectToAdminPage() = GetAction { _ =>

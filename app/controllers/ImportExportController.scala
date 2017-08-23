@@ -19,17 +19,17 @@ package controllers
 
 import com.debiki.core.Prelude._
 import com.debiki.core._
-import debiki.DebikiHttp._
 import debiki.JsonUtils._
 import debiki._
 import debiki.dao.PagePartsDao
 import ed.server._
 import ed.server.http._
 import java.{util => ju}
+import javax.inject.Inject
 import org.scalactic._
 import play.api._
 import play.api.libs.json._
-import play.api.mvc.Action
+import play.api.mvc.{AbstractController, Action, ControllerComponents}
 
 
 /** Imports and exports dumps of websites.
@@ -41,7 +41,8 @@ import play.api.mvc.Action
   *
   * Search for [readlater] for stuff ignored right now.
   */
-object ImportExportController extends mvc.Controller {
+class ImportExportController @Inject()(cc: ControllerComponents, globals: Globals)
+  extends EdController(cc, globals) {
 
   val MaxBytes = 1001000
 
@@ -91,8 +92,8 @@ object ImportExportController extends mvc.Controller {
 
     Ok(Json.obj(
       "id" -> newSite.id,
-      "origin" -> (Globals.schemeColonSlashSlash + newSite.theCanonicalHost.hostname),
-      "siteIdOrigin" -> Globals.siteByIdOrigin(newSite.id))) as JSON
+      "origin" -> (globals.schemeColonSlashSlash + newSite.theCanonicalHost.hostname),
+      "siteIdOrigin" -> globals.siteByIdOrigin(newSite.id))) as JSON
   }
 
 
@@ -219,7 +220,7 @@ object ImportExportController extends mvc.Controller {
     // COULD do this in the same transaction as the one below — then, would need a function
     // `transaction.continueWithSiteId(zzz)`?
     val siteToSave = siteData.site
-    val site = Globals.systemDao.createSite(
+    val site = globals.systemDao.createSite(
       siteToSave.name,
       siteToSave.status,
       siteToSave.canonicalHost.getOrDie("EsE2FUPFY7").hostname,
@@ -234,7 +235,7 @@ object ImportExportController extends mvc.Controller {
       pricePlan = "Unknown",  // [4GKU024S]
       createdFromSiteId = None)
 
-    val newDao = Globals.siteDao(site.id)
+    val newDao = globals.siteDao(site.id)
 
     HACK // not inserting groups, only updating summary email interval. [7FKB4Q1]
     // And in the wrong transaction :-/
@@ -313,7 +314,7 @@ object ImportExportController extends mvc.Controller {
     }
 
     val createdAtMs = readLong(jsObject, "createdAtMs")
-    val fullHostname = anyFullHostname.getOrElse(s"$theLocalHostname.${Globals.baseDomainNoPort}")
+    val fullHostname = anyFullHostname.getOrElse(s"$theLocalHostname.${globals.baseDomainNoPort}")
 
     Site(
       id = NoSiteId,

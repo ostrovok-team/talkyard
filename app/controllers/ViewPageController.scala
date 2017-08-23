@@ -27,8 +27,9 @@ import play.api.libs.json._
 import play.api.mvc._
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
-import DebikiHttp._
-import ed.server.RenderedPage
+import ed.server.{EdController, RenderedPage}
+import javax.inject.Inject
+import ViewPageController._
 
 
 
@@ -39,11 +40,9 @@ import ed.server.RenderedPage
   * comments that are pending approval — although such unapproved comments
   * aren't loaded, when other people view the page.
   */
-object ViewPageController extends mvc.Controller {
+class ViewPageController @Inject()(cc: ControllerComponents, globals: Globals)
+  extends EdController(cc, globals) {
 
-
-  val HtmlEncodedVolatileJsonMagicString =
-    "\"__html_encoded_volatile_json__\""
 
 
   def listPosts(authorId: UserId) = GetAction { request: GetRequest =>
@@ -139,12 +138,12 @@ object ViewPageController extends mvc.Controller {
 
     try {
       viewPageImpl(request) recover {
-        case ex: DebikiHttp.ResultException if ex.statusCode == NOT_FOUND =>
+        case ex: ResultException if ex.statusCode == NOT_FOUND =>
           makeLoginDialog(ex)
       }
     }
     catch {
-      case ex: DebikiHttp.ResultException if ex.statusCode == NOT_FOUND =>
+      case ex: ResultException if ex.statusCode == NOT_FOUND =>
         Future.successful(makeLoginDialog(ex))
     }
   }
@@ -163,7 +162,7 @@ object ViewPageController extends mvc.Controller {
     // Similar to loadPost, keep in sync. [7PKW0YZ2]
 
     dieIfAssetsMissingIfDevTest()
-    Globals.throwForbiddenIfSecretNotChanged()
+    globals.throwForbiddenIfSecretNotChanged()
 
     val specifiedPagePath = PagePath.fromUrlPath(request.siteId, request.request.path) match {
       case PagePath.Parsed.Good(path) => path
@@ -212,7 +211,7 @@ object ViewPageController extends mvc.Controller {
 
       // Show a create-something-here page (see TemplateRenderer).
       val pageRequest = makeEmptyPageRequest(
-          request, pageId = EmptyPageId, showId = false, pageRole = PageRole.WebPage)
+          request, pageId = EmptyPageId, showId = false, pageRole = PageRole.WebPage, globals.now())
       val json = ReactJson.emptySiteJson(pageRequest).toString()
       val html = views.html.specialpages.createSomethingHerePage(SiteTpi(pageRequest, Some(json))).body
       val renderedPage = RenderedPage(html, unapprovedPostAuthorIds = Set.empty)
@@ -241,7 +240,7 @@ object ViewPageController extends mvc.Controller {
     }
 
     if (request.user.isEmpty)
-      Globals.strangerCounter.strangerSeen(request.siteId, request.theBrowserIdData)
+      globals.strangerCounter.strangerSeen(request.siteId, request.theBrowserIdData)
 
     val pageRequest = new PageRequest[Unit](
       request.siteIdAndCanonicalHostname,
@@ -263,6 +262,14 @@ object ViewPageController extends mvc.Controller {
     val renderedPage = request.dao.renderPageMaybeUseCache(request)
     addVolatileJson(renderedPage, request)
   }
+
+}
+
+
+object ViewPageController {
+
+  val HtmlEncodedVolatileJsonMagicString =
+    "\"__html_encoded_volatile_json__\""
 
 
   def addVolatileJson(renderedPage: RenderedPage, request: PageRequest[_]): Future[Result] = {
@@ -287,7 +294,7 @@ object ViewPageController extends mvc.Controller {
 
     requester.foreach(dao.pubSub.userIsActive(request.siteId, _, request.theBrowserIdData))
 
-    var response = Ok(pageHtml)
+    var response = play.api.mvc.Results.Ok(pageHtml)
     if (request.siteSettings.allowEmbeddingFrom.isEmpty) {
       response = response.withHeaders("X-Frame-Options" -> "DENY")  // [7ACKRQ20]
     }
@@ -296,12 +303,11 @@ object ViewPageController extends mvc.Controller {
       // 'Content-Security-Policy: origin' for Chrome. For now, allow from anywhere though.
       // Also update: [4GUYQC0]
     }
-    Future.successful(response as HTML)
+    Future.successful(response as play.api.http.ContentTypes.HTML)
   }
 
-
   def makeEmptyPageRequest(request: DebikiRequest[Unit], pageId: PageId, showId: Boolean,
-        pageRole: PageRole): PageGetRequest = {
+        pageRole: PageRole, now: When): PageGetRequest = {
     val pagePath = PagePath(
       siteId = request.siteId,
       folder = "/",
@@ -313,7 +319,7 @@ object ViewPageController extends mvc.Controller {
       pageId = pageId,
       pageRole = pageRole,
       authorId = SystemUserId,
-      creationDati = Globals.now().toJavaDate,
+      creationDati = now.toJavaDate,
       categoryId = None,
       publishDirectly = true)
 

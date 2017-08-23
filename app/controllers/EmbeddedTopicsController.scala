@@ -25,13 +25,15 @@ import debiki.dao.SiteDao
 import ed.server.RenderedPage
 import ed.server.http._
 import java.{util => ju}
+import javax.inject.Inject
 import play.api._
 import play.api.mvc.{Action => _, _}
 
 
 /** Shows embedded comments.
   */
-object EmbeddedTopicsController extends mvc.Controller {
+class EmbeddedTopicsController @Inject()(cc: ControllerComponents, globals: Globals)
+  extends AbstractController(cc) {
 
 
   def showTopic(embeddingUrl: String, discussionId: Option[AltPageId], edPageId: Option[PageId]) =
@@ -44,7 +46,7 @@ object EmbeddedTopicsController extends mvc.Controller {
         // Embedded comments page not yet created. Return a dummy page; we'll create a real one,
         // later when the first reply gets posted.
         val pageRequest = ViewPageController.makeEmptyPageRequest(request, EmptyPageId, showId = true,
-            PageRole.EmbeddedComments)
+            PageRole.EmbeddedComments, globals.now())
         val jsonStuff = ReactJson.pageThatDoesNotExistsToJson(
           dao, PageRole.EmbeddedComments, Some(DefaultCategoryId))
         // Don't render server side, render client side only. Search engines shouldn't see it anyway,

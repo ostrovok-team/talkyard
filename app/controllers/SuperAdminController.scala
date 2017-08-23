@@ -18,15 +18,18 @@
 package controllers
 
 import com.debiki.core._
-import debiki.{RateLimits, SiteTpi}
+import debiki.{Globals, RateLimits, SiteTpi}
 import debiki.ReactJson._
 import debiki.DebikiHttp.throwBadRequest
 import ed.server.http._
+import javax.inject.Inject
 import play.{api => p}
 import play.api.libs.json.{JsObject, Json}
+import play.api.mvc.{AbstractController, ControllerComponents}
 
 
-object SuperAdminController extends p.mvc.Controller {
+class SuperAdminController @Inject()(cc: ControllerComponents, globals: Globals)
+  extends AbstractController(cc) {
 
   def redirect = GetAction { apiReq =>
     Redirect(routes.SuperAdminController.superAdminApp("").url)
@@ -57,19 +60,19 @@ object SuperAdminController extends p.mvc.Controller {
       }
       (siteId, newStatus)
     })
-    debiki.Globals.systemDao.updateSites(siteData)
+    globals.systemDao.updateSites(siteData)
     listSitesImpl()
   }
 
 
   private def listSitesImpl(): p.mvc.Result = {
     // The most recent first.
-    val sites: Seq[Site] = debiki.Globals.systemDao.loadSites().sortBy(-_.createdAt.toUnixMillis)
+    val sites: Seq[Site] = globals.systemDao.loadSites().sortBy(-_.createdAt.toUnixMillis)
     OkSafeJson(Json.obj(
-      "appVersion" -> debiki.Globals.applicationVersion,
+      "appVersion" -> globals.applicationVersion,
       "superadmin" -> Json.obj(
-        "firstSiteHostname" -> JsStringOrNull(debiki.Globals.firstSiteHostname),
-        "baseDomain" -> debiki.Globals.baseDomainWithPort,
+        "firstSiteHostname" -> JsStringOrNull(globals.firstSiteHostname),
+        "baseDomain" -> globals.baseDomainWithPort,
         "sites" -> sites.map(siteToJson))))
   }
 

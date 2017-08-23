@@ -23,13 +23,15 @@ import debiki._
 import debiki.DebikiHttp._
 import ed.server.security.createSessionIdAndXsrfToken
 import ed.server.http._
+import javax.inject.Inject
 import play.api._
-import play.api.mvc.Action
+import play.api.mvc.{AbstractController, Action, ControllerComponents}
 
 
 /** Resets the password of a PasswordIdentity, in case the user forgot it.
   */
-object ResetPasswordController extends mvc.Controller {
+class ResetPasswordController @Inject()(cc: ControllerComponents, globals: Globals)
+  extends AbstractController(cc) {
 
   val MaxResetPasswordEmailAgeInHours = 24
 
@@ -85,7 +87,7 @@ object ResetPasswordController extends mvc.Controller {
 
     val email = Email(
       EmailType.ResetPassword,
-      createdAt = Globals.now(),
+      createdAt = globals.now(),
       sendTo = user.email,
       toUserId = Some(user.id),
       subject = s"[${dao.theSiteName()}] Reset Password",
@@ -97,7 +99,7 @@ object ResetPasswordController extends mvc.Controller {
           expirationTimeInHours = MaxResetPasswordEmailAgeInHours).body
       })
     dao.saveUnsentEmail(email)
-    Globals.sendEmail(email, dao.siteId)
+    globals.sendEmail(email, dao.siteId)
   }
 
 
@@ -107,7 +109,7 @@ object ResetPasswordController extends mvc.Controller {
 
     val email = Email(
       EmailType.Notification,
-      createdAt = Globals.now(),
+      createdAt = globals.now(),
       sendTo = emailAddress,
       toUserId = Some(user.id),
       subject = s"[${dao.theSiteName()}] There is no password to reset",
@@ -118,7 +120,7 @@ object ResetPasswordController extends mvc.Controller {
           siteAddress = request.host).body
       })
     dao.saveUnsentEmail(email)
-    Globals.sendEmail(email, dao.siteId)
+    globals.sendEmail(email, dao.siteId)
   }
 
 
@@ -161,7 +163,7 @@ object ResetPasswordController extends mvc.Controller {
   private def loginByEmailOrThrow(resetPasswordEmailId: String, request: ApiRequest[_])
         : MemberLoginGrant = {
     val loginAttempt = EmailLoginAttempt(
-      ip = request.ip, date = Globals.now().toJavaDate, emailId = resetPasswordEmailId)
+      ip = request.ip, date = globals.now().toJavaDate, emailId = resetPasswordEmailId)
     // TODO: Check email type !
     val loginGrant =
       try request.dao.tryLoginAsMember(loginAttempt)
