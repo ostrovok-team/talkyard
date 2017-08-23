@@ -19,8 +19,6 @@ package debiki.dao
 
 import com.debiki.core._
 import com.debiki.core.Prelude._
-import debiki.DebikiHttp.throwNotFound
-import ed.server.http.throwForbiddenIf
 import debiki.TextAndHtml
 import ed.server.auth.{Authz, ForumAuthzContext, MayMaybe}
 import java.{util => ju}
@@ -82,6 +80,8 @@ case class CreateCategoryResult(
   */
 trait CategoriesDao {
   self: SiteDao =>
+
+  import context.http._
 
   // The dao shouldn't live past the current HTTP request anyway.
   private var categoriesById: Map[CategoryId, Category] = _

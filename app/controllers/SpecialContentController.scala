@@ -20,12 +20,11 @@ package controllers
 import com.debiki.core._
 import com.debiki.core.Prelude._
 import debiki._
-import debiki.DebikiHttp._
+import ed.server.{EdContext, EdController}
 import ed.server.http._
 import javax.inject.Inject
-import play.api._
 import play.api.libs.json.{JsString, Json}
-import play.api.mvc.{Action => _, _}
+import play.api.mvc.ControllerComponents
 
 
 
@@ -33,9 +32,10 @@ import play.api.mvc.{Action => _, _}
   * is automatically included on the terms-of-use page.
   */
 @deprecated("now?", "come up with something better instead?")
-class SpecialContentController @Inject()(cc: ControllerComponents)
-  extends AbstractController(cc) {
+class SpecialContentController @Inject()(cc: ControllerComponents, edContext: EdContext)
+  extends EdController(cc, edContext) {
 
+  import context.http._
 
   /** If the special content has not yet been edited, returns a default text (depending
     * on the page id). For example, if the forum owner hasn't edited the content license

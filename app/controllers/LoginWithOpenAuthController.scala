@@ -26,7 +26,6 @@ import com.mohiva.play.silhouette.impl.providers.oauth2._
 import com.mohiva.play.silhouette.impl.providers._
 import ed.server.spam.SpamChecker
 import debiki._
-import debiki.DebikiHttp._
 import ed.server._
 import ed.server.security.createSessionIdAndXsrfToken
 import ed.server.http._
@@ -54,7 +53,7 @@ import scala.concurrent.Future
   * login.domain.com, and redirects you back to X with a session id and an XSRF token.
 
 class LoginWithOpenAuthController @Inject()(cc: ControllerComponents, globals: Globals)
-  extends AbstractController(cc) {
+  extends EdController(cc, globals) {
 
   private val Separator = '|'
   private val ReturnToUrlCookieName = "dwCoReturnToUrl"

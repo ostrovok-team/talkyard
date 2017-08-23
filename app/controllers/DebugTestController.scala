@@ -20,20 +20,17 @@ package controllers
 import akka.pattern.ask
 import com.debiki.core._
 import com.debiki.core.Prelude._
-import debiki.{Globals, RateLimits, ReactRenderer}
-import debiki.DebikiHttp._
+import debiki.{RateLimits, ReactRenderer}
 import debiki.dao.PagePartsDao
-import ed.server.http._
+import ed.server.{EdContext, EdController}
 import ed.server.pop.PagePopularityCalculator
 import java.lang.management.ManagementFactory
 import java.{io => jio, util => ju}
 import javax.inject.Inject
 import org.slf4j.Marker
-import play.api._
 import play.api.libs.json._
 import play.{api => p}
-import play.api.Play.current
-import play.api.mvc.{AbstractController, Action, ControllerComponents}
+import play.api.mvc.{Action, ControllerComponents}
 import play.api.mvc.BodyParsers.parse.empty
 import redis.RedisClient
 import scala.concurrent.duration._
@@ -45,8 +42,11 @@ import scala.util.Try
 
 /** Intended for troubleshooting, via the browser, and helps running End-to-End tests.
   */
-class DebugTestController @Inject()(cc: ControllerComponents, globals: Globals)
-  extends AbstractController(cc) {
+class DebugTestController @Inject()(cc: ControllerComponents, edContext: EdContext)
+  extends EdController(cc, edContext) {
+
+  import context.http._
+  import context.globals
 
 
   /** If a JS error happens in the browser, it'll post the error message to this

@@ -19,7 +19,7 @@ package controllers
 
 import com.debiki.core._
 import debiki._
-import debiki.DebikiHttp._
+import ed.server.{EdContext, EdController}
 import ed.server.http._
 import javax.inject.Inject
 import play.api._
@@ -35,9 +35,11 @@ import scala.util.matching.Regex
  * (So whenever the bundle contents changes, the URL also changes — and
  * we can ask the browser to cache forever. This is asset versioning.)
  */
-class SiteAssetBundlesController @Inject()(cc: ControllerComponents, globals: Globals)
-  extends AbstractController(cc) {
+class SiteAssetBundlesController @Inject()(cc: ControllerComponents, edContext: EdContext)
+  extends EdController(cc, edContext) {
 
+  import context.http._
+  import context.globals
 
   /**
    * Serves asset bundles.

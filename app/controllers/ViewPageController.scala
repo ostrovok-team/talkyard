@@ -27,7 +27,7 @@ import play.api.libs.json._
 import play.api.mvc._
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
-import ed.server.{EdController, RenderedPage}
+import ed.server.{EdContext, EdController, RenderedPage}
 import javax.inject.Inject
 import ViewPageController._
 
@@ -40,8 +40,11 @@ import ViewPageController._
   * comments that are pending approval — although such unapproved comments
   * aren't loaded, when other people view the page.
   */
-class ViewPageController @Inject()(cc: ControllerComponents, globals: Globals)
-  extends EdController(cc, globals) {
+class ViewPageController @Inject()(cc: ControllerComponents, edContext: EdContext)
+  extends EdController(cc, edContext) {
+
+  import context.http._
+  import context.globals
 
 
 

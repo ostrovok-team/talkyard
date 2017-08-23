@@ -18,18 +18,20 @@
 package controllers
 
 import com.debiki.core._
-import debiki.{Globals, RateLimits, SiteTpi}
+import debiki.{Globals, SiteTpi}
 import debiki.ReactJson._
-import debiki.DebikiHttp.throwBadRequest
-import ed.server.http._
+import ed.server.{EdContext, EdController}
 import javax.inject.Inject
 import play.{api => p}
 import play.api.libs.json.{JsObject, Json}
-import play.api.mvc.{AbstractController, ControllerComponents}
+import play.api.mvc.ControllerComponents
 
 
-class SuperAdminController @Inject()(cc: ControllerComponents, globals: Globals)
-  extends AbstractController(cc) {
+class SuperAdminController @Inject()(cc: ControllerComponents, edContext: EdContext)
+  extends EdController(cc, edContext) {
+
+  import context.http._
+  import context.globals
 
   def redirect = GetAction { apiReq =>
     Redirect(routes.SuperAdminController.superAdminApp("").url)

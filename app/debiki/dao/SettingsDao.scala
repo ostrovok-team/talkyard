@@ -29,6 +29,8 @@ import ed.server.http.throwForbidden2
 trait SettingsDao {
   self: SiteDao =>
 
+  import context.http.throwForbidden
+
   def getWholeSiteSettings(): EffectiveSettings = {
     memCache.lookup(
       siteSettingsKey,
@@ -53,7 +55,7 @@ trait SettingsDao {
       val newSettings = loadWholeSiteSettings(transaction)
       newSettings.findAnyError foreach { error =>
         // This'll rollback the transaction.
-        throwForbidden2("EsE40GY28", s"Bad settings: $error")
+        throwForbidden("EsE40GY28", s"Bad settings: $error")
       }
       memCache.clearSingleSite(siteId)
     }

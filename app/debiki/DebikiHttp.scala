@@ -19,32 +19,27 @@ package debiki
 
 import com.debiki.core._
 import com.debiki.core.Prelude._
-import debiki.dao.SystemDao
-import ed.server.http._
+import ed.server.auth.MayMaybe
+import ed.server.auth.MayMaybe.{NoMayNot, NoNotFound, Yes}
+import ed.server.http.DebikiRequest
 import java.{net => jn}
-import play.api._
+import play.api.libs.json.JsLookupResult
 import play.{api => p}
 import play.api.mvc._
-import play.api.Play.current
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
+import scala.util.Try
 
-
-object EdHttp {
-
-  def withGlobals(theGlobals: Globals) = new DebikiHttp {
-    val globals: Globals = theGlobals
-  }
-
-}
 
 
 /**
  * HTTP utilities.
  */
-trait DebikiHttp {
-
-  def globals: Globals
+class EdHttp(
+  val secure: Boolean,
+  isProd: Boolean,
+  e2eTestPassword: Option[String],
+  forbiddenPassword: Option[String]) {
 
 
   // ----- Limits
@@ -67,7 +62,6 @@ trait DebikiHttp {
     case object Json extends ContentType
     case object Html extends ContentType
   }
-
 
   // ----- Error handling
 
@@ -188,6 +182,12 @@ trait DebikiHttp {
   def throwForbidden(errCode: String, message: String = "") =
     throw ResultException(ForbiddenResult(errCode, message))
 
+  def throwForbiddenIf(test: Boolean, errorCode: String, message: => String): Unit =
+    if (test) throwForbidden(errorCode, message)
+
+  def throwForbiddenUnless(test: Boolean, errorCode: String, message: => String): Unit =
+    if (!test) throwForbidden(errorCode, message)
+
   def throwNotImplemented(errorCode: String, message: String = "") =
     throw ResultException(NotImplementedResult(errorCode, message))
 
@@ -196,6 +196,16 @@ trait DebikiHttp {
 
   def throwNotFound(errCode: String, message: String = "") =
     throw ResultException(NotFoundResult(errCode, message))
+
+  /** Use this if page not found, or the page is private and we don't want strangers
+    * to find out that it exists. [7C2KF24]
+    */
+  def throwIndistinguishableNotFound(devModeErrCode: String = ""): Nothing = {
+    val suffix =
+      if (!isProd && devModeErrCode.nonEmpty) s"-$devModeErrCode"
+      else ""
+    throwNotFound("EsE404" + suffix, "Page not found")
+  }
 
   def throwEntityTooLargeIf(condition: Boolean, errCode: String, message: String) =
     if (condition) throwEntityTooLarge(errCode, message)
@@ -234,114 +244,60 @@ trait DebikiHttp {
     throw ResultException(InternalErrorResult(errCode, message))
 
 
-  // ----- Tenant ID lookup
 
+  def throwForbidden2: (String, String) => Nothing =
+    throwForbidden
 
-  def originOf(request: GetRequest) =
-    globals.originOf(request.underlying)
-
-  def originOf(request: Request[_]) =
-    globals.originOf(request)
-
-
-  def daoFor(request: Request[_]) = {
-    val site = lookupSiteOrThrow(originOf(request), globals.systemDao)
-    globals.siteDao(site.id)
-  }
-
-
-  /** Looks up a site by hostname, or directly by id.
-    *
-    * By id: If a HTTP request specifies a hostname like "site-<id>.<baseDomain>",
-    * for example:  site-123.debiki.com,
-    * then the site is looked up directly by id. This is useful for embedded
-    * comment sites, since their address isn't important, and if we always access
-    * them via site id, we don't need to ask the side admin to come up with any
-    * site address.
-    */
-  def lookupSiteOrThrow(request: RequestHeader, systemDao: SystemDao): SiteBrief = {
-    lookupSiteOrThrow(request.secure, request.host, request.uri, systemDao)
-  }
-
-  def lookupSiteOrThrow(url: String, systemDao: SystemDao): SiteBrief = {
-    val (scheme, separatorHostPathQuery) = url.span(_ != ':')
-    val secure = scheme == "https"
-    val (host, pathAndQuery) =
-      separatorHostPathQuery.drop(3).span(_ != '/') // drop(3) drops "://"
-    lookupSiteOrThrow(secure, host = host, pathAndQuery, systemDao)
-  }
-
-  def lookupSiteOrThrow(secure: Boolean, host: String, pathAndQuery: String,
-        systemDao: SystemDao): SiteBrief = {
-
-    // Play supports one HTTP and one HTTPS port only, so it makes little sense
-    // to include any port number when looking up a site.
-    val hostname = if (host contains ':') host.span(_ != ':')._1 else host
-    def firstSiteIdAndHostname = {
-      val hostname = globals.firstSiteHostname getOrElse throwForbidden(
-        "EsE5UYK2", o"""No first site hostname configured (config value:
-            ${Globals.FirstSiteHostnameConfigValue})""")
-      val firstSite = systemDao.getOrCreateFirstSite()
-      SiteBrief(Site.FirstSiteId, hostname, firstSite.status)
+  def throwNoUnless(mayMaybe: MayMaybe, errorCode: String) {
+    import MayMaybe._
+    mayMaybe match {
+      case Yes => // fine
+      case NoNotFound(debugCode) => throwIndistinguishableNotFound(debugCode)
+      case NoMayNot(code2, reason) => throwForbidden(s"$errorCode-$code2", reason)
     }
-
-    if (globals.firstSiteHostname.contains(hostname))
-      return firstSiteIdAndHostname
-
-    // If the hostname is like "site-123.example.com" then we'll just lookup id 123.
-    hostname match {
-      case globals.siteByIdHostnameRegex(siteIdString: String) =>
-        val siteId = siteIdString.toIntOrThrow("EdE5PJW2", s"Bad site id: $siteIdString")
-        systemDao.getSite(siteId) match {
-          case None =>
-            throwNotFound("DwE72SF6", s"No site with id $siteId")
-          case Some(site) =>
-            COULD // link to canonical host if (site.hosts.exists(_.role == SiteHost.RoleCanonical))
-            // Let the config file hostname have precedence over the database.
-            if (site.id == FirstSiteId && globals.firstSiteHostname.isDefined)
-              return site.brief.copy(hostname = globals.firstSiteHostname.get)
-            else
-              return site.brief
-        }
-      case _ =>
-    }
-
-    // Id unknown so we'll lookup the hostname instead.
-    val lookupResult = systemDao.lookupCanonicalHost(hostname) match {
-      case Some(result) =>
-        if (result.thisHost == result.canonicalHost)
-          result
-        else result.thisHost.role match {
-          case SiteHost.RoleDuplicate =>
-            result
-          case SiteHost.RoleRedirect =>
-            throwPermanentRedirect(globals.originOf(result.canonicalHost.hostname) + pathAndQuery)
-          case SiteHost.RoleLink =>
-            die("DwE2KFW7", "Not implemented: <link rel='canonical'>")
-          case _ =>
-            die("DwE20SE4")
-        }
-      case None =>
-        if (Site.Ipv4AnyPortRegex.matches(hostname)) {
-          // Make it possible to access the server before any domain has been connected
-          // to it and when we still don't know its ip, just after installation.
-          return firstSiteIdAndHostname
-        }
-        throwNotFound("DwE0NSS0", s"There is no site with hostname '$hostname'")
-    }
-    val site = systemDao.getSite(lookupResult.siteId) getOrDie "EsE2KU503"
-    site.brief
   }
+
+  def throwNotImplementedIf(test: Boolean, errorCode: String, message: => String = "") {
+    if (test) throwNotImplemented(errorCode, message)
+  }
+
+  def throwLoginAsSuperAdmin(request: Request[_]): Nothing =
+    if (isAjax(request)) throwForbidden2("EsE54YK2", "Not super admin")
+    else throwLoginAsSuperAdminTo(request.uri)
+
+  def throwLoginAsSuperAdminTo(path: String): Nothing =
+    ??? // throwLoginAsTo(LoginController.AsSuperadmin, path)
+
+
+  def throwLoginAsAdmin(request: Request[_]): Nothing =
+    if (isAjax(request)) throwForbidden2("EsE6GP21", "Not admin")
+    else throwLoginAsAdminTo(request.uri)
+
+  def throwLoginAsAdminTo(path: String): Nothing =
+    ??? // throwLoginAsTo(LoginController.AsAdmin, path)
+
+
+  def throwLoginAsStaff(request: Request[_]): Nothing =
+    if (isAjax(request)) throwForbidden2("EsE4GP6D", "Not staff")
+    else throwLoginAsStaffTo(request.uri)
+
+  def throwLoginAsStaffTo(path: String): Nothing =
+    ??? // throwLoginAsTo(LoginController.AsStaff, path)
+
+
+  private def throwLoginAsTo(as: String, to: String): Nothing =
+    ??? // throwTemporaryRedirect(routes.LoginController.showLoginPage(as = Some(as), to = Some(to)).url)
+
 
 
   // ----- Cookies
 
   def SecureCookie(name: String, value: String, maxAgeSeconds: Option[Int] = None,
         httpOnly: Boolean = false) =
-    Cookie(name, value, maxAge = maxAgeSeconds, secure = globals.secure, httpOnly = httpOnly)
+    Cookie(name, value, maxAge = maxAgeSeconds, secure = secure, httpOnly = httpOnly)
 
   def DiscardingSecureCookie(name: String) =
-    DiscardingCookie(name, secure = globals.secure)
+    DiscardingCookie(name, secure = secure)
 
   def DiscardingSessionCookie = DiscardingSecureCookie("dwCoSid")
 
@@ -368,7 +324,7 @@ trait DebikiHttp {
       maxAge = maxAgeSecs,
       path = "/",
       domain = None,
-      secure = globals.secure,
+      secure = secure,
       httpOnly = false)
 
   def urlDecodeCookie(name: String, request: Request[_]): Option[String] =
@@ -404,10 +360,130 @@ trait DebikiHttp {
   // so email addresses are okay.
 
 
-  // ----- Miscellaneous
+
+  // ----- Request "getters" and payload parsing helpers
+
+
+  implicit class RichString2(value: String) {
+    def toIntOrThrow(errorCode: String, errorMessage: String): Int =
+      value.toIntOption getOrElse throwBadRequest(errorCode, errorMessage)
+
+    def toFloatOrThrow(errorCode: String, errorMessage: String): Float =
+      value.toFloatOption getOrElse throwBadRequest(errorCode, errorMessage)
+
+    def toLongOrThrow(errorCode: String, errorMessage: String): Long =
+      Try(value.toLong).toOption getOrElse throwBadRequest(errorCode, errorMessage)
+  }
+
+
+  implicit class RichJsLookupResult(val underlying: JsLookupResult) {
+    def asOptStringTrimmed: Option[String] = underlying.asOpt[String].map(_.trim)
+
+    def asOptStringNoneIfBlank: Option[String] = underlying.asOpt[String].map(_.trim) match {
+      case Some("") => None
+      case x => x
+    }
+  }
+
+
+  implicit class GetOrThrowBadArgument[A](val underlying: Option[A]) {
+    def getOrThrowBadArgument(errorCode: String, parameterName: String, message: => String = ""): A = {
+      underlying getOrElse {
+        throwBadArgument(errorCode, parameterName, message)
+      }
+    }
+  }
+
+
+  def parseIntOrThrowBadReq(text: String, errorCode: String = "DwE50BK7"): Int = {
+    try {
+      text.toInt
+    }
+    catch {
+      case ex: NumberFormatException =>
+        throwBadReq(s"Not an integer: ``$text''", errorCode)
+    }
+  }
+
+
 
   def isAjax(request: Request[_]) =
     request.headers.get("X-Requested-With") == Some("XMLHttpRequest")
+
+
+  /** The real ip address of the client, unless a fakeIp url param or dwCoFakeIp cookie specified
+    * In prod mode, an e2e test password cookie is required.
+    *
+    * (If 'fakeIp' is specified, actions.SafeActions.scala copies the value to
+    * the dwCoFakeIp cookie.)
+    */
+  def realOrFakeIpOf(request: play.api.mvc.Request[_]): String = {
+    val fakeIpQueryParam = request.queryString.get("fakeIp").flatMap(_.headOption)
+    val fakeIp = fakeIpQueryParam.orElse(
+      request.cookies.get("dwCoFakeIp").map(_.value))  getOrElse {
+      return request.remoteAddress
+    }
+
+    if (isProd) {
+      def where = fakeIpQueryParam.isDefined ? "in query param" | "in cookie"
+      val password = getE2eTestPassword(request) getOrElse {
+        throwForbidden(
+          "DwE6KJf2", s"Fake ip specified $where, but no e2e test password — required in prod mode")
+      }
+      val correctPassword = e2eTestPassword getOrElse {
+        throwForbidden(
+          "DwE7KUF2", "Fake ips not allowed, because no e2e test password has been configured")
+      }
+      if (password != correctPassword) {
+        throwForbidden(
+          "DwE2YUF2", "Fake ip forbidden: Wrong e2e test password")
+      }
+    }
+
+    // Dev or test mode, or correct password, so:
+    fakeIp
+  }
+
+
+  def getE2eTestPassword(request: play.api.mvc.Request[_]): Option[String] =
+    request.queryString.get("e2eTestPassword").flatMap(_.headOption).orElse(
+      request.cookies.get("dwCoE2eTestPassword").map(_.value)).orElse( // dwXxx obsolete. esXxx now
+      request.cookies.get("esCoE2eTestPassword").map(_.value))
+
+
+  def hasOkE2eTestPassword(request: play.api.mvc.Request[_]): Boolean = {
+    getE2eTestPassword(request) match {
+      case None => false
+      case Some(password) =>
+        val correctPassword = e2eTestPassword getOrElse throwForbidden(
+          "EsE5GUM2", "There's an e2e test password in the request, but not in any config file")
+        if (password != correctPassword) {
+          throwForbidden("EsE2FWK4", "The e2e test password in the request is wrong")
+        }
+        true
+    }
+  }
+
+
+  def getForbiddenPassword(request: DebikiRequest[_]): Option[String] =
+    request.queryString.get("forbiddenPassword").flatMap(_.headOption).orElse(
+      request.cookies.get("esCoForbiddenPassword").map(_.value))
+
+
+  def hasOkForbiddenPassword(request: DebikiRequest[_]): Boolean = {
+    getForbiddenPassword(request) match {
+      case None => false
+      case Some(password) =>
+        val correctPassword = forbiddenPassword getOrElse throwForbidden(
+          "EsE48YC2", "There's a forbidden-password in the request, but not in any config file")
+        if (password != correctPassword) {
+          throwForbidden("EsE7UKF2", "The forbidden-password in the request is wrong")
+        }
+        true
+    }
+  }
+
+
 
 }
 

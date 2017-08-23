@@ -20,13 +20,11 @@ package controllers
 import com.debiki.core._
 import com.debiki.core.Prelude._
 import debiki._
-import debiki.DebikiHttp._
+import ed.server.{EdContext, EdController}
 import ed.server.http._
 import javax.inject.Inject
-import play.api._
 import play.api.mvc._
 import play.api.libs.json.{JsString, JsValue}
-import scala.concurrent.ExecutionContext.Implicits.global
 
 
 /** Starts discussions for a group of people: chat channels, or personal messages.
@@ -34,8 +32,10 @@ import scala.concurrent.ExecutionContext.Implicits.global
   * Read more about how to build a good message handling system here:
   *   https://meta.discourse.org/t/discourse-as-a-private-email-support-portal/34444
   */
-class GroupTalkController @Inject()(cc: ControllerComponents)
-  extends AbstractController(cc) {
+class GroupTalkController @Inject()(cc: ControllerComponents, edContext: EdContext)
+  extends EdController(cc, edContext) {
+
+  import context.http._
 
 
   def sendMessage: Action[JsValue] = PostJsonAction(RateLimits.PostReply, maxBytes = MaxPostSize) {

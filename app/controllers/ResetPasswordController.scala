@@ -20,7 +20,7 @@ package controllers
 import com.debiki.core._
 import com.debiki.core.Prelude._
 import debiki._
-import debiki.DebikiHttp._
+import ed.server.{EdContext, EdController}
 import ed.server.security.createSessionIdAndXsrfToken
 import ed.server.http._
 import javax.inject.Inject
@@ -30,8 +30,11 @@ import play.api.mvc.{AbstractController, Action, ControllerComponents}
 
 /** Resets the password of a PasswordIdentity, in case the user forgot it.
   */
-class ResetPasswordController @Inject()(cc: ControllerComponents, globals: Globals)
-  extends AbstractController(cc) {
+class ResetPasswordController @Inject()(cc: ControllerComponents, edContext: EdContext)
+  extends EdController(cc, edContext) {
+
+  import context.http._
+  import context.globals
 
   val MaxResetPasswordEmailAgeInHours = 24
 

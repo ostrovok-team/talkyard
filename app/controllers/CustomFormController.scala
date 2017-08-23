@@ -31,9 +31,10 @@ import play.api.mvc._
 /** Saves a {{{<form>}}} as either 1) a new reply, in JSON (for the db) + Yaml (for presentation),
   * or as 2) a new topic — then in title + human friendly body.
   */
-class CustomFormController @Inject()(cc: ControllerComponents, globals: Globals)
-  extends EdController(cc, globals) {
+class CustomFormController @Inject()(cc: ControllerComponents, edContext: EdContext)
+  extends EdController(cc, edContext) {
 
+  import context.http._
 
   def handleJsonReply: Action[JsValue] = PostJsonAction(
         RateLimits.PostReply, maxBytes = MaxPostSize) { request =>

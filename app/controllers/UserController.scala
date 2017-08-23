@@ -30,15 +30,18 @@ import play.api.mvc.{AbstractController, Action, ControllerComponents}
 import scala.util.Try
 import scala.collection.immutable
 import debiki.RateLimits.TrackReadingActivity
-import ed.server.EdController
+import ed.server.{EdContext, EdController}
 import ed.server.auth.Authz
 import javax.inject.Inject
 
 
 /** Handles requests related to users.
  */
-class UserController @Inject()(cc: ControllerComponents, globals: Globals)
-  extends EdController(cc, globals) {
+class UserController @Inject()(cc: ControllerComponents, edContext: EdContext)
+  extends EdController(cc, edContext) {
+
+  import context.http._
+  import context.globals
 
 
   def listCompleteUsers(whichUsers: String): Action[Unit] = StaffGetAction { request =>

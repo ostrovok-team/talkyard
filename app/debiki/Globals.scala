@@ -46,7 +46,9 @@ import scala.concurrent.{Await, Future, TimeoutException}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.matching.Regex
 import Globals._
+import ed.server.EdContext
 import ed.server.http.GetRequest
+import play.api.mvc.RequestHeader
 
 
 object Globals {
@@ -73,18 +75,27 @@ object Globals {
   *
   * It's a class, so it can be tweaked during unit testing.
   */
-class Globals(context: p.ApplicationLoader.Context, val actorSystem: ActorSystem) {
+class Globals(
+  private val appLoaderContext: p.ApplicationLoader.Context,
+  val actorSystem: ActorSystem,
+  private val edHttp: EdHttp) {
 
-  private def edHttp = EdHttp.withGlobals(this)
+  def outer: Globals = this
 
+  def setEdContext(edContext: EdContext) {
+    dieIf(edContext ne null, "EdE7UBR10")
+    this.edContext = edContext
+  }
 
-  val conf: p.Configuration = context.initialConfiguration
+  var edContext: EdContext = _
+
+  val conf: p.Configuration = appLoaderContext.initialConfiguration
   def rawConf: p.Configuration = conf
 
   /** Can be accessed also after the test is done and Play.maybeApplication is None.
     */
-  lazy val isOrWasTest: Boolean = context.environment.mode == play.api.Mode.Test
-  lazy val isProd: Boolean = context.environment.mode == play.api.Mode.Prod
+  lazy val isOrWasTest: Boolean = appLoaderContext.environment.mode == play.api.Mode.Test
+  lazy val isProd: Boolean = appLoaderContext.environment.mode == play.api.Mode.Prod
 
   def testsDoneServerGone: Boolean =
     isOrWasTest && (!isInitialized || Play.maybeApplication.isEmpty)
@@ -267,13 +278,94 @@ class Globals(context: p.ApplicationLoader.Context, val actorSystem: ActorSystem
   def maxUploadSizeBytes: Int = state.maxUploadSizeBytes
   def anyUploadsDir: Option[String] = state.anyUploadsDir
   def anyPublicUploadsDir: Option[String] = state.anyPublicUploadsDir
-  val uploadsUrlPath: String = controllers.routes.UploadsController.servePublicFile("").url
 
   def pubSub: PubSubApi = state.pubSub
   def strangerCounter: StrangerCounterApi = state.strangerCounter
 
 
-  def onServerStartup(app: p.Application) {
+  /** Looks up a site by hostname, or directly by id.
+    *
+    * By id: If a HTTP request specifies a hostname like "site-<id>.<baseDomain>",
+    * for example:  site-123.debiki.com,
+    * then the site is looked up directly by id. This is useful for embedded
+    * comment sites, since their address isn't important, and if we always access
+    * them via site id, we don't need to ask the side admin to come up with any
+    * site address.
+    */
+  def lookupSiteOrThrow(request: RequestHeader): SiteBrief = {
+    lookupSiteOrThrow(request.secure, request.host, request.uri)
+  }
+
+  def lookupSiteOrThrow(url: String): SiteBrief = {
+    val (scheme, separatorHostPathQuery) = url.span(_ != ':')
+    val secure = scheme == "https"
+    val (host, pathAndQuery) =
+      separatorHostPathQuery.drop(3).span(_ != '/') // drop(3) drops "://"
+    lookupSiteOrThrow(secure, host = host, pathAndQuery)
+  }
+
+  def lookupSiteOrThrow(secure: Boolean, host: String, pathAndQuery: String): SiteBrief = {
+
+    // Play supports one HTTP and one HTTPS port only, so it makes little sense
+    // to include any port number when looking up a site.
+    val hostname = if (host contains ':') host.span(_ != ':')._1 else host
+    def firstSiteIdAndHostname = {
+      val hostname = firstSiteHostname getOrElse edHttp.throwForbidden(
+        "EsE5UYK2", o"""No first site hostname configured (config value:
+            ${Globals.FirstSiteHostnameConfigValue})""")
+      val firstSite = systemDao.getOrCreateFirstSite()
+      SiteBrief(Site.FirstSiteId, hostname, firstSite.status)
+    }
+
+    if (firstSiteHostname.contains(hostname))
+      return firstSiteIdAndHostname
+
+    // If the hostname is like "site-123.example.com" then we'll just lookup id 123.
+    hostname match {
+      case siteByIdHostnameRegex(siteIdString: String) =>
+        val siteId = siteIdString.toIntOrThrow("EdE5PJW2", s"Bad site id: $siteIdString")
+        systemDao.getSite(siteId) match {
+          case None =>
+            edHttp.throwNotFound("DwE72SF6", s"No site with id $siteId")
+          case Some(site) =>
+            COULD // link to canonical host if (site.hosts.exists(_.role == SiteHost.RoleCanonical))
+            // Let the config file hostname have precedence over the database.
+            if (site.id == FirstSiteId && firstSiteHostname.isDefined)
+              return site.brief.copy(hostname = firstSiteHostname.get)
+            else
+              return site.brief
+        }
+      case _ =>
+    }
+
+    // Id unknown so we'll lookup the hostname instead.
+    val lookupResult = systemDao.lookupCanonicalHost(hostname) match {
+      case Some(result) =>
+        if (result.thisHost == result.canonicalHost)
+          result
+        else result.thisHost.role match {
+          case SiteHost.RoleDuplicate =>
+            result
+          case SiteHost.RoleRedirect =>
+            edHttp.throwPermanentRedirect(originOf(result.canonicalHost.hostname) + pathAndQuery)
+          case SiteHost.RoleLink =>
+            die("DwE2KFW7", "Not implemented: <link rel='canonical'>")
+          case _ =>
+            die("DwE20SE4")
+        }
+      case None =>
+        if (Site.Ipv4AnyPortRegex.matches(hostname)) {
+          // Make it possible to access the server before any domain has been connected
+          // to it and when we still don't know its ip, just after installation.
+          return firstSiteIdAndHostname
+        }
+        edHttp.throwNotFound("DwE0NSS0", s"There is no site with hostname '$hostname'")
+    }
+    val site = systemDao.getSite(lookupResult.siteId) getOrDie "EsE2KU503"
+    site.brief
+  }
+
+  def startStuff() {
     p.Logger.info("Starting... [EsM200HELLO]")
     isOrWasTest // initialise it now
     if (_state ne null)
@@ -347,7 +439,7 @@ class Globals(context: p.ApplicationLoader.Context, val actorSystem: ActorSystem
         // Create any missing database tables before `new State`, otherwise State
         // creates background threads that might attempt to access the tables.
         p.Logger.info("Running database migrations... [EsM200MIGRDB]")
-        new SystemDao(dbDaoFactory, cache).applyEvolutions()
+        new SystemDao(dbDaoFactory, cache, this, edHttp).applyEvolutions()
 
         p.Logger.info("Done migrating database. Connecting to other services... [EsM200CONNOTR]")
         val newState = new State(dbDaoFactory, cache)
@@ -572,7 +664,7 @@ class Globals(context: p.ApplicationLoader.Context, val actorSystem: ActorSystem
           jn.InetAddress.getByName(elasticSearchHost), 9300))
 
     val siteDaoFactory = new SiteDaoFactory(
-      dbDaoFactory, redisClient, cache, usersOnlineCache, elasticSearchClient, config)
+      edContext, dbDaoFactory, redisClient, cache, usersOnlineCache, elasticSearchClient, config)
 
     val mailerActorRef: ActorRef = Mailer.startNewActor(actorSystem, siteDaoFactory, conf, now)
 
@@ -602,12 +694,12 @@ class Globals(context: p.ApplicationLoader.Context, val actorSystem: ActorSystem
     val (pubSub, strangerCounter) = PubSub.startNewActor(actorSystem, nginxHost, redisClient)
 
     val renderContentActorRef: ActorRef =
-      RenderContentService.startNewActor(actorSystem, siteDaoFactory)
+      RenderContentService.startNewActor(outer)
 
     val spamChecker = new SpamChecker()
     spamChecker.start()
 
-    def systemDao: SystemDao = new SystemDao(dbDaoFactory, cache) // [rename] to newSystemDao()?
+    def systemDao: SystemDao = new SystemDao(dbDaoFactory, cache, outer, edHttp) // [rename] to newSystemDao()?
 
     val applicationVersion = "0.00.40"  // later, read from some build config file
 
@@ -627,6 +719,7 @@ class Globals(context: p.ApplicationLoader.Context, val actorSystem: ActorSystem
       if (!isProd) true
       else conf.getBoolean("ed.mayFastForwardTime") getOrElse false
 
+    CLEAN_UP // dupl code [7UWKDAAQ0]
     val secure: Boolean =
       conf.getBoolean("ed.secure").orElse(
         conf.getBoolean("debiki.secure")) getOrElse {
@@ -733,9 +826,11 @@ class Config(conf: play.api.Configuration) {
   val cnameTargetHost: Option[String] =
     conf.getString(Config.CnameTargetHostConfValName).noneIfBlank
 
+  val uploadsUrlPath: String = controllers.routes.UploadsController.servePublicFile("").url
+
   object cdn {
     val origin: Option[String] = conf.getString("ed.cdn.origin").noneIfBlank
-    def uploadsUrlPrefix: Option[String] = origin.map(_ + Globals.uploadsUrlPath)
+    def uploadsUrlPrefix: Option[String] = origin.map(_ + uploadsUrlPath)
   }
 
   object createSite {

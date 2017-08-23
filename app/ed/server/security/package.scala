@@ -15,20 +15,65 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package ed.server
+package ed.server.security
 
 import com.debiki.core._
 import com.debiki.core.Prelude._
-import debiki.DebikiHttp._
-import debiki.ReactRenderer
-import ed.server.http.{JsonOrFormDataBody, realOrFakeIpOf}
+import debiki.{EdHttp, Globals, ReactRenderer}
+import ed.server.http.JsonOrFormDataBody
 import java.{util => ju}
 import play.api.mvc.Cookie
 import play.api.Logger
 import scala.util.Try
+import EdSecurity._
 
 
-package object security {
+sealed abstract class XsrfStatus { def isOk = false }
+case object XsrfAbsent extends XsrfStatus
+case object XsrfNoSid extends XsrfStatus
+case object XsrfBad extends XsrfStatus
+case class XsrfOk(value: String) extends XsrfStatus {
+  override def isOk = true
+}
+
+
+
+sealed abstract class SidStatus {
+  def isOk = false
+  def userId: Option[UserId] = None
+}
+
+case object SidAbsent extends SidStatus { override def isOk = true }
+case object SidBadFormat extends SidStatus
+case object SidBadHash extends SidStatus
+//case class SidExpired(millisAgo: Long) extends SidStatus
+
+
+case class SidOk(
+  value: String,
+  ageInMillis: Long,
+  override val userId: Option[UserId]) extends SidStatus {
+
+  override def isOk = true
+}
+
+
+object EdSecurity {
+
+  /**
+    * A session id cookie is created on the first page view.
+    * It is cleared on logout, and a new one generated on login.
+    * Lift-Web's cookies and session state won't last across server
+    * restarts and I want to be able to restart the app servers at
+    * any time so I don't use Lift's stateful session stuff so very much.
+    */
+  val SessionIdCookieName = "dwCoSid"
+}
+
+
+class EdSecurity(val http: EdHttp, globals: Globals) {
+
+  import http._
 
   private val XsrfTokenInputName = "dw-fi-xsrf"
 
@@ -207,15 +252,6 @@ package object security {
 
 
 
-  sealed abstract class XsrfStatus { def isOk = false }
-  case object XsrfAbsent extends XsrfStatus
-  case object XsrfNoSid extends XsrfStatus
-  case object XsrfBad extends XsrfStatus
-  case class XsrfOk(value: String) extends XsrfStatus {
-    override def isOk = true
-  }
-
-
   private def checkXsrfToken(xsrfToken: String, xsrfCookieValue: Option[String]): XsrfStatus = {
     // COULD check date, and hash, to find out if the token is too old.
     // (Perhaps shouldn't accept e.g. 1 year old tokens?)
@@ -248,38 +284,8 @@ package object security {
   }
 
 
-
-sealed abstract class SidStatus {
-  def isOk = false
-  def userId: Option[UserId] = None
-}
-
-case object SidAbsent extends SidStatus { override def isOk = true }
-case object SidBadFormat extends SidStatus
-case object SidBadHash extends SidStatus
-//case class SidExpired(millisAgo: Long) extends SidStatus
-
-
-case class SidOk(
-  value: String,
-  ageInMillis: Long,
-  override val userId: Option[UserId]) extends SidStatus {
-
-  override def isOk = true
-}
-
-
-/**
- * A session id cookie is created on the first page view.
- * It is cleared on logout, and a new one generated on login.
- * Lift-Web's cookies and session state won't last across server
- * restarts and I want to be able to restart the app servers at
- * any time so I don't use Lift's stateful session stuff so very much.
- */
-  val SessionIdCookieName = "dwCoSid"
-
   private val sidHashLength = 14
-  private def secretSalt = debiki.Globals.applicationSecret
+  private def secretSalt = globals.applicationSecret
   private val _sidMaxMillis = 2 * 31 * 24 * 3600 * 1000  // two months
   //private val _sidExpireAgeSecs = 5 * 365 * 24 * 3600  // five years
 

@@ -20,12 +20,11 @@ package controllers
 import com.debiki.core.EmailNotfPrefs
 import com.debiki.core._
 import debiki._
-import debiki.DebikiHttp._
-import ed.server.http._
 import play.api._
 import play.api.mvc.{AbstractController, Action, ControllerComponents}
 import play.api.mvc.BodyParsers.parse.empty
 import Prelude._
+import ed.server.{EdContext, EdController}
 import javax.inject.Inject
 
 
@@ -39,8 +38,11 @@ import javax.inject.Inject
  * web sites, in the Referer header. So only use each email id
  * for one distinct non-repeatable task?
  */
-class UnsubscriptionController @Inject()(cc: ControllerComponents, globals: Globals)
-  extends AbstractController(cc) {
+class UnsubscriptionController @Inject()(cc: ControllerComponents, edContext: EdContext)
+  extends EdController(cc, edContext) {
+
+  import context.http._
+  import context.globals
 
   SECURITY; SHOULD // (not urgent) not allow this type of email id to do anything else
   // than unsubbing, and expire after ... one month?
@@ -78,7 +80,7 @@ class UnsubscriptionController @Inject()(cc: ControllerComponents, globals: Glob
 
   def handleForm(emailId: EmailId): Action[Map[String, Seq[String]]] =
         ExceptionAction(parse.urlFormEncoded(maxLength = 200)) { request =>
-    val site = DebikiHttp.lookupSiteOrThrow(request, globals.systemDao)
+    val site = lookupSiteOrThrow(request, globals.systemDao)
 
     SECURITY; SHOULD // rate limit and check email type.
 

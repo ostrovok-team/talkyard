@@ -20,22 +20,22 @@ package controllers
 import com.debiki.core._
 import com.debiki.core.Prelude._
 import debiki._
-import debiki.DebikiHttp._
 import debiki.ReactJson.JsLongOrNull
+import ed.server.{EdContext, EdController}
 import ed.server.auth.Authz
 import ed.server.http._
 import java.{util => ju}
 import javax.inject.Inject
-import play.api._
 import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.{AbstractController, Action, ControllerComponents}
+import play.api.mvc.{Action, ControllerComponents}
 
 
 /** Creates pages, toggles is-done, deletes them.
   */
-class PageController @Inject()(cc: ControllerComponents)
-  extends AbstractController(cc) {
+class PageController @Inject()(cc: ControllerComponents, edContext: EdContext)
+  extends EdController(cc, edContext) {
 
+  import context.http._
 
   def createPage: Action[JsValue] = PostJsonAction(RateLimits.CreateTopic, maxBytes = 20 * 1000) {
         request =>

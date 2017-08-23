@@ -20,7 +20,6 @@ package controllers
 import com.debiki.core._
 import com.debiki.core.Prelude._
 import debiki._
-import debiki.DebikiHttp._
 import debiki.dao.UploadsDao._
 import ed.server.http._
 import java.{io => jio}

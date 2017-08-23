@@ -19,7 +19,6 @@ package controllers
 
 import debiki._
 import ed.server._
-import ed.server.http._
 import javax.inject.Inject
 import play.api.mvc.ControllerComponents
 
@@ -27,8 +26,10 @@ import play.api.mvc.ControllerComponents
 
 /** Loads the admin app page.
   */
-class AdminController @Inject()(cc: ControllerComponents, globals: Globals)
-  extends EdController(cc, globals) {
+class AdminController @Inject()(cc: ControllerComponents, edContext: EdContext)
+  extends EdController(cc, edContext) {
+
+  import context.http.SecureCookie
 
 
   def redirectToAdminPage() = GetAction { _ =>

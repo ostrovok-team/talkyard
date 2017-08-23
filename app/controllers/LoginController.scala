@@ -19,7 +19,7 @@ package controllers
 
 import com.debiki.core._
 import debiki.{Globals, RateLimits, SiteTpi}
-import ed.server.EdController
+import ed.server.{EdContext, EdController}
 import ed.server.http._
 import javax.inject.Inject
 import play.api._
@@ -29,8 +29,11 @@ import play.api.mvc._
 
 /** Logs in and out.
   */
-class LoginController @Inject()(cc: ControllerComponents, globals: Globals)
-  extends EdController(cc, globals) {
+class LoginController @Inject()(cc: ControllerComponents, edContext: EdContext)
+  extends EdController(cc, edContext) {
+
+  import context.http._
+  import context.globals
 
 
   val AsSuperadmin = "superadmin"

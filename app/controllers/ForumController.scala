@@ -30,16 +30,17 @@ import play.api.mvc._
 import scala.collection.{immutable, mutable}
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Try
-import Utils.ValidationImplicits._
-import ed.server.EdController
+import ed.server.{EdContext, EdController}
 import ed.server.auth.ForumAuthzContext
 import javax.inject.Inject
 
 
 /** Handles requests related to forums and forum categories.
  */
-class ForumController @Inject()(cc: ControllerComponents, globals: Globals)
-  extends EdController(cc, globals) {
+class ForumController @Inject()(cc: ControllerComponents, edContext: EdContext)
+  extends EdController(cc, edContext) {
+
+  import context.http._
 
   /** Keep synced with client/forum/list-topics/ListTopicsController.NumNewTopicsPerRequest. */
   val NumTopicsToList = 40
@@ -214,7 +215,7 @@ class ForumController @Inject()(cc: ControllerComponents, globals: Globals)
     SECURITY; TESTS_MISSING  // securified
     import request.{dao, requester}
     val authzCtx = dao.getForumAuthzContext(requester)
-    val pageQuery: PageQuery = parseThePageQuery(request)
+    val pageQuery: PageQuery = request.parseThePageQuery()
     throwForbiddenIf(pageQuery.pageFilter.includesDeleted && !request.isStaff, "EdE5FKZX2",
       "Only staff can list deleted pages")
     val topics = listMaySeeTopicsInclPinned(categoryId, pageQuery, dao,
@@ -273,7 +274,7 @@ class ForumController @Inject()(cc: ControllerComponents, globals: Globals)
       mutable.Map[CategoryId, Seq[PagePathAndMeta]]()
 
     val pageIds = ArrayBuffer[PageId]()
-    val pageQuery = PageQuery(PageOrderOffset.ByBumpTime(None), parsePageFilter(request))
+    val pageQuery = PageQuery(PageOrderOffset.ByBumpTime(None), request.parsePageFilter())
 
     for (category <- categories) {
       val recentTopics = listMaySeeTopicsInclPinned(category.id, pageQuery, dao,
@@ -327,55 +328,6 @@ class ForumController @Inject()(cc: ControllerComponents, globals: Globals)
 
     topicsInclPinned
   }
-
-
-  def parseThePageQuery(request: DebikiRequest[_]): PageQuery =
-    parsePageQuery(request) getOrElse throwBadRequest(
-      "DwE2KTES7", "No sort-order-offset specified")
-
-
-  def parsePageQuery(request: DebikiRequest[_]): Option[PageQuery] = {
-    val sortOrderStr = request.queryString.getFirst("sortOrder") getOrElse { return None }
-    def anyDateOffset = request.queryString.getLong("bumpedAt") map (new ju.Date(_))
-
-    val orderOffset: PageOrderOffset = sortOrderStr match {
-      case "ByBumpTime" =>
-        PageOrderOffset.ByBumpTime(anyDateOffset)
-      case "ByScore" =>
-        val scoreStr = request.queryString.getFirst("maxScore")
-        val periodStr = request.queryString.getFirst("period")
-        val period = periodStr.flatMap(TopTopicsPeriod.fromIntString) getOrElse TopTopicsPeriod.Month
-        val score = scoreStr.map(_.toFloatOrThrow("EdE28FKSD3", "Score is not a number"))
-        PageOrderOffset.ByScoreAndBumpTime(offset = score, period)
-      case "ByLikes" =>
-        def anyNumOffset = request.queryString.getInt("num") // CLEAN_UP rename 'num' to 'maxLikes'
-        (anyNumOffset, anyDateOffset) match {
-          case (Some(num), Some(date)) =>
-            PageOrderOffset.ByLikesAndBumpTime(Some(num, date))
-          case (None, None) =>
-            PageOrderOffset.ByLikesAndBumpTime(None)
-          case _ =>
-            throwBadReq("DwE4KEW21", "Please specify both 'num' and 'bumpedAt' or none at all")
-        }
-      case x => throwBadReq("DwE05YE2", s"Bad sort order: `$x'")
-    }
-
-    val filter = parsePageFilter(request)
-    Some(PageQuery(orderOffset, filter))
-  }
-
-
-  def parsePageFilter(request: DebikiRequest[_]): PageFilter =
-    request.queryString.getFirst("filter") match {
-      case None => PageFilter.ShowAll
-      case Some("ShowAll") => PageFilter.ShowAll
-      case Some("ShowWaiting") => PageFilter.ShowWaiting
-      case Some("ShowDeleted") =>
-        if (!request.isStaff)
-          throwForbidden2("EsE5YKP3", "Only staff may list deleted topics")
-        PageFilter.ShowDeleted
-      case Some(x) => throwBadRequest("DwE5KGP8", s"Bad topic filter: $x")
-    }
 
 
   private def categoryToJson(category: Category, isDefault: Boolean,

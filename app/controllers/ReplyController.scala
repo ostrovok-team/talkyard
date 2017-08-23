@@ -19,7 +19,7 @@ package controllers
 
 import com.debiki.core._
 import debiki._
-import debiki.DebikiHttp._
+import ed.server.{EdContext, EdController}
 import ed.server.auth.Authz
 import ed.server.http._
 import javax.inject.Inject
@@ -31,9 +31,10 @@ import play.api.mvc._
 /** Saves replies. Lazily creates pages for embedded discussions
   * — such pages aren't created until the very first reply is posted.
   */
-class ReplyController @Inject()(cc: ControllerComponents)
-  extends AbstractController(cc) {
+class ReplyController @Inject()(cc: ControllerComponents, edContext: EdContext)
+  extends EdController(cc, edContext) {
 
+  import context.http._
 
   def handleReply: Action[JsValue] = PostJsonAction(RateLimits.PostReply, maxBytes = MaxPostSize) {
         request: JsonPostRequest =>

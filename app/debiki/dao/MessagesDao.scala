@@ -21,12 +21,13 @@ import com.debiki.core._
 import com.debiki.core.Prelude._
 import ed.server.notf.NotificationGenerator
 import ed.server.pubsub
-import debiki.DebikiHttp.throwForbidden
 import debiki.TextAndHtml
 
 
 trait MessagesDao {
   self: SiteDao =>
+
+  import context.http.throwForbidden
 
 
   /** COULD perhaps this method be used to create OpenChat pages too? So that the creator

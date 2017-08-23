@@ -20,12 +20,12 @@ package controllers
 import com.debiki.core._
 import com.debiki.core.Prelude._
 import debiki._
-import debiki.DebikiHttp._
+import ed.server.{EdContext, EdController}
 import ed.server.spam.SpamChecker.throwForbiddenIfSpam
 import ed.server.http._
 import javax.inject.Inject
 import play.api.libs.json._
-import play.api.mvc.{AbstractController, Action, Controller, ControllerComponents}
+import play.api.mvc.{Action, ControllerComponents}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Try
 
@@ -35,8 +35,11 @@ import scala.util.Try
   * Each new empty site remembers an admin email address. When the site creator later
   * logs in with that email address, s/he becomes admin for the site.
   */
-class CreateSiteController @Inject()(cc: ControllerComponents, globals: Globals)
-  extends AbstractController(cc) {
+class CreateSiteController @Inject()(cc: ControllerComponents, edContext: EdContext)
+  extends EdController(cc, edContext) {
+
+  import context.http._
+  import context.globals
 
   // Let people use hostnames that start with 'test-' — good to know which sites are
   // in fact just people's test sites.

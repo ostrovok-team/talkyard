@@ -20,20 +20,21 @@ package controllers
 import com.debiki.core._
 import com.debiki.core.Prelude._
 import debiki._
-import debiki.DebikiHttp._
+import ed.server.{EdContext, EdController}
 import ed.server.http._
 import javax.inject.Inject
-import play.api._
 import play.api.libs.json._
-import play.api.mvc.{AbstractController, ControllerComponents}
+import play.api.mvc.ControllerComponents
 
 
 /** Loads and saves settings, for the whole website, site sections,
   * and individual pages. In the future probably also for user roles.
   */
-class SettingsController @Inject()(cc: ControllerComponents, globals: Globals)
-  extends AbstractController(cc) {
+class SettingsController @Inject()(cc: ControllerComponents, edContext: EdContext)
+  extends EdController(cc, edContext) {
 
+  import context.http._
+  import context.globals
 
   def loadSiteSettings = AdminGetAction { request: GetRequest =>
     loadSiteSettingsImpl(request)

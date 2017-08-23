@@ -22,7 +22,6 @@ import com.debiki.core.Prelude._
 import com.debiki.core.PageParts.MaxTitleLength
 import com.debiki.core.User.SystemUserId
 import debiki._
-import debiki.DebikiHttp._
 import ed.server.auth.{Authz, ForumAuthzContext}
 import ed.server.notf.NotificationGenerator
 import java.{util => ju}
@@ -41,6 +40,8 @@ import scala.collection.immutable
 trait PagesDao {
   self: SiteDao =>
 
+  import context.http._
+  import context.globals
 
   def loadPagesByUser(userId: UserId, isStaffOrSelf: Boolean, limit: Int): Seq[PagePathAndMeta] = {
     readOnlyTransaction(_.loadPagesByUser(userId, isStaffOrSelf = isStaffOrSelf, limit))
@@ -87,7 +88,7 @@ trait PagesDao {
         transaction, altPageId = altPageId, embeddingUrl = embeddingUrl)
 
       val notifications = NotificationGenerator(transaction)
-        .generateForNewPost(PageDao(pagePath.pageId getOrDie "DwE5KWI2", transaction), bodyPost)
+        .generateForNewPost(PageDao(pagePath.pageId getOrDie "DwE5KWI2", context, transaction), bodyPost)
       transaction.saveDeleteNotifications(notifications)
       pagePath
     }
@@ -127,7 +128,7 @@ trait PagesDao {
       bodyPostType: PostType = PostType.Normal,
       altPageId: Option[AltPageId] = None, embeddingUrl: Option[String] = None): (PagePath, Post) = {
 
-    val now = Globals.now()
+    val now = globals.now()
     val authorId = byWho.id
     val authorAndLevels = loadUserAndLevels(byWho, transaction)
     val author = authorAndLevels.user
@@ -237,7 +238,7 @@ trait PagesDao {
         bodyHiddenById = ifThenSome(hidePageBody, authorId),
         bodyHiddenReason = None) // add `hiddenReason` function parameter?
 
-    val uploadPaths = UploadsDao.findUploadRefsInPost(bodyPost)
+    val uploadPaths = findUploadRefsInPost(bodyPost)
 
     val pageMeta = PageMeta.forNewPage(pageId, pageRole, authorId, now.toJavaDate,
       pinOrder = pinOrder, pinWhere = pinWhere,
@@ -408,7 +409,7 @@ trait PagesDao {
     */
   def cyclePageDoneIfAuth(pageId: PageId, userId: UserId, browserIdData: BrowserIdData)
         : PageMeta = {
-    val now = Globals.now()
+    val now = globals.now()
     val newMeta = readWriteTransaction { transaction =>
       val user = transaction.loadTheUser(userId)
       val oldMeta = transaction.loadThePageMeta(pageId)
@@ -461,7 +462,7 @@ trait PagesDao {
 
   def ifAuthTogglePageClosed(pageId: PageId, userId: UserId, browserIdData: BrowserIdData)
         : Option[ju.Date] = {
-    val now = Globals.now()
+    val now = globals.now()
     val newClosedAt = readWriteTransaction { transaction =>
       val user = transaction.loadTheUser(userId)
       val oldMeta = transaction.loadThePageMeta(pageId)
@@ -539,7 +540,7 @@ trait PagesDao {
 
   def refreshPageMetaBumpVersion(pageId: PageId, markSectionPageStale: Boolean,
         transaction: SiteTransaction) {
-    val page = PageDao(pageId, transaction)
+    val page = PageDao(pageId, context, transaction)
     val newMeta = page.meta.copy(
       lastReplyAt = page.parts.lastVisibleReply.map(_.createdAt),
       lastReplyById = page.parts.lastVisibleReply.map(_.createdById),

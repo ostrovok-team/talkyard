@@ -20,7 +20,6 @@ package debiki.dao
 import com.debiki.core._
 import com.debiki.core.Prelude._
 import com.debiki.core.EditedSettings.MaxNumFirstPosts
-import debiki.DebikiHttp.{throwNotFound, throwForbidden}
 import java.{util => ju}
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.{mutable, immutable}
@@ -51,6 +50,7 @@ case class ReviewStuff(
 trait ReviewsDao {
   self: SiteDao =>
 
+  import context.http._
 
   def completeReviewTask(taskId: ReviewTaskId, completedById: UserId, anyRevNr: Option[Int],
         action: ReviewAction, browserIdData: BrowserIdData) {

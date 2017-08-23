@@ -41,8 +41,11 @@ import play.api.mvc.{AbstractController, Action, ControllerComponents}
   *
   * Search for [readlater] for stuff ignored right now.
   */
-class ImportExportController @Inject()(cc: ControllerComponents, globals: Globals)
-  extends EdController(cc, globals) {
+class ImportExportController @Inject()(cc: ControllerComponents, edContext: EdContext)
+  extends EdController(cc, edContext) {
+
+  import context.http._
+  import context.globals
 
   val MaxBytes = 1001000
 

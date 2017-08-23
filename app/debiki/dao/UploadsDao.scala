@@ -20,7 +20,6 @@ package debiki.dao
 import com.debiki.core._
 import com.debiki.core.Prelude._
 import com.google.{common => guava}
-import debiki.DebikiHttp._
 import debiki.Globals
 import java.{io => jio, util => ju}
 import java.awt.image.BufferedImage
@@ -29,8 +28,7 @@ import java.nio.file.{attribute => jfa}
 import debiki.{ImageUtils, ReactRenderer}
 import org.jsoup.Jsoup
 import play.{api => p}
-import play.api.Play
-import UploadsDao._
+
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -40,6 +38,8 @@ import scala.collection.mutable.ArrayBuffer
 trait UploadsDao {
   self: SiteDao =>
 
+  import context.http._
+  import context.globals
 
   /** Returns the hash-path-suffix to the file after it has been copied into the uploads
     * directory, or CDN. E.g. returns "x/y/zwq...abc.jpg" where "xyzwq...abc" is the hash.
@@ -50,9 +50,10 @@ trait UploadsDao {
   def addUploadedFile(uploadedFileName: String, tempFile: jio.File, uploadedById: UserId,
         browserIdData: BrowserIdData): UploadRef = {
 
-    import Globals.{LocalhostUploadsDirConfigValueName, maxUploadSizeBytes, uploadsUrlPath}
+    import Globals.LocalhostUploadsDirConfigValueName
+    import globals.{maxUploadSizeBytes, uploadsUrlPath}
 
-    val publicUploadsDir = Globals.anyPublicUploadsDir getOrElse throwForbidden(
+    val publicUploadsDir = globals.anyPublicUploadsDir getOrElse throwForbidden(
       "DwE5KFY9", "File uploads disabled, config value missing: " +
         LocalhostUploadsDirConfigValueName)
 
@@ -230,10 +231,6 @@ trait UploadsDao {
       throwIfTooMuch(bytesUploadedLastDay, maxBytesDay, "24 hours")
     }
   }
-}
-
-
-object UploadsDao {
 
   val MaxSuffixLength = 12
 
@@ -353,7 +350,7 @@ object UploadsDao {
               return
           }
         }
-      import Globals.uploadsUrlPath
+      import globals.uploadsUrlPath
       if (urlPath startsWith uploadsUrlPath) {
         val hashPathSuffix = urlPath drop uploadsUrlPath.length
         if (OldHashPathSuffixRegex.matches(hashPathSuffix) ||

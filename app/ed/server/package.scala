@@ -26,15 +26,6 @@ package object server {
 
   val Whatever = "*"
 
-  implicit class GetOrThrowBadArgument[A](val underlying: Option[A]) {
-    def getOrThrowBadArgument(errorCode: String, parameterName: String, message: => String = "")
-          : A = {
-      underlying getOrElse {
-        throwBadArgument(errorCode, parameterName, message)
-      }
-    }
-  }
-
 
   /** @param html Html for the whole page.
     * @param unapprovedPostAuthorIds Ids of authors who have posted stuff that hasn't yet been

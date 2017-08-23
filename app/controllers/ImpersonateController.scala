@@ -19,9 +19,8 @@ package controllers
 
 import com.debiki.core._
 import com.debiki.core.Prelude._
-import debiki.DebikiHttp._
 import debiki.Globals
-import ed.server.EdController
+import ed.server.{EdContext, EdController}
 import ed.server.security.createSessionIdAndXsrfToken
 import ed.server.http._
 import javax.inject.Inject
@@ -39,8 +38,11 @@ import scala.concurrent.duration._
   * And 2) lets staff view the site, in read-only mode, as strangers, guests, normal members,
   * or member of some group. Only partly implemented (2017-01).
   */
-class ImpersonateController @Inject()(cc: ControllerComponents, globals: Globals)
-  extends EdController(cc, globals) {
+class ImpersonateController @Inject()(cc: ControllerComponents, edContext: EdContext)
+  extends EdController(cc, edContext) {
+
+  import context.http._
+  import context.globals
 
   val MaxBecomeOldUserSeconds = 3600
   val MaxKeyAgeSeconds = 3600

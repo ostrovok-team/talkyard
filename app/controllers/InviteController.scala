@@ -42,8 +42,11 @@ import play.api.mvc._
   * before logging in the next time. And, if it's a Gmail address, that she can login
   * via Gmail (not yet implemented, not yet possible, though (May 2015)).
   */
-class InviteController @Inject()(cc: ControllerComponents, globals: Globals)
-  extends EdController(cc, globals) {
+class InviteController @Inject()(cc: ControllerComponents, edContext: EdContext)
+  extends EdController(cc, edContext) {
+
+  import context.http._
+  import context.globals
 
 
   def sendInvite: Action[JsValue] = PostJsonAction(RateLimits.SendInvite, maxBytes = 200) {

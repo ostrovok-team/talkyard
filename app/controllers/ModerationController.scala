@@ -18,8 +18,8 @@
 package controllers
 
 import com.debiki.core._
-import debiki.DebikiHttp._
 import debiki.{Globals, ReactJson}
+import ed.server.{EdContext, EdController}
 import ed.server.http._
 import javax.inject.Inject
 import play.api._
@@ -38,9 +38,11 @@ import play.api.mvc.{AbstractController, Action, ControllerComponents}
   * for guests, when not allowed. (Logging errors = letting people clutter the log files with
   * crap.)
   */
-class ModerationController @Inject()(cc: ControllerComponents, globals: Globals)
-  extends AbstractController(cc) {
+class ModerationController @Inject()(cc: ControllerComponents, edContext: EdContext)
+  extends EdController(cc, edContext) {
 
+  import context.http._
+  import context.globals
 
   val ActionCountLimit = 100
   val PostTextLengthLimit = 500

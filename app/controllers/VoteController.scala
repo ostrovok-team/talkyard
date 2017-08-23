@@ -22,19 +22,20 @@ import com.debiki.core.Prelude._
 import collection.immutable
 import debiki._
 import debiki.ReactJson.JsUser
-import debiki.DebikiHttp._
+import ed.server.{EdContext, EdController}
 import ed.server.auth.Authz
 import ed.server.http._
 import javax.inject.Inject
-import play.api._
 import play.api.libs.json._
-import play.api.mvc.{AbstractController, Action, ControllerComponents}
+import play.api.mvc.{Action, ControllerComponents}
 
 
 /** Handles votes, e.g. "I like this comment" or "this comment is faulty" votes.
  */
-class VoteController @Inject()(cc: ControllerComponents, globals: Globals)
-  extends AbstractController(cc) {
+class VoteController @Inject()(cc: ControllerComponents, edContext: EdContext)
+  extends EdController(cc, edContext) {
+
+  import context.http._
 
 
   /** Currently handles only one vote at a time. Example post data, in Yaml:

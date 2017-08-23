@@ -23,7 +23,7 @@ import debiki._
 import ed.server.spam.SpamChecker
 import ed.server.security.createSessionIdAndXsrfToken
 import debiki.dao.SiteDao
-import debiki.DebikiHttp._
+import ed.server.{EdContext, EdController}
 import ed.server.http._
 import javax.inject.Inject
 import org.scalactic.{Bad, Good}
@@ -36,8 +36,11 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 /** Logs in users via username and password.
   */
-class LoginWithPasswordController @Inject()(cc: ControllerComponents, globals: Globals)
-  extends AbstractController(cc) {
+class LoginWithPasswordController @Inject()(cc: ControllerComponents, edContext: EdContext)
+  extends EdController(cc, edContext) {
+
+  import context.http._
+  import context.globals
 
   private val MaxAddressVerificationEmailAgeInHours = 25
 
@@ -48,7 +51,7 @@ class LoginWithPasswordController @Inject()(cc: ControllerComponents, globals: G
     val password = request.body.getOrThrowBadReq("password")
     val anyReturnToUrl = request.body.getFirst("returnToUrl")
 
-    val site = globals.lookupSiteOrThrow(request.request, globals.systemDao)
+    val site = lookupSiteOrThrow(request.request, globals.systemDao)
     val dao = globals.siteDao(site.id)
 
     val cookies = doLogin(request, dao, email, password)
@@ -106,7 +109,7 @@ class LoginWithPasswordController @Inject()(cc: ControllerComponents, globals: G
       throwBadReq("DwE85FX1", "Password missing")
     val anyReturnToUrl = (body \ "returnToUrl").asOpt[String]
 
-    val dao = globals.daoFor(request.request)
+    val dao = daoFor(request.request)
     val siteSettings = dao.getWholeSiteSettings()
 
     // Some dupl code. [2FKD05]

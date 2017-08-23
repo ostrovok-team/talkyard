@@ -27,6 +27,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import Prelude._
 import debiki.dao.SearchQuery
+import ed.server.{EdContext, EdController}
 import javax.inject.Inject
 import play.api.libs.json.JsValue
 import play.api.mvc.{AbstractController, Action, ControllerComponents}
@@ -35,8 +36,8 @@ import play.api.mvc.{AbstractController, Action, ControllerComponents}
 /** Full text search, for a whole site, or for a site section, e.g. a single
   * forum (including all sub forums and topics), a single blog, or wiki.
   */
-class SearchController @Inject()(cc: ControllerComponents)
-  extends AbstractController(cc) {
+class SearchController @Inject()(cc: ControllerComponents, edContext: EdContext)
+  extends EdController(cc, edContext) {
 
   private val SearchPhraseFieldName = "searchPhrase"
 

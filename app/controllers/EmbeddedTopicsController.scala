@@ -18,23 +18,20 @@
 package controllers
 
 import com.debiki.core._
-import com.debiki.core.Prelude._
 import debiki._
-import debiki.DebikiHttp._
 import debiki.dao.SiteDao
-import ed.server.RenderedPage
+import ed.server.{EdContext, EdController, RenderedPage}
 import ed.server.http._
-import java.{util => ju}
 import javax.inject.Inject
-import play.api._
-import play.api.mvc.{Action => _, _}
+import play.api.mvc.ControllerComponents
 
 
 /** Shows embedded comments.
   */
-class EmbeddedTopicsController @Inject()(cc: ControllerComponents, globals: Globals)
-  extends AbstractController(cc) {
+class EmbeddedTopicsController @Inject()(cc: ControllerComponents, edContext: EdContext)
+  extends EdController(cc, edContext) {
 
+  import context.globals
 
   def showTopic(embeddingUrl: String, discussionId: Option[AltPageId], edPageId: Option[PageId]) =
         AsyncGetAction { request =>
