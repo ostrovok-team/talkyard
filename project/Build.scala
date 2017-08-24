@@ -50,6 +50,7 @@ object ApplicationBuild extends Build {
 
 
   val appDependencies = Seq(
+    //ws,
     // Gzip filter.
     play.sbt.Play.autoImport.filters,
     "com.typesafe.play" %% "play-json" % "2.6.2",
@@ -130,8 +131,10 @@ object ApplicationBuild extends Build {
       ("Atlassian Releases" at "https://maven.atlassian.com/public/") +:
         Keys.resolvers.value,
 
-    play.sbt.routes.RoutesCompiler.autoImport.routesGenerator :=
-      play.routes.compiler.StaticRoutesGenerator,
+    // This is the default. But keep anyway, because if needed later, then won't have to try to
+    // find out in which packages the stuff is located.
+    //play.sbt.routes.RoutesCompiler.autoImport.routesGenerator :=
+    //  play.routes.compiler.InjectedRoutesGenerator,
 
     BuildInfoKeys.buildInfoPackage := "generatedcode",
     BuildInfoKeys.buildInfoOptions += BuildInfoOption.BuildTime,

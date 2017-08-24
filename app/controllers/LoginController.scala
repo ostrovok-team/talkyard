@@ -30,7 +30,7 @@ import play.api.mvc._
 
 /** Logs in and out.
   */
-class LoginController @Inject()(cc: ControllerComponents, edContext: EdContext)
+class LoginController(cc: ControllerComponents, edContext: EdContext)
   extends EdController(cc, edContext) {
 
   import context.globals

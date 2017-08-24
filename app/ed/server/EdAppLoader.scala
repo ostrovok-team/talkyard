@@ -1,7 +1,7 @@
 package ed.server
 
 import com.debiki.core._
-import debiki.{EdHttp, Globals, RateLimiter, ReactJson}
+import debiki.{Globals, RateLimiter}
 import ed.server.http.{PlainApiActions, SafeActions}
 import ed.server.security.EdSecurity
 import play.api._
@@ -30,7 +30,8 @@ class EdAppLoader extends ApplicationLoader {
 
 class EdAppComponents(appLoaderContext: ApplicationLoader.Context)
   extends BuiltInComponentsFromContext(appLoaderContext)
-  with HttpFiltersComponents {
+  with HttpFiltersComponents
+  with _root_.controllers.AssetsComponents {
 
   val globals = new Globals(appLoaderContext, executionContext, actorSystem)
   val security = new ed.server.security.EdSecurity(globals)
@@ -43,7 +44,51 @@ class EdAppComponents(appLoaderContext: ApplicationLoader.Context)
   globals.setEdContext(context)
   globals.startStuff()
 
-  lazy val router: Router = Router.empty
+  // (Cannot:  import _root_.{controllers => c} because cannot incl _root_ in an import, apparently.)
+
+  private def cc = controllerComponents
+
+  val loginController = new _root_.controllers.LoginController(cc, context)
+
+  lazy val router: Router = new _root_.router.Routes(
+    httpErrorHandler,
+    loginController,
+    new _root_.controllers.LoginAsGuestController(cc, context),
+    new _root_.controllers.LoginWithPasswordController(cc, context),
+    new _root_.controllers.ImpersonateController(cc, context, loginController),
+    new ed.server.pubsub.SubscriberController(cc, context),
+    new _root_.controllers.EmbeddedTopicsController(cc, context),
+    new _root_.controllers.SearchController(cc, context),
+    new _root_.controllers.ResetPasswordController(cc, context),
+    new _root_.controllers.CreateSiteController(cc, context),
+    new _root_.controllers.AdminController(cc, context),
+    new _root_.controllers.SettingsController(cc, context),
+    new _root_.controllers.LegalController(cc, context),
+    new _root_.controllers.SpecialContentController(cc, context),
+    new _root_.controllers.ModerationController(cc, context),
+    new _root_.controllers.UserController(cc, context),
+    new _root_.controllers.UnsubscriptionController(cc, context),
+    new ed.server.summaryemails.UnsubFromSummariesController(cc, context),
+    new _root_.controllers.InviteController(cc, context),
+    new _root_.controllers.ForumController(cc, context),
+    new _root_.controllers.PageController(cc, context),
+    new _root_.controllers.ReplyController(cc, context),
+    new _root_.controllers.CustomFormController(cc, context),
+    new ed.plugins.utx.UsabilityTestingExchangeController(cc, context),
+    new _root_.controllers.VoteController(cc, context),
+    new _root_.controllers.Application(cc, context),
+    new _root_.controllers.EditController(cc, context),
+    new _root_.controllers.PageTitleSettingsController(cc, context),
+    new _root_.controllers.GroupTalkController(cc, context),
+    new _root_.controllers.UploadsController(cc, context),
+    new _root_.controllers.CloseCollapseController(cc, context),
+    new _root_.controllers.ImportExportController(cc, context),
+    new _root_.controllers.DebugTestController(cc, context),
+    new _root_.controllers.SiteAssetBundlesController(cc, context),
+    new _root_.controllers.TagsController(cc, context),
+    new _root_.controllers.SuperAdminController(cc, context),
+    new _root_.controllers.ViewPageController(cc, context),
+    assets)
 
 }
 
@@ -54,6 +99,7 @@ class EdContext(
   val safeActions: SafeActions,
   val plainApiActions: PlainApiActions,
   val akkaStreamMaterializer: akka.stream.Materializer,
+  // Hide so fewer parts of the app get access to Play's internal stuff.
   private val controllerComponents: ControllerComponents) {
 
   implicit def executionContext: ExecutionContext = controllerComponents.executionContext

@@ -282,7 +282,7 @@ class Globals(
 
   /** If a hostname matches this pattern, the site id can be extracted directly from the url.
     */
-  def SiteByIdHostnameRegex: Regex = state.SiteByIdHostnameRegex
+  def siteByIdHostnameRegex: Regex = state.siteByIdHostnameRegex
 
   def SiteByIdHostnamePrefix = "site-"
 
@@ -336,8 +336,9 @@ class Globals(
       return firstSiteIdAndHostname
 
     // If the hostname is like "site-123.example.com" then we'll just lookup id 123.
+    val SiteByIdRegex = siteByIdHostnameRegex // uppercase, otherwise Scala won't "de-structure".
     hostname match {
-      case SiteByIdHostnameRegex(siteIdString: String) =>
+      case SiteByIdRegex(siteIdString: String) =>
         val siteId = siteIdString.toIntOrThrow("EdE5PJW2", s"Bad site id: $siteIdString")
         systemDao.getSite(siteId) match {
           case None =>
@@ -790,7 +791,7 @@ class Globals(
     // wildcard HTTPS certificates won't work: they cover 1 level below the
     // base domain only, e.g. host.example.com but not sub.host.example.com,
     // if the cert was issued for *.example.com.
-    val SiteByIdHostnameRegex: Regex =
+    val siteByIdHostnameRegex: Regex =
       s"""^$SiteByIdHostnamePrefix(.*)\\.$baseDomainNoPort$$""".r
 
     val maxUploadSizeBytes: Int =
