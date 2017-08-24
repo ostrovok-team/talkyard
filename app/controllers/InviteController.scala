@@ -20,14 +20,11 @@ package controllers
 import com.debiki.core._
 import com.debiki.core.Prelude._
 import debiki._
+import debiki.EdHttp._
 import debiki.ReactJson.{DateEpochOrNull, JsNumberOrNull, JsUser}
 import debiki.dao.SiteDao
 import ed.server._
-import ed.server.security.createSessionIdAndXsrfToken
-import ed.server.http._
-import java.{util => ju}
 import javax.inject.Inject
-import play.api.mvc
 import play.api.libs.json._
 import play.api.mvc._
 
@@ -45,8 +42,8 @@ import play.api.mvc._
 class InviteController @Inject()(cc: ControllerComponents, edContext: EdContext)
   extends EdController(cc, edContext) {
 
-  import context.http._
   import context.globals
+  import context.security.createSessionIdAndXsrfToken
 
 
   def sendInvite: Action[JsValue] = PostJsonAction(RateLimits.SendInvite, maxBytes = 200) {
@@ -166,7 +163,7 @@ class InviteController @Inject()(cc: ControllerComponents, edContext: EdContext)
   private def makeInvitationEmail(invite: Invite, inviter: Member, siteHostname: String): Email = {
     val emailBody = views.html.invite.inviteEmail(
       inviterName = inviter.usernameParensFullName,
-      siteHostname = siteHostname, secretKey = invite.secretKey).body
+      siteHostname = siteHostname, secretKey = invite.secretKey, globals).body
     Email(
       EmailType.Invite,
       createdAt = globals.now(),
@@ -185,7 +182,7 @@ class InviteController @Inject()(cc: ControllerComponents, edContext: EdContext)
       toUserId = Some(newUser.id),
       subject = s"[$siteHostname] Welcome! Account created",
       bodyHtmlText = (emailId) => views.html.invite.welcomeSetPasswordEmail(
-      siteHostname = siteHostname, emailId = emailId).body)
+      siteHostname = siteHostname, emailId = emailId, globals).body)
   }
 
 

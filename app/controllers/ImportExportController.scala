@@ -21,15 +21,15 @@ import com.debiki.core.Prelude._
 import com.debiki.core._
 import debiki.JsonUtils._
 import debiki._
+import debiki.EdHttp._
 import debiki.dao.PagePartsDao
 import ed.server._
-import ed.server.http._
 import java.{util => ju}
 import javax.inject.Inject
 import org.scalactic._
 import play.api._
 import play.api.libs.json._
-import play.api.mvc.{AbstractController, Action, ControllerComponents}
+import play.api.mvc.{Action, ControllerComponents}
 
 
 /** Imports and exports dumps of websites.
@@ -44,8 +44,9 @@ import play.api.mvc.{AbstractController, Action, ControllerComponents}
 class ImportExportController @Inject()(cc: ControllerComponents, edContext: EdContext)
   extends EdController(cc, edContext) {
 
-  import context.http._
   import context.globals
+  import context.security
+  import context.safeActions.ExceptionAction
 
   val MaxBytes = 1001000
 
@@ -60,7 +61,7 @@ class ImportExportController @Inject()(cc: ControllerComponents, edContext: EdCo
 
   def importTestSite: Action[JsValue] = ExceptionAction(parse.json(maxLength = MaxBytes)) {
         request =>
-    val (browserId, moreNewCookies) = BrowserId.checkBrowserId(request)
+    val (browserId, moreNewCookies) = security.getBrowserIdCreateIfNeeded(request)
     val browserIdData = BrowserIdData(ip = request.remoteAddress, idCookie = browserId.cookieValue,
       fingerprint = 0)
     val response = importSiteImpl(request, browserIdData, deleteOld = true, isTest = true)
@@ -72,7 +73,7 @@ class ImportExportController @Inject()(cc: ControllerComponents, edContext: EdCo
         deleteOld: Boolean, isTest: Boolean): mvc.Result = {
     dieIf(deleteOld && !isTest, "EdE5FKWU02")
 
-    val okE2ePassword = hasOkE2eTestPassword(request)
+    val okE2ePassword = security.hasOkE2eTestPassword(request)
     if (!okE2ePassword)
       throwForbidden("EsE5JKU2", "Importing sites is only allowed for e2e testing right now")
 

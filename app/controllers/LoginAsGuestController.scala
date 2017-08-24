@@ -19,12 +19,13 @@ package controllers
 
 import com.debiki.core._
 import debiki._
+import debiki.EdHttp._
 import ed.server.spam.SpamChecker
 import ed.server._
-import ed.server.security.createSessionIdAndXsrfToken
 import javax.inject.Inject
 import play.api.mvc._
 import play.api.libs.json.{JsObject, JsValue}
+import scala.concurrent.ExecutionContext
 
 
 /** Logs in guest users.
@@ -32,8 +33,10 @@ import play.api.libs.json.{JsObject, JsValue}
 class LoginAsGuestController @Inject()(cc: ControllerComponents, edContext: EdContext)
   extends EdController(cc, edContext) {
 
-  import context.http._
   import context.globals
+  import context.security.createSessionIdAndXsrfToken
+  import context.executionContext
+
 
   def loginGuest: Action[JsValue] = AsyncPostJsonAction(RateLimits.Login, maxBytes = 1000) { request =>
     val json = request.body.as[JsObject]

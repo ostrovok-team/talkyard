@@ -1,10 +1,11 @@
 package ed.server
 
 import com.debiki.core._
-import debiki.{EdHttp, Globals}
+import debiki.{EdHttp, Globals, RateLimiter, ReactJson}
 import ed.server.http.{PlainApiActions, SafeActions}
 import ed.server.security.EdSecurity
 import play.api._
+import play.api.http.FileMimeTypes
 import play.api.mvc.ControllerComponents
 import play.api.routing.Router
 import play.filters.HttpFiltersComponents
@@ -18,6 +19,9 @@ class EdAppLoader extends ApplicationLoader {
       _.configure(context.environment, context.initialConfiguration, Map.empty)
     }
 
+    val isProd = context.environment.mode == play.api.Mode.Prod
+    Globals.setIsProdForever(isProd)
+
     new EdAppComponents(context).application
   }
 
@@ -28,21 +32,13 @@ class EdAppComponents(appLoaderContext: ApplicationLoader.Context)
   extends BuiltInComponentsFromContext(appLoaderContext)
   with HttpFiltersComponents {
 
-  CLEAN_UP // dupl code [7UWKDAAQ0]
-  val secure: Boolean =
-    configuration.getBoolean("ed.secure").orElse(
-      configuration.getBoolean("debiki.secure")) getOrElse {
-      play.api.Logger.info("Config value 'ed.secure' missing; defaulting to true. [EdM3KEF2]")
-      true
-    }
-
-  val http = new EdHttp(secure, isProd = appLoaderContext.environment.mode == play.api.Mode.Prod,
-    ???, ???)
-  val globals = new Globals(appLoaderContext, actorSystem, http)
-  val security = new ed.server.security.EdSecurity(http, globals)
-  val safeActions = new SafeActions(globals, http)
-  val plainApiActions = new PlainApiActions(safeActions, globals, http, security)
-  val context = new EdContext(http, globals, security, safeActions, plainApiActions, controllerComponents)
+  val globals = new Globals(appLoaderContext, executionContext, actorSystem)
+  val security = new ed.server.security.EdSecurity(globals)
+  val rateLimiter = new RateLimiter(globals, security)
+  val safeActions = new SafeActions(globals, security)
+  val plainApiActions = new PlainApiActions(safeActions, globals, security, rateLimiter)
+  val context = new EdContext(
+    globals, security, safeActions, plainApiActions, materializer, controllerComponents)
 
   globals.setEdContext(context)
   globals.startStuff()
@@ -53,13 +49,14 @@ class EdAppComponents(appLoaderContext: ApplicationLoader.Context)
 
 
 class EdContext(
-  val http: EdHttp,
   val globals: Globals,
   val security: EdSecurity,
   val safeActions: SafeActions,
   val plainApiActions: PlainApiActions,
+  val akkaStreamMaterializer: akka.stream.Materializer,
   private val controllerComponents: ControllerComponents) {
 
-  def executionContext: ExecutionContext = controllerComponents.executionContext
+  implicit def executionContext: ExecutionContext = controllerComponents.executionContext
+  def mimeTypes: FileMimeTypes = controllerComponents.fileMimeTypes
 
 }

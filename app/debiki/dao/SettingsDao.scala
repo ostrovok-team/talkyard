@@ -20,7 +20,7 @@ package debiki.dao
 import com.debiki.core._
 import com.debiki.core.Prelude._
 import debiki._
-import ed.server.http.throwForbidden2
+import debiki.EdHttp.throwForbidden
 
 
 /** Loads and saves settings for the whole website, a section of the website (e.g.
@@ -29,7 +29,6 @@ import ed.server.http.throwForbidden2
 trait SettingsDao {
   self: SiteDao =>
 
-  import context.http.throwForbidden
 
   def getWholeSiteSettings(): EffectiveSettings = {
     memCache.lookup(

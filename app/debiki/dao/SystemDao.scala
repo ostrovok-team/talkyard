@@ -20,9 +20,10 @@ package debiki.dao
 
 import com.debiki.core._
 import com.debiki.core.Prelude._
+import debiki.EdHttp.throwForbidden
 import scala.collection.immutable
 import SystemDao._
-import debiki.{EdHttp, Globals}
+import debiki.Globals
 
 
 class NumSites(val byYou: Int, val total: Int)
@@ -33,12 +34,11 @@ class NumSites(val byYou: Int, val total: Int)
 class SystemDao(
   private val dbDaoFactory: DbDaoFactory,
   val cache: DaoMemCache,
-  private val globals: Globals,
-  private val http: EdHttp) {
+  val globals: Globals) {
 
   private def dbDao2: DbDao2 = dbDaoFactory.newDbDao2()
 
-  val memCache = new MemCache(NoSiteId, cache)
+  val memCache = new MemCache(NoSiteId, cache, globals.mostMetrics)
 
   protected def readOnlyTransaction[R](fn: SystemTransaction => R): R =
     dbDao2.readOnlySystemTransaction(fn)
@@ -119,7 +119,7 @@ class SystemDao(
     createdFromSiteId: Option[SiteId]): Site = {
 
     if (!Site.isOkayName(name))
-      http.throwForbidden("EsE7UZF2_", s"Bad site name: '$name'")
+      throwForbidden("EsE7UZF2_", s"Bad site name: '$name'")
 
     dieIf(hostname contains ":", "DwE3KWFE7")
 
@@ -187,7 +187,7 @@ class SystemDao(
       try newSiteTx.insertSiteHost(newSiteHost)
       catch {
         case _: DuplicateHostnameException =>
-          http.throwForbidden(
+          throwForbidden(
             "EdE7FKW20", o"""There's already a site with hostname '${newSiteHost.hostname}'. Add
             the URL param deleteOldSite=true to delete it (works for e2e tests only)""")
       }

@@ -18,9 +18,8 @@
 package ed.server
 
 import com.debiki.core._
-import debiki._
 import debiki.dao.SiteDao
-import ed.server.security.{SidStatus, XsrfOk}
+import ed.server.security.{BrowserId, SidStatus, XsrfOk}
 import play.api.libs.json.JsValue
 import play.api.mvc._
 

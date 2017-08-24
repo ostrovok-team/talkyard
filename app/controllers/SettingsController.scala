@@ -20,6 +20,7 @@ package controllers
 import com.debiki.core._
 import com.debiki.core.Prelude._
 import debiki._
+import debiki.EdHttp._
 import ed.server.{EdContext, EdController}
 import ed.server.http._
 import javax.inject.Inject
@@ -33,7 +34,6 @@ import play.api.mvc.ControllerComponents
 class SettingsController @Inject()(cc: ControllerComponents, edContext: EdContext)
   extends EdController(cc, edContext) {
 
-  import context.http._
   import context.globals
 
   def loadSiteSettings = AdminGetAction { request: GetRequest =>

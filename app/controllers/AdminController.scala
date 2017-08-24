@@ -19,6 +19,7 @@ package controllers
 
 import debiki._
 import ed.server._
+import ed.server.security.EdSecurity
 import javax.inject.Inject
 import play.api.mvc.ControllerComponents
 
@@ -29,7 +30,7 @@ import play.api.mvc.ControllerComponents
 class AdminController @Inject()(cc: ControllerComponents, edContext: EdContext)
   extends EdController(cc, edContext) {
 
-  import context.http.SecureCookie
+  import context.security.SecureCookie
 
 
   def redirectToAdminPage() = GetAction { _ =>
@@ -52,7 +53,7 @@ class AdminController @Inject()(cc: ControllerComponents, edContext: EdContext)
       val siteTpi = SiteTpi(apiReq)
       val adminPageBody = views.html.adminPage(siteTpi, appId = "dw-react-admin-app").body
       Ok(adminPageBody) as HTML withCookies SecureCookie(
-        security.XsrfCookieName, apiReq.xsrfToken.value)
+        EdSecurity.XsrfCookieName, apiReq.xsrfToken.value)
     }
   }
 

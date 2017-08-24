@@ -21,8 +21,8 @@ import com.debiki.core._
 import com.debiki.core.Prelude._
 import debiki.RateLimits.NoRateLimits
 import debiki._
+import debiki.EdHttp._
 import ed.server.http._
-import play.api._
 import play.api.libs.json._
 import play.api.mvc._
 import scala.concurrent.Future
@@ -43,7 +43,7 @@ import ViewPageController._
 class ViewPageController @Inject()(cc: ControllerComponents, edContext: EdContext)
   extends EdController(cc, edContext) {
 
-  import context.http._
+  import context.security.throwIndistinguishableNotFound
   import context.globals
 
 

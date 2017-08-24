@@ -19,6 +19,7 @@ package controllers
 
 import com.debiki.core._
 import debiki._
+import debiki.EdHttp._
 import ed.server.{EdContext, EdController}
 import javax.inject.Inject
 import play.api.mvc._
@@ -32,7 +33,7 @@ import play.api.libs.json.JsValue
 class Application @Inject()(cc: ControllerComponents, edContext: EdContext)
   extends EdController(cc, edContext) {
 
-  import context.http._
+  import context.security._
 
   def flag: Action[JsValue] = PostJsonAction(RateLimits.FlagPost, maxBytes = 2000) { request =>
     import request.{body, dao}

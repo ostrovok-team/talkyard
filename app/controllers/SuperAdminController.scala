@@ -18,7 +18,8 @@
 package controllers
 
 import com.debiki.core._
-import debiki.{Globals, SiteTpi}
+import debiki.SiteTpi
+import debiki.EdHttp._
 import debiki.ReactJson._
 import ed.server.{EdContext, EdController}
 import javax.inject.Inject
@@ -30,7 +31,6 @@ import play.api.mvc.ControllerComponents
 class SuperAdminController @Inject()(cc: ControllerComponents, edContext: EdContext)
   extends EdController(cc, edContext) {
 
-  import context.http._
   import context.globals
 
   def redirect = GetAction { apiReq =>

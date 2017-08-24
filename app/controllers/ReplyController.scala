@@ -19,6 +19,7 @@ package controllers
 
 import com.debiki.core._
 import debiki._
+import debiki.EdHttp._
 import ed.server.{EdContext, EdController}
 import ed.server.auth.Authz
 import ed.server.http._
@@ -34,7 +35,7 @@ import play.api.mvc._
 class ReplyController @Inject()(cc: ControllerComponents, edContext: EdContext)
   extends EdController(cc, edContext) {
 
-  import context.http._
+  import context.security.{throwNoUnless, throwIndistinguishableNotFound}
 
   def handleReply: Action[JsValue] = PostJsonAction(RateLimits.PostReply, maxBytes = MaxPostSize) {
         request: JsonPostRequest =>

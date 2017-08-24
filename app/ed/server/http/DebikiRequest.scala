@@ -23,9 +23,10 @@ import com.debiki.core.Prelude._
 import controllers.Utils.ValidationImplicits._
 import debiki._
 import debiki.dao.SiteDao
+import debiki.EdHttp._
 import ed.server.EdContext
 import ed.server.auth.ForumAuthzContext
-import ed.server.security.{SidStatus, XsrfOk}
+import ed.server.security.{BrowserId, SidStatus, XsrfOk}
 import java.{util => ju}
 import play.api.mvc
 import play.api.mvc._
@@ -35,11 +36,9 @@ import play.api.mvc._
  */
 abstract class DebikiRequest[A] {
 
-  def context: EdContext
-  val http: EdHttp = context.http
-  def globals: Globals = context.globals
-
-  import http._
+  def context: EdContext = dao.context
+  private def security = dao.context.security
+  private def globals = dao.context.globals
 
   def siteIdAndCanonicalHostname: SiteBrief
   def sid: SidStatus
@@ -108,22 +107,22 @@ abstract class DebikiRequest[A] {
   }
 
   def user_! : User =
-    user getOrElse http.throwForbidden("DwE5PK2W0", "Not logged in")
+    user getOrElse throwForbidden("DwE5PK2W0", "Not logged in")
 
   def theMember: Member = theUser match {
     case m: Member => m
-    case g: Guest => http.throwForbidden("EsE5YKJ37", "Not authenticated")
+    case g: Guest => throwForbidden("EsE5YKJ37", "Not authenticated")
   }
 
   def anyRoleId: Option[UserId] = user.flatMap(_.anyMemberId)
-  def theRoleId: UserId = anyRoleId getOrElse http.throwForbidden("DwE86Wb7", "Not authenticated")
+  def theRoleId: UserId = anyRoleId getOrElse throwForbidden("DwE86Wb7", "Not authenticated")
 
   def isGuest: Boolean = user.exists(_.isGuest)
   def isStaff: Boolean = user.exists(_.isStaff)
 
   def session: mvc.Session = request.session
 
-  def ip: IpAddress = http.realOrFakeIpOf(request)
+  def ip: IpAddress = security.realOrFakeIpOf(request)
 
   /**
    * Approximately when the server started serving this request.
@@ -152,7 +151,7 @@ abstract class DebikiRequest[A] {
 
   def cookies = request.cookies
 
-  def isAjax = http.isAjax(request)
+  def isAjax = EdHttp.isAjax(request)
 
   def isHttpPostRequest = request.method == "POST"
 
@@ -160,7 +159,7 @@ abstract class DebikiRequest[A] {
 
 
   def parseThePageQuery(): PageQuery =
-    parsePageQuery() getOrElse http.throwBadRequest(
+    parsePageQuery() getOrElse throwBadRequest(
       "DwE2KTES7", "No sort-order-offset specified")
 
 
@@ -185,9 +184,9 @@ abstract class DebikiRequest[A] {
           case (None, None) =>
             PageOrderOffset.ByLikesAndBumpTime(None)
           case _ =>
-            http.throwBadReq("DwE4KEW21", "Please specify both 'num' and 'bumpedAt' or none at all")
+            throwBadReq("DwE4KEW21", "Please specify both 'num' and 'bumpedAt' or none at all")
         }
-      case x => http.throwBadReq("DwE05YE2", s"Bad sort order: `$x'")
+      case x => throwBadReq("DwE05YE2", s"Bad sort order: `$x'")
     }
 
     val filter = parsePageFilter()
@@ -202,9 +201,9 @@ abstract class DebikiRequest[A] {
       case Some("ShowWaiting") => PageFilter.ShowWaiting
       case Some("ShowDeleted") =>
         if (!isStaff)
-          http.throwForbidden("EsE5YKP3", "Only staff may list deleted topics")
+          throwForbidden("EsE5YKP3", "Only staff may list deleted topics")
         PageFilter.ShowDeleted
-      case Some(x) => http.throwBadRequest("DwE5KGP8", s"Bad topic filter: $x")
+      case Some(x) => throwBadRequest("DwE5KGP8", s"Bad topic filter: $x")
     }
 
 

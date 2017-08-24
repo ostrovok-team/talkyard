@@ -20,6 +20,7 @@ package debiki.dao
 import com.debiki.core._
 import com.debiki.core.Prelude._
 import debiki._
+import debiki.EdHttp._
 import SpecialContentPages._
 
 
@@ -33,7 +34,6 @@ import SpecialContentPages._
 trait SpecialContentDao {
   self: SiteDao =>
 
-  import context.http._
 
 
   memCache.onPageSaved { sitePageId =>

@@ -19,6 +19,7 @@ package controllers
 
 import com.debiki.core._
 import debiki.{Globals, RateLimits, SiteTpi}
+import debiki.EdHttp._
 import ed.server.{EdContext, EdController}
 import ed.server.http._
 import javax.inject.Inject
@@ -32,8 +33,8 @@ import play.api.mvc._
 class LoginController @Inject()(cc: ControllerComponents, edContext: EdContext)
   extends EdController(cc, edContext) {
 
-  import context.http._
   import context.globals
+  import context.security.DiscardingSessionCookie
 
 
   val AsSuperadmin = "superadmin"
@@ -148,7 +149,10 @@ class LoginController @Inject()(cc: ControllerComponents, edContext: EdContext)
     }
     Ok
   }
+}
 
+
+object LoginController {
 
   /** Tests if we're currently logging in as the very first user — s/he will
     * be made admin if s/he has the correct email address.

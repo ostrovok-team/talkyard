@@ -18,16 +18,14 @@
 package debiki.dao
 
 import com.debiki.core._
+import debiki.EdHttp.throwNotFound
 import scala.collection.immutable
 import Prelude._
-import ed.server.EdContext
 
 
 @deprecated("use SiteTransaction directly instead?", "now")
-case class PageDao(override val id: PageId, context: EdContext, transaction: SiteTransaction)
+case class PageDao(override val id: PageId, transaction: SiteTransaction)
   extends Page {
-
-  import context.http.throwNotFound
 
   def sitePageId = SitePageId(transaction.siteId, id)
 

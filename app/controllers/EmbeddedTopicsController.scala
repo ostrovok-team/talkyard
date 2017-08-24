@@ -19,6 +19,7 @@ package controllers
 
 import com.debiki.core._
 import debiki._
+import debiki.EdHttp._
 import debiki.dao.SiteDao
 import ed.server.{EdContext, EdController, RenderedPage}
 import ed.server.http._
@@ -61,7 +62,7 @@ class EmbeddedTopicsController @Inject()(cc: ControllerComponents, edContext: Ed
         SECURITY; COULD // do the standard auth stuff here, but not needed right now since we
         // proceed only if is embedded comments page. So, right now all such pages are public.
         if (pageMeta.pageRole != PageRole.EmbeddedComments)
-          throwForbidden2("EdE2F6UHY3", "Not an embedded comments page")
+          throwForbidden("EdE2F6UHY3", "Not an embedded comments page")
         val pageRequest = new PageRequest[Unit](
           request.siteIdAndCanonicalHostname,
           sid = request.sid,

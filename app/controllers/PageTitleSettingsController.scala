@@ -21,6 +21,7 @@ import com.debiki.core._
 import com.debiki.core.Prelude._
 import com.debiki.core.PageParts.MaxTitleLength
 import debiki._
+import debiki.EdHttp._
 import debiki.ReactJson.JsStringOrNull
 import ed.server.{EdContext, EdController}
 import ed.server.http._
@@ -35,7 +36,6 @@ import play.api.mvc.ControllerComponents
 class PageTitleSettingsController @Inject()(cc: ControllerComponents, edContext: EdContext)
   extends EdController(cc, edContext) {
 
-  import context.http._
 
   def editTitleSaveSettings = PostJsonAction(RateLimits.EditPost, maxBytes = 2000) {
         request: JsonPostRequest =>

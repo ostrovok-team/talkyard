@@ -27,7 +27,6 @@ import com.mohiva.play.silhouette.impl.providers._
 import ed.server.spam.SpamChecker
 import debiki._
 import ed.server._
-import ed.server.security.createSessionIdAndXsrfToken
 import ed.server.http._
 import java.{util => ju}
 import javax.inject.Inject
@@ -54,6 +53,8 @@ import scala.concurrent.Future
 
 class LoginWithOpenAuthController @Inject()(cc: ControllerComponents, globals: Globals)
   extends EdController(cc, globals) {
+
+  import context.security.createSessionIdAndXsrfToken
 
   private val Separator = '|'
   private val ReturnToUrlCookieName = "dwCoReturnToUrl"

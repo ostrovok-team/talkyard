@@ -27,6 +27,7 @@ import com.debiki.dao.rdb.{Rdb, RdbDaoFactory}
 import com.github.benmanes.caffeine
 import com.zaxxer.hikari.HikariDataSource
 import debiki.Globals.NoStateError
+import debiki.EdHttp._
 import ed.server.spam.{SpamCheckActor, SpamChecker}
 import debiki.dao._
 import debiki.dao.migrations.ScalaBasedMigrations
@@ -43,7 +44,7 @@ import redis.RedisClient
 import scala.collection.immutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future, TimeoutException}
-import scala.concurrent.ExecutionContext.Implicits.global
+// import scala.concurrent.ExecutionContext.Implicits.global  CLEAN_UP remove all these everywhere
 import scala.util.matching.Regex
 import Globals._
 import ed.server.EdContext
@@ -66,6 +67,19 @@ object Globals {
   val FirstSiteHostnameConfigValue = "ed.hostname"
   val BecomeOwnerEmailConfigValue = "ed.becomeOwnerEmailAddress"
 
+  def isProd: Boolean = _isProd
+
+  /** One never changes from Prod to Dev or Test, or from Dev or Test to Prod, so we can safely
+    * remember isProd, forever. (However, is-Dev and is-Test might change, depending on which
+    * commands one types in the cli.)
+    */
+  def setIsProdForever(isIt: Boolean) {
+    dieIf(hasSet && isIt != _isProd, "EdE2PWVU07")
+    _isProd = isIt
+  }
+
+  private var _isProd = true
+  private var hasSet = false
 }
 
 
@@ -77,8 +91,8 @@ object Globals {
   */
 class Globals(
   private val appLoaderContext: p.ApplicationLoader.Context,
-  val actorSystem: ActorSystem,
-  private val edHttp: EdHttp) {
+  implicit val executionContext: scala.concurrent.ExecutionContext,
+  val actorSystem: ActorSystem) {
 
   def outer: Globals = this
 
@@ -94,8 +108,9 @@ class Globals(
 
   /** Can be accessed also after the test is done and Play.maybeApplication is None.
     */
+  lazy val isDev: Boolean = appLoaderContext.environment.mode == play.api.Mode.Dev
   lazy val isOrWasTest: Boolean = appLoaderContext.environment.mode == play.api.Mode.Test
-  lazy val isProd: Boolean = appLoaderContext.environment.mode == play.api.Mode.Prod
+  lazy val isProd: Boolean = Globals.isProd
 
   def testsDoneServerGone: Boolean =
     isOrWasTest && (!isInitialized || Play.maybeApplication.isEmpty)
@@ -154,7 +169,7 @@ class Globals(
 
   def throwForbiddenIfSecretNotChanged() {
     if (state.applicationSecretNotChanged && isProd)
-      edHttp.throwForbidden("EsE4UK20F", o"""Please edit the 'play.crypto.secret' config value,
+      throwForbidden("EsE4UK20F", o"""Please edit the 'play.crypto.secret' config value,
           its still set to 'changeme'""")
   }
 
@@ -267,7 +282,7 @@ class Globals(
 
   /** If a hostname matches this pattern, the site id can be extracted directly from the url.
     */
-  def siteByIdHostnameRegex: Regex = state.siteByIdHostnameRegex
+  def SiteByIdHostnameRegex: Regex = state.SiteByIdHostnameRegex
 
   def SiteByIdHostnamePrefix = "site-"
 
@@ -310,7 +325,7 @@ class Globals(
     // to include any port number when looking up a site.
     val hostname = if (host contains ':') host.span(_ != ':')._1 else host
     def firstSiteIdAndHostname = {
-      val hostname = firstSiteHostname getOrElse edHttp.throwForbidden(
+      val hostname = firstSiteHostname getOrElse throwForbidden(
         "EsE5UYK2", o"""No first site hostname configured (config value:
             ${Globals.FirstSiteHostnameConfigValue})""")
       val firstSite = systemDao.getOrCreateFirstSite()
@@ -322,11 +337,11 @@ class Globals(
 
     // If the hostname is like "site-123.example.com" then we'll just lookup id 123.
     hostname match {
-      case siteByIdHostnameRegex(siteIdString: String) =>
+      case SiteByIdHostnameRegex(siteIdString: String) =>
         val siteId = siteIdString.toIntOrThrow("EdE5PJW2", s"Bad site id: $siteIdString")
         systemDao.getSite(siteId) match {
           case None =>
-            edHttp.throwNotFound("DwE72SF6", s"No site with id $siteId")
+            throwNotFound("DwE72SF6", s"No site with id $siteId")
           case Some(site) =>
             COULD // link to canonical host if (site.hosts.exists(_.role == SiteHost.RoleCanonical))
             // Let the config file hostname have precedence over the database.
@@ -347,7 +362,7 @@ class Globals(
           case SiteHost.RoleDuplicate =>
             result
           case SiteHost.RoleRedirect =>
-            edHttp.throwPermanentRedirect(originOf(result.canonicalHost.hostname) + pathAndQuery)
+            throwPermanentRedirect(originOf(result.canonicalHost.hostname) + pathAndQuery)
           case SiteHost.RoleLink =>
             die("DwE2KFW7", "Not implemented: <link rel='canonical'>")
           case _ =>
@@ -359,7 +374,7 @@ class Globals(
           // to it and when we still don't know its ip, just after installation.
           return firstSiteIdAndHostname
         }
-        edHttp.throwNotFound("DwE0NSS0", s"There is no site with hostname '$hostname'")
+        throwNotFound("DwE0NSS0", s"There is no site with hostname '$hostname'")
     }
     val site = systemDao.getSite(lookupResult.siteId) getOrDie "EsE2KU503"
     site.brief
@@ -439,7 +454,7 @@ class Globals(
         // Create any missing database tables before `new State`, otherwise State
         // creates background threads that might attempt to access the tables.
         p.Logger.info("Running database migrations... [EsM200MIGRDB]")
-        new SystemDao(dbDaoFactory, cache, this, edHttp).applyEvolutions()
+        new SystemDao(dbDaoFactory, cache, this).applyEvolutions()
 
         p.Logger.info("Done migrating database. Connecting to other services... [EsM200CONNOTR]")
         val newState = new State(dbDaoFactory, cache)
@@ -691,15 +706,15 @@ class Globals(
     val nginxHost: String =
       conf.getString("ed.nginx.host").orElse(
         conf.getString("debiki.nginx.host")).noneIfBlank getOrElse "localhost"
-    val (pubSub, strangerCounter) = PubSub.startNewActor(actorSystem, nginxHost, redisClient)
+    val (pubSub, strangerCounter) = PubSub.startNewActor(outer, nginxHost)
 
     val renderContentActorRef: ActorRef =
       RenderContentService.startNewActor(outer)
 
-    val spamChecker = new SpamChecker()
+    val spamChecker = new SpamChecker(appLoaderContext.initialConfiguration)
     spamChecker.start()
 
-    def systemDao: SystemDao = new SystemDao(dbDaoFactory, cache, outer, edHttp) // [rename] to newSystemDao()?
+    def systemDao: SystemDao = new SystemDao(dbDaoFactory, cache, outer) // [rename] to newSystemDao()?
 
     val applicationVersion = "0.00.40"  // later, read from some build config file
 
@@ -719,7 +734,6 @@ class Globals(
       if (!isProd) true
       else conf.getBoolean("ed.mayFastForwardTime") getOrElse false
 
-    CLEAN_UP // dupl code [7UWKDAAQ0]
     val secure: Boolean =
       conf.getBoolean("ed.secure").orElse(
         conf.getBoolean("debiki.secure")) getOrElse {
@@ -776,7 +790,7 @@ class Globals(
     // wildcard HTTPS certificates won't work: they cover 1 level below the
     // base domain only, e.g. host.example.com but not sub.host.example.com,
     // if the cert was issued for *.example.com.
-    val siteByIdHostnameRegex: Regex =
+    val SiteByIdHostnameRegex: Regex =
       s"""^$SiteByIdHostnamePrefix(.*)\\.$baseDomainNoPort$$""".r
 
     val maxUploadSizeBytes: Int =

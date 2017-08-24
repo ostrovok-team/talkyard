@@ -21,6 +21,7 @@ import com.debiki.core._
 import com.debiki.core.Prelude._
 import com.debiki.core.User.{MinUsernameLength, isGuestId}
 import debiki._
+import debiki.EdHttp._
 import debiki.ReactJson._
 import ed.server.http._
 import java.{util => ju}
@@ -40,7 +41,7 @@ import javax.inject.Inject
 class UserController @Inject()(cc: ControllerComponents, edContext: EdContext)
   extends EdController(cc, edContext) {
 
-  import context.http._
+  import context.security.{throwNoUnless, throwIndistinguishableNotFound}
   import context.globals
 
 

@@ -20,12 +20,13 @@ package ed.server.security
 import com.debiki.core._
 import com.debiki.core.Prelude._
 import debiki.{EdHttp, Globals, ReactRenderer}
-import ed.server.http.JsonOrFormDataBody
+import ed.server.http.{DebikiRequest, JsonOrFormDataBody}
 import java.{util => ju}
-import play.api.mvc.Cookie
+import play.api.mvc.{Cookie, DiscardingCookie, Request}
 import play.api.Logger
 import scala.util.Try
 import EdSecurity._
+import ed.server.auth.MayMaybe
 
 
 sealed abstract class XsrfStatus { def isOk = false }
@@ -58,6 +59,14 @@ case class SidOk(
 }
 
 
+/** The value of Debiki's browser id cookie, which is used e.g. to count unique page
+  * visits and to mitigate vote fraud.
+  * @param isNew The cookie was just set, this very HTTP request, which means
+  *              it's possible that the browser has disabled cookies?
+  */
+case class BrowserId(cookieValue: String, isNew: Boolean)
+
+
 object EdSecurity {
 
   /**
@@ -68,12 +77,21 @@ object EdSecurity {
     * any time so I don't use Lift's stateful session stuff so very much.
     */
   val SessionIdCookieName = "dwCoSid"
+
+  /** Don't rename. Is used by AngularJS: AngularJS copies the value of
+    * this cookie to the HTTP header just above.
+    * See: http://docs.angularjs.org/api/ng.$http, search for "XSRF-TOKEN".
+    * CLEAN_UP do rename to edCoXsrf, Angular is since long gone.
+    */
+  val XsrfCookieName = "XSRF-TOKEN"
+
+  val BrowserIdCookieName = "dwCoBrId"
 }
 
 
-class EdSecurity(val http: EdHttp, globals: Globals) {
+class EdSecurity(globals: Globals) {
 
-  import http._
+  import EdHttp._
 
   private val XsrfTokenInputName = "dw-fi-xsrf"
 
@@ -213,12 +231,6 @@ class EdSecurity(val http: EdHttp, globals: Globals) {
    */
   val AngularJsXsrfHeaderName = "X-XSRF-TOKEN"
 
-  /** Don't rename. Is used by AngularJS: AngularJS copies the value of
-    * this cookie to the HTTP header just above.
-    * See: http://docs.angularjs.org/api/ng.$http, search for "XSRF-TOKEN".
-    */
-  val XsrfCookieName = "XSRF-TOKEN"
-
 
   def throwErrorIfPasswordTooWeak(
         password: String, username: String, fullName: Option[String], email: String) {
@@ -333,5 +345,171 @@ class EdSecurity(val http: EdHttp, globals: Globals) {
     checkSessionId(siteId, value).asInstanceOf[SidOk]
   }
 
+
+  // ----- Secure cookies
+
+  def SecureCookie(name: String, value: String, maxAgeSeconds: Option[Int] = None,
+    httpOnly: Boolean = false) =
+    Cookie(name, value, maxAge = maxAgeSeconds, secure = globals.secure, httpOnly = httpOnly)
+
+  def DiscardingSecureCookie(name: String) =
+    DiscardingCookie(name, secure = globals.secure)
+
+  def DiscardingSessionCookie = DiscardingSecureCookie("dwCoSid")
+
+  // Two comments on the encoding of the cookie value:
+  // 1. If the cookie contains various special characters
+  // (whitespace, any of: "[]{]()=,"/\?@:;") it will be
+  // sent as a Version 1 cookie (by javax.servlet.http.Cookie),
+  // then it is surrounded with quotes.
+  // the jQuery cookie plugin however expects an urlencoded value:
+  // 2. urlEncode(value) results in these cookies being sent:
+  //    Set-Cookie: dwCoUserEmail="kajmagnus79%40gmail.com";Path=/
+  //    Set-Cookie: dwCoUserName="Kaj%20Magnus";Path=/
+  // No encoding results in these cookies:
+  //    Set-Cookie: dwCoUserEmail=kajmagnus79@gmail.com;Path=/
+  //    Set-Cookie: dwCoUserName="Kaj Magnus";Path=/
+  // So it seems a % encoded string is surrounded with double quotes, by
+  // javax.servlet.http.Cookie? Why? Not needed!, '%' is safe.
+  // So I've modified jquery-cookie.js to remove double quotes when
+  // reading cookie values.
+  def urlEncodeCookie(name: String, value: String, maxAgeSecs: Option[Int] = None) =
+  Cookie(
+    name = name,
+    value = urlEncode(convertEvil(value)),  // see comment above
+    maxAge = maxAgeSecs,
+    path = "/",
+    domain = None,
+    secure = globals.secure,
+    httpOnly = false)
+
+
+  /** Extracts the browser id cookie from the request, or creates it if absent.
+    */
+  def getBrowserIdCreateIfNeeded(request: Request[_]): (BrowserId, List[Cookie]) = {
+    val anyBrowserIdCookieValue = request.cookies.get(BrowserIdCookieName).map(_.value)
+    if (anyBrowserIdCookieValue.isDefined)
+      (BrowserId(anyBrowserIdCookieValue.get, isNew = false), Nil)
+    else
+      createBrowserIdCookie()
+  }
+
+
+  private def createBrowserIdCookie(): (BrowserId, List[Cookie]) = {
+    val unixTimeSeconds = globals.now().seconds
+    // Let's separate the timestamp from the random stuff by adding an a-z letter.
+    val randomString = nextRandomAzLetter() + nextRandomString() take 7
+
+    // SECURITY COULD prevent evil programs from submitting fake browser id cookies:
+    //val hash = hashSha1Base64UrlSafe(s"$unixTimeSeconds$randomString") take 13
+    //val cookieValue = s"$unixTimeSeconds$randomString$hash"
+    val cookieValue = s"$unixTimeSeconds$randomString"
+
+    val newCookie = SecureCookie(
+      name = BrowserIdCookieName,
+      value = cookieValue,
+      maxAgeSeconds = Some(3600 * 24 * 365 * 20),
+      httpOnly = true)
+
+    (BrowserId(cookieValue, isNew = true), newCookie :: Nil)
+  }
+
+
+  // ----- Secure Not-fond and No-may-not
+
+  /** Use this if page not found, or the page is private and we don't want strangers
+    * to find out that it exists. [7C2KF24]
+    */
+  def throwIndistinguishableNotFound(devModeErrCode: String = ""): Nothing = {
+    val suffix =
+      if (!globals.isProd && devModeErrCode.nonEmpty) s"-$devModeErrCode"
+      else ""
+    throwNotFound("EsE404" + suffix, "Page not found")
+  }
+
+  def throwNoUnless(mayMaybe: MayMaybe, errorCode: String) {
+    import MayMaybe._
+    mayMaybe match {
+      case Yes => // fine
+      case NoNotFound(debugCode) => throwIndistinguishableNotFound(debugCode)
+      case NoMayNot(code2, reason) => throwForbidden(s"$errorCode-$code2", reason)
+    }
+  }
+
+
+  // ----- Magic passwords
+
+
+  /** The real ip address of the client, unless a fakeIp url param or dwCoFakeIp cookie specified
+    * In prod mode, an e2e test password cookie is required.
+    *
+    * (If 'fakeIp' is specified, actions.SafeActions.scala copies the value to
+    * the dwCoFakeIp cookie.)
+    */
+  def realOrFakeIpOf(request: play.api.mvc.Request[_]): String = {
+    val fakeIpQueryParam = request.queryString.get("fakeIp").flatMap(_.headOption)
+    val fakeIp = fakeIpQueryParam.orElse(
+      request.cookies.get("dwCoFakeIp").map(_.value))  getOrElse {
+      return request.remoteAddress
+    }
+
+    if (globals.isProd) {
+      def where = fakeIpQueryParam.isDefined ? "in query param" | "in cookie"
+      val password = getE2eTestPassword(request) getOrElse {
+        throwForbidden(
+          "DwE6KJf2", s"Fake ip specified $where, but no e2e test password — required in prod mode")
+      }
+      val correctPassword = globals.e2eTestPassword getOrElse {
+        throwForbidden(
+          "DwE7KUF2", "Fake ips not allowed, because no e2e test password has been configured")
+      }
+      if (password != correctPassword) {
+        throwForbidden(
+          "DwE2YUF2", "Fake ip forbidden: Wrong e2e test password")
+      }
+    }
+
+    // Dev or test mode, or correct password, so:
+    fakeIp
+  }
+
+
+  def getE2eTestPassword(request: play.api.mvc.Request[_]): Option[String] =
+    request.queryString.get("e2eTestPassword").flatMap(_.headOption).orElse(
+      request.cookies.get("dwCoE2eTestPassword").map(_.value)).orElse( // dwXxx obsolete. esXxx now
+      request.cookies.get("esCoE2eTestPassword").map(_.value))
+
+
+  def hasOkE2eTestPassword(request: play.api.mvc.Request[_]): Boolean = {
+    getE2eTestPassword(request) match {
+      case None => false
+      case Some(password) =>
+        val correctPassword = globals.e2eTestPassword getOrElse throwForbidden(
+          "EsE5GUM2", "There's an e2e test password in the request, but not in any config file")
+        if (password != correctPassword) {
+          throwForbidden("EsE2FWK4", "The e2e test password in the request is wrong")
+        }
+        true
+    }
+  }
+
+
+  def getForbiddenPassword(request: DebikiRequest[_]): Option[String] =
+    request.queryString.get("forbiddenPassword").flatMap(_.headOption).orElse(
+      request.cookies.get("esCoForbiddenPassword").map(_.value))
+
+
+  def hasOkForbiddenPassword(request: DebikiRequest[_]): Boolean = {
+    getForbiddenPassword(request) match {
+      case None => false
+      case Some(password) =>
+        val correctPassword = globals.forbiddenPassword getOrElse throwForbidden(
+          "EsE48YC2", "There's a forbidden-password in the request, but not in any config file")
+        if (password != correctPassword) {
+          throwForbidden("EsE7UKF2", "The forbidden-password in the request is wrong")
+        }
+        true
+    }
+  }
 }
 

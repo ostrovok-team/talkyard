@@ -18,13 +18,13 @@
 package controllers
 
 import com.debiki.core._
-import debiki._
+import debiki.EdHttp._
 import ed.server.{EdContext, EdController}
 import ed.server.http._
 import javax.inject.Inject
-import play.api._
-import play.api.mvc.{AbstractController, ControllerComponents}
+import play.api.mvc.ControllerComponents
 import scala.util.matching.Regex
+import SiteAssetBundlesController._
 
 
 /**
@@ -38,7 +38,6 @@ import scala.util.matching.Regex
 class SiteAssetBundlesController @Inject()(cc: ControllerComponents, edContext: EdContext)
   extends EdController(cc, edContext) {
 
-  import context.http._
   import context.globals
 
   /**
@@ -100,7 +99,10 @@ class SiteAssetBundlesController @Inject()(cc: ControllerComponents, edContext: 
         NotFoundResult("DwE93BY1", s"Not found: $fileName")
     }
   }
+}
 
+
+object SiteAssetBundlesController {
 
   /**
    * <bundle-name-no-suffix>.<suffix>.

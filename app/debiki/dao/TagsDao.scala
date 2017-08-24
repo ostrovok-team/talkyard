@@ -19,6 +19,7 @@ package debiki.dao
 
 import com.debiki.core._
 import com.debiki.core.Prelude._
+import debiki.EdHttp.{throwForbidden, throwForbiddenIf}
 import debiki.ReactJson
 import ed.server.notf.NotificationGenerator
 import ed.server.pubsub.StorePatchMessage
@@ -36,8 +37,6 @@ object TagsDao {
 
 trait TagsDao {
   this: SiteDao =>
-
-  import context.http._
 
 
   def loadAllTagsAsSet(): Set[TagLabel] =

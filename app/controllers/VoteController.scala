@@ -21,6 +21,7 @@ import com.debiki.core._
 import com.debiki.core.Prelude._
 import collection.immutable
 import debiki._
+import debiki.EdHttp._
 import debiki.ReactJson.JsUser
 import ed.server.{EdContext, EdController}
 import ed.server.auth.Authz
@@ -35,7 +36,7 @@ import play.api.mvc.{Action, ControllerComponents}
 class VoteController @Inject()(cc: ControllerComponents, edContext: EdContext)
   extends EdController(cc, edContext) {
 
-  import context.http._
+  import context.security.throwNoUnless
 
 
   /** Currently handles only one vote at a time. Example post data, in Yaml:

@@ -24,6 +24,7 @@ import debiki.{DatabaseUtils, Globals, ReactJson, ReactRenderer}
 import play.{api => p}
 import scala.concurrent.duration._
 import RenderContentService._
+import scala.concurrent.ExecutionContext
 
 
 /** Renders page contents using React.js and Nashorn. Is done in background threads
@@ -49,6 +50,8 @@ object RenderContentService {
   * content html and makes them up-to-date.
   */
 class RenderContentActor(globals: Globals) extends Actor {
+
+  def execCtx: ExecutionContext = globals.executionContext
 
   override def receive: Receive = {
     case sitePageId: SitePageId =>
@@ -84,7 +87,7 @@ class RenderContentActor(globals: Globals) extends Actor {
           p.Logger.debug("Tests done, server gone. Stopping background rendering pages. [EsM5KG3]")
         }
         else {
-          context.system.scheduler.scheduleOnce(333 millis, self, RegenerateStaleHtml)
+          context.system.scheduler.scheduleOnce(333 millis, self, RegenerateStaleHtml)(execCtx)
         }
       }
   }

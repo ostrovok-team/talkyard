@@ -19,7 +19,6 @@ package ed.server.http
 
 import com.debiki.core._
 import com.debiki.core.Prelude._
-import controllers.LoginController
 import debiki._
 import debiki.RateLimits.NoRateLimits
 import debiki.dao.LoginNotFoundException
@@ -38,12 +37,13 @@ import scala.util.{Failure, Success}
 class PlainApiActions(
   val safeActions: SafeActions,
   val globals: Globals,
-  val http: EdHttp,
-  val security: EdSecurity) {
+  val security: EdSecurity,
+  val rateLimiter: RateLimiter) {
 
-  import http._
-
-  def ExceptionAction: safeActions.ExceptionAction.type = safeActions.ExceptionAction _
+  import EdHttp._
+  import security.DiscardingSecureCookie
+  import security.DiscardingSessionCookie
+  import safeActions.ExceptionAction
 
   def PlainApiAction[B](parser: BodyParser[B],
         rateLimits: RateLimits, allowAnyone: Boolean = false, isLogin: Boolean = false) =
@@ -104,7 +104,7 @@ class PlainApiActions(
         if (actualSidStatus.isOk) (actualSidStatus, false)
         else (SidAbsent, true)
 
-      val (browserId, moreNewCookies) = BrowserId.checkBrowserId(request)
+      val (browserId, moreNewCookies) = security.getBrowserIdCreateIfNeeded(request)
 
       // Parts of `block` might be executed asynchronously. However any LoginNotFoundException
       // should happen before the async parts, because access control should be done
@@ -258,7 +258,7 @@ class PlainApiActions(
       val apiRequest = ApiRequest[A](
         site, sidStatus, xsrfOk, browserId, anyUser, dao, request)
 
-      RateLimiter.rateLimit(rateLimits, apiRequest)
+      rateLimiter.rateLimit(rateLimits, apiRequest)
 
       // COULD use markers instead for site id and ip, and perhaps uri too? Dupl code [5KWC28]
       val requestUriAndIp = s"site $site, ip ${apiRequest.ip}: ${apiRequest.uri}"
@@ -284,7 +284,7 @@ class PlainApiActions(
       }
 
       result onComplete {
-        case Success(r) =>
+        case Success(_) =>
           //p.Logger.debug(
             //s"API request ended, status ${r.header.status} [DwM9Z2], $requestUriAndIp")
         case Failure(exception) =>
@@ -295,7 +295,7 @@ class PlainApiActions(
       if (logoutBecauseSuspended) {
         // We won't get here if e.g. a 403 Forbidden exception was thrown because 'user' was
         // set to None. How solve that?
-        result = result.map(_.discardingCookies(http.DiscardingSessionCookie))
+        result = result.map(_.discardingCookies(DiscardingSessionCookie))
       }
       result
     }

@@ -22,6 +22,7 @@ import com.debiki.core._
 import com.debiki.core.Prelude._
 import debiki.{RateLimits, ReactRenderer}
 import debiki.dao.PagePartsDao
+import debiki.EdHttp._
 import ed.server.{EdContext, EdController}
 import ed.server.pop.PagePopularityCalculator
 import java.lang.management.ManagementFactory
@@ -45,8 +46,8 @@ import scala.util.Try
 class DebugTestController @Inject()(cc: ControllerComponents, edContext: EdContext)
   extends EdController(cc, edContext) {
 
-  import context.http._
   import context.globals
+  import context.safeActions.ExceptionAction
 
 
   /** If a JS error happens in the browser, it'll post the error message to this

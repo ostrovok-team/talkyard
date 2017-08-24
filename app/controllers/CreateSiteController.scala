@@ -20,6 +20,7 @@ package controllers
 import com.debiki.core._
 import com.debiki.core.Prelude._
 import debiki._
+import debiki.EdHttp._
 import ed.server.{EdContext, EdController}
 import ed.server.spam.SpamChecker.throwForbiddenIfSpam
 import ed.server.http._
@@ -38,7 +39,7 @@ import scala.util.Try
 class CreateSiteController @Inject()(cc: ControllerComponents, edContext: EdContext)
   extends EdController(cc, edContext) {
 
-  import context.http._
+  import context.security._
   import context.globals
 
   // Let people use hostnames that start with 'test-' — good to know which sites are

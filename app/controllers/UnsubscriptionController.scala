@@ -19,7 +19,7 @@ package controllers
 
 import com.debiki.core.EmailNotfPrefs
 import com.debiki.core._
-import debiki._
+import debiki.EdHttp._
 import play.api._
 import play.api.mvc.{AbstractController, Action, ControllerComponents}
 import play.api.mvc.BodyParsers.parse.empty
@@ -41,8 +41,8 @@ import javax.inject.Inject
 class UnsubscriptionController @Inject()(cc: ControllerComponents, edContext: EdContext)
   extends EdController(cc, edContext) {
 
-  import context.http._
   import context.globals
+  import context.safeActions.ExceptionAction
 
   SECURITY; SHOULD // (not urgent) not allow this type of email id to do anything else
   // than unsubbing, and expire after ... one month?
@@ -80,7 +80,7 @@ class UnsubscriptionController @Inject()(cc: ControllerComponents, edContext: Ed
 
   def handleForm(emailId: EmailId): Action[Map[String, Seq[String]]] =
         ExceptionAction(parse.urlFormEncoded(maxLength = 200)) { request =>
-    val site = lookupSiteOrThrow(request, globals.systemDao)
+    val site = globals.lookupSiteOrThrow(request)
 
     SECURITY; SHOULD // rate limit and check email type.
 

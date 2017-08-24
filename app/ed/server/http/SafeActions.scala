@@ -23,6 +23,7 @@ import com.debiki.core.Prelude._
 import debiki.Globals.StillConnectingException
 import org.apache.commons.lang3.exception.ExceptionUtils.getStackTrace
 import debiki._
+import ed.server.security.EdSecurity
 import play.{api => p}
 import play.api.mvc._
 import play.api.{Logger, Play}
@@ -35,8 +36,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
  * require a valid xsrf token for POST requests.
  * Also understand Debiki's internal throwBadReq etcetera functions.
  */
-class SafeActions(val globals: Globals, val http: EdHttp) {
+class SafeActions(val globals: Globals, val security: EdSecurity) {
 
+  import EdHttp._
 
   /** IE9 blocks cookies in iframes unless the site in the iframe clarifies its
     * in a P3P header (Platform for Privacy Preferences). (But Debiki's embedded comments
@@ -119,7 +121,7 @@ class SafeActions(val globals: Globals, val http: EdHttp) {
         case ex: EmailAddressChangedException =>
           Future.successful(Results.Forbidden(
             "The email address related to this request has been changed. Access denied"))
-        case http.ResultException(result) =>
+        case ResultException(result) =>
           Future.successful(result)
         case ex: play.api.libs.json.JsResultException =>
           Future.successful(Results.BadRequest(s"Bad JSON: $ex [DwE70KX3]"))
@@ -137,7 +139,7 @@ class SafeActions(val globals: Globals, val http: EdHttp) {
           Future.successful(internalError(request, ex, "DwE500ERR"))
       }
       futureResult = futureResult recover {
-        case http.ResultException(result) => result
+        case ResultException(result) => result
         case ex: play.api.libs.json.JsResultException =>
           Results.BadRequest(s"Bad JSON: $ex [error DwE6PK30]")
         case Globals.StillConnectingException =>
@@ -157,7 +159,7 @@ class SafeActions(val globals: Globals, val http: EdHttp) {
       val anyNewFakeIp = request.queryString.get("fakeIp").flatMap(_.headOption)
       anyNewFakeIp foreach { fakeIp =>
         futureResult = futureResult map { result =>
-          result.withCookies(http.SecureCookie("dwCoFakeIp", fakeIp))
+          result.withCookies(security.SecureCookie("dwCoFakeIp", fakeIp))
         }
       }
 
@@ -165,7 +167,7 @@ class SafeActions(val globals: Globals, val http: EdHttp) {
         val anyPassword = request.queryString.get(paramName).flatMap(_.headOption)
         anyPassword foreach { password =>
           futureResult = futureResult map { result =>
-            result.withCookies(http.SecureCookie(cookieName, password, maxAgeSeconds = Some(600)))
+            result.withCookies(security.SecureCookie(cookieName, password, maxAgeSeconds = Some(600)))
           }
         }
       }

@@ -19,14 +19,13 @@ package controllers
 
 import com.debiki.core._
 import com.debiki.core.Prelude._
-import debiki.Globals
+import debiki.EdHttp._
 import ed.server.{EdContext, EdController}
-import ed.server.security.createSessionIdAndXsrfToken
 import ed.server.http._
 import javax.inject.Inject
 import play.api._
 import play.api.libs.json.JsString
-import play.api.mvc.{AbstractController, ControllerComponents}
+import play.api.mvc.ControllerComponents
 import redis.RedisClient
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -38,11 +37,12 @@ import scala.concurrent.duration._
   * And 2) lets staff view the site, in read-only mode, as strangers, guests, normal members,
   * or member of some group. Only partly implemented (2017-01).
   */
-class ImpersonateController @Inject()(cc: ControllerComponents, edContext: EdContext)
+class ImpersonateController @Inject()(cc: ControllerComponents, edContext: EdContext,
+    LoginController: LoginController)
   extends EdController(cc, edContext) {
 
-  import context.http._
   import context.globals
+  import context.security._
 
   val MaxBecomeOldUserSeconds = 3600
   val MaxKeyAgeSeconds = 3600

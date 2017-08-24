@@ -22,6 +22,7 @@ import com.debiki.core.Prelude._
 import com.debiki.core.PageParts.MaxTitleLength
 import com.debiki.core.User.SystemUserId
 import debiki._
+import debiki.EdHttp._
 import ed.server.auth.{Authz, ForumAuthzContext}
 import ed.server.notf.NotificationGenerator
 import java.{util => ju}
@@ -40,7 +41,6 @@ import scala.collection.immutable
 trait PagesDao {
   self: SiteDao =>
 
-  import context.http._
   import context.globals
 
   def loadPagesByUser(userId: UserId, isStaffOrSelf: Boolean, limit: Int): Seq[PagePathAndMeta] = {
@@ -88,7 +88,7 @@ trait PagesDao {
         transaction, altPageId = altPageId, embeddingUrl = embeddingUrl)
 
       val notifications = NotificationGenerator(transaction)
-        .generateForNewPost(PageDao(pagePath.pageId getOrDie "DwE5KWI2", context, transaction), bodyPost)
+        .generateForNewPost(PageDao(pagePath.pageId getOrDie "DwE5KWI2", transaction), bodyPost)
       transaction.saveDeleteNotifications(notifications)
       pagePath
     }
@@ -540,7 +540,7 @@ trait PagesDao {
 
   def refreshPageMetaBumpVersion(pageId: PageId, markSectionPageStale: Boolean,
         transaction: SiteTransaction) {
-    val page = PageDao(pageId, context, transaction)
+    val page = PageDao(pageId, transaction)
     val newMeta = page.meta.copy(
       lastReplyAt = page.parts.lastVisibleReply.map(_.createdAt),
       lastReplyById = page.parts.lastVisibleReply.map(_.createdById),

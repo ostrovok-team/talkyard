@@ -19,6 +19,7 @@ package controllers
 
 import com.debiki.core._
 import debiki._
+import debiki.EdHttp.throwForbidden
 import ed.server.http._
 import ed.server.{EdContext, EdController}
 import javax.inject.Inject
@@ -30,8 +31,6 @@ import play.api.mvc.ControllerComponents
   */
 class CloseCollapseController @Inject()(cc: ControllerComponents, edContext: EdContext)
   extends EdController(cc, edContext) {
-
-  import context.http.throwForbidden
 
 
   def hidePost = PostJsonAction(RateLimits.CloseCollapsePost, maxBytes = 100) { apiReq =>

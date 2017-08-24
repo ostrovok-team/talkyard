@@ -20,6 +20,7 @@ package controllers
 import com.debiki.core._
 import com.debiki.core.Prelude._
 import debiki._
+import debiki.EdHttp._
 import debiki.ReactJson.JsStringOrNull
 import debiki.onebox.Onebox
 import ed.server.http._
@@ -29,6 +30,7 @@ import javax.inject.Inject
 import play.api.mvc.ControllerComponents
 import play.api.libs.json._
 import EditController._
+import scala.concurrent.ExecutionContext
 
 
 /** Edits pages and posts.
@@ -36,8 +38,8 @@ import EditController._
 class EditController @Inject()(cc: ControllerComponents, edContext: EdContext)
   extends EdController(cc, edContext) {
 
-  import context.http._
-  import context.executionContext
+  import context.security.{throwNoUnless, throwIndistinguishableNotFound}
+  def execCtx: ExecutionContext = context.executionContext
 
   def loadDraftAndGuidelines(writingWhat: String, categoryId: Option[Int], pageRole: String) =
         GetAction { request =>
@@ -150,7 +152,7 @@ class EditController @Inject()(cc: ControllerComponents, edContext: EdContext)
   def onebox(url: String) = AsyncGetActionRateLimited(RateLimits.LoadOnebox) { request =>
     Onebox.loadRenderSanitize(url, javascriptEngine = None).transform(
       html => Ok(html),
-      throwable => ResultException(BadReqResult("DwE4PKE2", "Cannot onebox that link")))
+      throwable => ResultException(BadReqResult("DwE4PKE2", "Cannot onebox that link")))(execCtx)
   }
 
 

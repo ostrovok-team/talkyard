@@ -23,6 +23,7 @@ import com.debiki.core.Prelude._
 import com.debiki.core.PageParts.FirstReplyNr
 import controllers.EditController
 import debiki._
+import debiki.EdHttp._
 import ed.server.notf.NotificationGenerator
 import ed.server.pubsub.StorePatchMessage
 import play.api.libs.json.{JsObject, JsValue}
@@ -47,7 +48,6 @@ case class InsertPostResult(storePatchJson: JsObject, post: Post, reviewTask: Op
 trait PostsDao {
   self: SiteDao =>
 
-  import context.http._
   import context.globals
 
   // 3 minutes
@@ -79,7 +79,7 @@ trait PostsDao {
     val (newPost, author, notifications, anyReviewTask) = readWriteTransaction { transaction =>
       val authorAndLevels = loadUserAndLevels(byWho, transaction)
       val author = authorAndLevels.user
-      val page = PageDao(pageId, context, transaction)
+      val page = PageDao(pageId, transaction)
       val replyToPosts = page.parts.getPostsAllOrError(replyToPostNrs) getOrIfBad  { missingPostNr =>
         throwNotFound(s"Post nr $missingPostNr not found", "EdE4JK2RJ")
       }
@@ -347,7 +347,7 @@ trait PostsDao {
       val author = authorAndLevels.user
 
       SHOULD_OPTIMIZE // don't load all posts [2GKF0S6], because this is a chat, could be too many.
-      val page = PageDao(pageId, context, transaction)
+      val page = PageDao(pageId, transaction)
       val replyToPosts = Nil // currently cannot reply to specific posts, in the chat. [7YKDW3]
 
       dieOrThrowNoUnless(Authz.mayPostReply(authorAndLevels, transaction.loadGroupIds(author),
@@ -573,7 +573,7 @@ trait PostsDao {
     readWriteTransaction { transaction =>
       val editorAndLevels = loadUserAndLevels(who, transaction)
       val editor = editorAndLevels.user
-      val page = PageDao(pageId, context, transaction)
+      val page = PageDao(pageId, transaction)
 
       val postToEdit = page.parts.postByNr(postNr) getOrElse {
         page.meta // this throws page-not-fount if the page doesn't exist
@@ -824,7 +824,7 @@ trait PostsDao {
     var usersById: Map[UserId, User] = null
     readOnlyTransaction { transaction =>
       val post = transaction.loadThePost(postId)
-      val page = PageDao(post.pageId, context, transaction)
+      val page = PageDao(post.pageId, transaction)
       val user = userId.flatMap(transaction.loadUser)
 
       throwIfMayNotSeePost(post, user)(transaction)
@@ -924,7 +924,8 @@ trait PostsDao {
       insertAuditLogEntry(auditLogEntry, transaction)
 
       COULD_OPTIMIZE // try not to load the whole page in makeStorePatch2
-      (postAfter, ReactJson.makeStorePatch2(postId, postAfter.pageId, transaction))
+      (postAfter, ReactJson.makeStorePatch2(postId, postAfter.pageId,
+          appVersion = globals.applicationVersion, transaction))
     }
     refreshPageInMemCache(post.pageId)
     patch
@@ -934,7 +935,7 @@ trait PostsDao {
   def changePostType(pageId: PageId, postNr: PostNr, newType: PostType,
         changerId: UserId, browserIdData: BrowserIdData) {
     readWriteTransaction { transaction =>
-      val page = PageDao(pageId, context, transaction)
+      val page = PageDao(pageId, transaction)
       val postBefore = page.parts.thePostByNr(postNr)
       val Seq(author, changer) = transaction.loadTheUsers(postBefore.createdById, changerId)
       throwIfMayNotSeePage(page, Some(changer))(transaction)
@@ -1000,7 +1001,7 @@ trait PostsDao {
         userId: UserId, transaction: SiteTransaction) {
     import com.debiki.core.{PostStatusAction => PSA}
 
-    val page = PageDao(pageId, context, transaction)
+    val page = PageDao(pageId, transaction)
     val user = transaction.loadUser(userId) getOrElse throwForbidden("DwE3KFW2", "Bad user id")
     throwIfMayNotSeePage(page, Some(user))(transaction)
 
@@ -1137,7 +1138,7 @@ trait PostsDao {
   def approvePostImpl(pageId: PageId, postNr: PostNr, approverId: UserId,
         transaction: SiteTransaction) {
 
-    val page = PageDao(pageId, context, transaction)
+    val page = PageDao(pageId, transaction)
     val pageMeta = page.meta
     val postBefore = page.parts.thePostByNr(postNr)
     if (postBefore.isCurrentVersionApproved)
@@ -1238,7 +1239,7 @@ trait PostsDao {
     if (posts.isEmpty) return
     require(posts.forall(_.pageId == pageId), "EdE2AX5N6")
 
-    val page = PageDao(pageId, context, transaction)
+    val page = PageDao(pageId, transaction)
     val pageMeta = page.meta
 
     var numNewVisibleReplies = 0
@@ -1354,7 +1355,7 @@ trait PostsDao {
   def ifAuthAddVote(pageId: PageId, postNr: PostNr, voteType: PostVoteType,
         voterId: UserId, voterIp: String, postNrsRead: Set[PostNr]) {
     readWriteTransaction { transaction =>
-      val page = PageDao(pageId, context, transaction)
+      val page = PageDao(pageId, transaction)
       val voter = transaction.loadTheUser(voterId)
       SECURITY // minor. Should be if-may-not-see-*post*. And should do a pre-check in VoteController.
       throwIfMayNotSeePage(page, Some(voter))(transaction)
@@ -1436,8 +1437,8 @@ trait PostsDao {
       dieIf(newParentPost.closedStatus.isClosed, "EsE2GLK83", "Unimpl")
       dieIf(newParentPost.deletedStatus.isDeleted, "EsE8KFG1", "Unimpl")
 
-      val fromPage = PageDao(postToMove.pageId, context, transaction)
-      val toPage = PageDao(newParent.pageId, context, transaction)
+      val fromPage = PageDao(postToMove.pageId, transaction)
+      val toPage = PageDao(newParent.pageId, transaction)
 
       // Don't create cycles.
       if (newParentPost.pageId == postToMove.pageId) {
@@ -1528,7 +1529,8 @@ trait PostsDao {
         toPage, postAfter, skipMentions = true)
       SHOULD // transaction.saveDeleteNotifications(notfs) — but would cause unique key errors
 
-      val patch = ReactJson.makeStorePatch2(postAfter.id, toPage.id, transaction)
+      val patch = ReactJson.makeStorePatch2(postAfter.id, toPage.id,
+        appVersion = globals.applicationVersion, transaction)
       (postAfter, patch)
     }
 

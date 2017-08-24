@@ -20,6 +20,7 @@ package debiki.dao
 import com.debiki.core._
 import com.debiki.core.Prelude._
 import debiki._
+import debiki.EdHttp._
 import ed.server.search.SearchEngine
 import org.{elasticsearch => es}
 import redis.RedisClient
@@ -97,12 +98,12 @@ class SiteDao(
   with SummaryEmailsDao
   with AuditDao {
 
-  protected lazy val memCache = new MemCache(siteId, cache)
+  protected lazy val memCache = new MemCache(siteId, cache, globals.mostMetrics)
   protected lazy val redisCache = new RedisCache(siteId, redisClient, context.globals.now)
   protected lazy val searchEngine = new SearchEngine(siteId, elasticSearchClient)
 
-  import context.globals
-  import context.http._
+  def globals: debiki.Globals = context.globals
+  import context.security.throwIndistinguishableNotFound
 
   def memCache_test: MemCache = {
     require(globals.isOrWasTest, "EsE7YKP42B")

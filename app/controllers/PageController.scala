@@ -20,6 +20,7 @@ package controllers
 import com.debiki.core._
 import com.debiki.core.Prelude._
 import debiki._
+import debiki.EdHttp._
 import debiki.ReactJson.JsLongOrNull
 import ed.server.{EdContext, EdController}
 import ed.server.auth.Authz
@@ -35,7 +36,7 @@ import play.api.mvc.{Action, ControllerComponents}
 class PageController @Inject()(cc: ControllerComponents, edContext: EdContext)
   extends EdController(cc, edContext) {
 
-  import context.http._
+  import context.security.throwNoUnless
 
   def createPage: Action[JsValue] = PostJsonAction(RateLimits.CreateTopic, maxBytes = 20 * 1000) {
         request =>

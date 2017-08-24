@@ -18,7 +18,6 @@
 package ed
 
 import com.debiki.core._
-import debiki.DebikiHttp.throwBadArgument
 import play.api.libs.json._
 
 

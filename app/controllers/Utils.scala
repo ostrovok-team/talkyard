@@ -18,6 +18,7 @@
 package controllers
 
 import com.debiki.core._
+import debiki.EdHttp._
 import ed.server.liftweb
 import java.{lang => jl}
 import play.api._

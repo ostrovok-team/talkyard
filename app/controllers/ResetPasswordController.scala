@@ -20,8 +20,8 @@ package controllers
 import com.debiki.core._
 import com.debiki.core.Prelude._
 import debiki._
+import debiki.EdHttp._
 import ed.server.{EdContext, EdController}
-import ed.server.security.createSessionIdAndXsrfToken
 import ed.server.http._
 import javax.inject.Inject
 import play.api._
@@ -33,8 +33,8 @@ import play.api.mvc.{AbstractController, Action, ControllerComponents}
 class ResetPasswordController @Inject()(cc: ControllerComponents, edContext: EdContext)
   extends EdController(cc, edContext) {
 
-  import context.http._
   import context.globals
+  import context.security.createSessionIdAndXsrfToken
 
   val MaxResetPasswordEmailAgeInHours = 24
 
@@ -99,7 +99,8 @@ class ResetPasswordController @Inject()(cc: ControllerComponents, edContext: EdC
           userName = user.theUsername,
           emailId = emailId,
           siteAddress = request.host,
-          expirationTimeInHours = MaxResetPasswordEmailAgeInHours).body
+          expirationTimeInHours = MaxResetPasswordEmailAgeInHours,
+          globals = globals).body
       })
     dao.saveUnsentEmail(email)
     globals.sendEmail(email, dao.siteId)
@@ -120,7 +121,8 @@ class ResetPasswordController @Inject()(cc: ControllerComponents, edContext: EdC
         views.html.resetpassword.noPasswordToResetEmail(
           userName = user.theUsername,
           emailAddress = emailAddress,
-          siteAddress = request.host).body
+          siteAddress = request.host,
+          globals = globals).body
       })
     dao.saveUnsentEmail(email)
     globals.sendEmail(email, dao.siteId)

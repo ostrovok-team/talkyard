@@ -19,8 +19,6 @@ package debiki
 
 import com.debiki.core._
 import com.debiki.core.Prelude._
-import ed.server.auth.MayMaybe
-import ed.server.auth.MayMaybe.{NoMayNot, NoNotFound, Yes}
 import ed.server.http.DebikiRequest
 import java.{net => jn}
 import play.api.libs.json.JsLookupResult
@@ -35,11 +33,7 @@ import scala.util.Try
 /**
  * HTTP utilities.
  */
-class EdHttp(
-  val secure: Boolean,
-  isProd: Boolean,
-  e2eTestPassword: Option[String],
-  forbiddenPassword: Option[String]) {
+object EdHttp {
 
 
   // ----- Limits
@@ -133,7 +127,7 @@ class EdHttp(
     // ScalaTest prints the stack trace but not the exception message. However this is
     // a QuickException — it has no stack trace. Let's create a helpful fake stack trace
     // that shows the exception message, so one knows what happened.
-    if (false) { // if (isTest) {
+    if (!Globals.isProd) {
       val message = s"ResultException, status $statusCode [EsMRESEX]:\n$bodyToString"
       setStackTrace(Array(new StackTraceElement(message, "", "", 0)))
     }
@@ -197,16 +191,6 @@ class EdHttp(
   def throwNotFound(errCode: String, message: String = "") =
     throw ResultException(NotFoundResult(errCode, message))
 
-  /** Use this if page not found, or the page is private and we don't want strangers
-    * to find out that it exists. [7C2KF24]
-    */
-  def throwIndistinguishableNotFound(devModeErrCode: String = ""): Nothing = {
-    val suffix =
-      if (!isProd && devModeErrCode.nonEmpty) s"-$devModeErrCode"
-      else ""
-    throwNotFound("EsE404" + suffix, "Page not found")
-  }
-
   def throwEntityTooLargeIf(condition: Boolean, errCode: String, message: String) =
     if (condition) throwEntityTooLarge(errCode, message)
 
@@ -248,15 +232,6 @@ class EdHttp(
   def throwForbidden2: (String, String) => Nothing =
     throwForbidden
 
-  def throwNoUnless(mayMaybe: MayMaybe, errorCode: String) {
-    import MayMaybe._
-    mayMaybe match {
-      case Yes => // fine
-      case NoNotFound(debugCode) => throwIndistinguishableNotFound(debugCode)
-      case NoMayNot(code2, reason) => throwForbidden(s"$errorCode-$code2", reason)
-    }
-  }
-
   def throwNotImplementedIf(test: Boolean, errorCode: String, message: => String = "") {
     if (test) throwNotImplemented(errorCode, message)
   }
@@ -287,45 +262,6 @@ class EdHttp(
 
   private def throwLoginAsTo(as: String, to: String): Nothing =
     ??? // throwTemporaryRedirect(routes.LoginController.showLoginPage(as = Some(as), to = Some(to)).url)
-
-
-
-  // ----- Cookies
-
-  def SecureCookie(name: String, value: String, maxAgeSeconds: Option[Int] = None,
-        httpOnly: Boolean = false) =
-    Cookie(name, value, maxAge = maxAgeSeconds, secure = secure, httpOnly = httpOnly)
-
-  def DiscardingSecureCookie(name: String) =
-    DiscardingCookie(name, secure = secure)
-
-  def DiscardingSessionCookie = DiscardingSecureCookie("dwCoSid")
-
-  // Two comments on the encoding of the cookie value:
-  // 1. If the cookie contains various special characters
-  // (whitespace, any of: "[]{]()=,"/\?@:;") it will be
-  // sent as a Version 1 cookie (by javax.servlet.http.Cookie),
-  // then it is surrounded with quotes.
-  // the jQuery cookie plugin however expects an urlencoded value:
-  // 2. urlEncode(value) results in these cookies being sent:
-  //    Set-Cookie: dwCoUserEmail="kajmagnus79%40gmail.com";Path=/
-  //    Set-Cookie: dwCoUserName="Kaj%20Magnus";Path=/
-  // No encoding results in these cookies:
-  //    Set-Cookie: dwCoUserEmail=kajmagnus79@gmail.com;Path=/
-  //    Set-Cookie: dwCoUserName="Kaj Magnus";Path=/
-  // So it seems a % encoded string is surrounded with double quotes, by
-  // javax.servlet.http.Cookie? Why? Not needed!, '%' is safe.
-  // So I've modified jquery-cookie.js to remove double quotes when
-  // reading cookie values.
-  def urlEncodeCookie(name: String, value: String, maxAgeSecs: Option[Int] = None) =
-    Cookie(
-      name = name,
-      value = urlEncode(convertEvil(value)),  // see comment above
-      maxAge = maxAgeSecs,
-      path = "/",
-      domain = None,
-      secure = secure,
-      httpOnly = false)
 
   def urlDecodeCookie(name: String, request: Request[_]): Option[String] =
     request.cookies.get(name).map(cookie => urlDecode(cookie.value))
@@ -409,79 +345,6 @@ class EdHttp(
 
   def isAjax(request: Request[_]) =
     request.headers.get("X-Requested-With") == Some("XMLHttpRequest")
-
-
-  /** The real ip address of the client, unless a fakeIp url param or dwCoFakeIp cookie specified
-    * In prod mode, an e2e test password cookie is required.
-    *
-    * (If 'fakeIp' is specified, actions.SafeActions.scala copies the value to
-    * the dwCoFakeIp cookie.)
-    */
-  def realOrFakeIpOf(request: play.api.mvc.Request[_]): String = {
-    val fakeIpQueryParam = request.queryString.get("fakeIp").flatMap(_.headOption)
-    val fakeIp = fakeIpQueryParam.orElse(
-      request.cookies.get("dwCoFakeIp").map(_.value))  getOrElse {
-      return request.remoteAddress
-    }
-
-    if (isProd) {
-      def where = fakeIpQueryParam.isDefined ? "in query param" | "in cookie"
-      val password = getE2eTestPassword(request) getOrElse {
-        throwForbidden(
-          "DwE6KJf2", s"Fake ip specified $where, but no e2e test password — required in prod mode")
-      }
-      val correctPassword = e2eTestPassword getOrElse {
-        throwForbidden(
-          "DwE7KUF2", "Fake ips not allowed, because no e2e test password has been configured")
-      }
-      if (password != correctPassword) {
-        throwForbidden(
-          "DwE2YUF2", "Fake ip forbidden: Wrong e2e test password")
-      }
-    }
-
-    // Dev or test mode, or correct password, so:
-    fakeIp
-  }
-
-
-  def getE2eTestPassword(request: play.api.mvc.Request[_]): Option[String] =
-    request.queryString.get("e2eTestPassword").flatMap(_.headOption).orElse(
-      request.cookies.get("dwCoE2eTestPassword").map(_.value)).orElse( // dwXxx obsolete. esXxx now
-      request.cookies.get("esCoE2eTestPassword").map(_.value))
-
-
-  def hasOkE2eTestPassword(request: play.api.mvc.Request[_]): Boolean = {
-    getE2eTestPassword(request) match {
-      case None => false
-      case Some(password) =>
-        val correctPassword = e2eTestPassword getOrElse throwForbidden(
-          "EsE5GUM2", "There's an e2e test password in the request, but not in any config file")
-        if (password != correctPassword) {
-          throwForbidden("EsE2FWK4", "The e2e test password in the request is wrong")
-        }
-        true
-    }
-  }
-
-
-  def getForbiddenPassword(request: DebikiRequest[_]): Option[String] =
-    request.queryString.get("forbiddenPassword").flatMap(_.headOption).orElse(
-      request.cookies.get("esCoForbiddenPassword").map(_.value))
-
-
-  def hasOkForbiddenPassword(request: DebikiRequest[_]): Boolean = {
-    getForbiddenPassword(request) match {
-      case None => false
-      case Some(password) =>
-        val correctPassword = forbiddenPassword getOrElse throwForbidden(
-          "EsE48YC2", "There's a forbidden-password in the request, but not in any config file")
-        if (password != correctPassword) {
-          throwForbidden("EsE7UKF2", "The forbidden-password in the request is wrong")
-        }
-        true
-    }
-  }
 
 
 

@@ -21,29 +21,23 @@ import debiki.dao.{CategoriesDao, CategoryToSave, PageStuff, SiteDao}
 import com.debiki.core._
 import com.debiki.core.Prelude._
 import debiki._
+import debiki.EdHttp._
 import debiki.ReactJson._
 import ed.server.http._
-import java.{util => ju}
-import play.api.mvc
 import play.api.libs.json._
 import play.api.mvc._
 import scala.collection.{immutable, mutable}
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Try
 import ed.server.{EdContext, EdController}
-import ed.server.auth.ForumAuthzContext
 import javax.inject.Inject
+import ForumController._
 
 
 /** Handles requests related to forums and forum categories.
  */
 class ForumController @Inject()(cc: ControllerComponents, edContext: EdContext)
   extends EdController(cc, edContext) {
-
-  import context.http._
-
-  /** Keep synced with client/forum/list-topics/ListTopicsController.NumNewTopicsPerRequest. */
-  val NumTopicsToList = 40
 
 
   def createForum: Action[JsValue] = AdminPostJsonAction(maxBytes = 200) { request =>
@@ -169,7 +163,7 @@ class ForumController @Inject()(cc: ControllerComponents, edContext: EdContext)
     OkSafeJson(Json.obj(
       "allCategories" -> ReactJson.makeCategoriesJson(
         dao.getForumAuthzContext(requester), request.dao),
-      "myNewPermissions" -> JsArray(callersNewPerms map permissionToJson),
+      "myNewPermissions" -> JsArray(callersNewPerms map ReactJson.permissionToJson),
       "newCategoryId" -> category.id,
       "newCategorySlug" -> category.slug))
   }
@@ -218,8 +212,8 @@ class ForumController @Inject()(cc: ControllerComponents, edContext: EdContext)
     val pageQuery: PageQuery = request.parseThePageQuery()
     throwForbiddenIf(pageQuery.pageFilter.includesDeleted && !request.isStaff, "EdE5FKZX2",
       "Only staff can list deleted pages")
-    val topics = listMaySeeTopicsInclPinned(categoryId, pageQuery, dao,
-      includeDescendantCategories = true, authzCtx)
+    val topics = dao.listMaySeeTopicsInclPinned(categoryId, pageQuery,
+      includeDescendantCategories = true, authzCtx, limit = NumTopicsToList)
     makeTopicsResponse(topics, dao)
   }
 
@@ -277,7 +271,7 @@ class ForumController @Inject()(cc: ControllerComponents, edContext: EdContext)
     val pageQuery = PageQuery(PageOrderOffset.ByBumpTime(None), request.parsePageFilter())
 
     for (category <- categories) {
-      val recentTopics = listMaySeeTopicsInclPinned(category.id, pageQuery, dao,
+      val recentTopics = dao.listMaySeeTopicsInclPinned(category.id, pageQuery,
         includeDescendantCategories = true, authzCtx, limit = 6)
       recentTopicsByCategoryId(category.id) = recentTopics
       pageIds.append(recentTopics.map(_.pageId): _*)
@@ -293,41 +287,13 @@ class ForumController @Inject()(cc: ControllerComponents, edContext: EdContext)
 
     OkSafeJson(json)
   }
+}
 
 
-  def listMaySeeTopicsInclPinned(categoryId: CategoryId, pageQuery: PageQuery, dao: debiki.dao.SiteDao,
-        includeDescendantCategories: Boolean, authzCtx: ForumAuthzContext,
-        limit: Int = NumTopicsToList)
-        : Seq[PagePathAndMeta] = {
-          // COULD instead of PagePathAndMeta use some "ListedPage" class that also includes  [7IKA2V]
-          // the popularity score, + doesn't include stuff not needed to render forum topics etc.
-    SECURITY; TESTS_MISSING  // securified
+object ForumController {
 
-    val topics: Seq[PagePathAndMeta] = dao.loadMaySeePagesInCategory(
-      categoryId, includeDescendantCategories, authzCtx,
-      pageQuery, limit)
-
-    // If sorting by bump time, sort pinned topics first. Otherwise, don't.
-    val topicsInclPinned = pageQuery.orderOffset match {
-      case orderOffset: PageOrderOffset.ByBumpTime if orderOffset.offset.isEmpty =>
-        val pinnedTopics = dao.loadMaySeePagesInCategory(
-          categoryId, includeDescendantCategories, authzCtx,
-          pageQuery.copy(orderOffset = PageOrderOffset.ByPinOrderLoadOnlyPinned), limit)
-        val notPinned = topics.filterNot(topic => pinnedTopics.exists(_.id == topic.id))
-        val topicsSorted = (pinnedTopics ++ notPinned) sortBy { topic =>
-          val meta = topic.meta
-          val pinnedGlobally = meta.pinWhere.contains(PinPageWhere.Globally)
-          val pinnedInThisCategory = meta.isPinned && meta.categoryId.contains(categoryId)
-          val isPinned = pinnedGlobally || pinnedInThisCategory
-          if (isPinned) topic.meta.pinOrder.get // 1..100
-          else Long.MaxValue - topic.meta.bumpedOrPublishedOrCreatedAt.getTime // much larger
-        }
-        topicsSorted
-      case _ => topics
-    }
-
-    topicsInclPinned
-  }
+  /** Keep synced with client/forum/list-topics/ListTopicsController.NumNewTopicsPerRequest. */
+  val NumTopicsToList = 40
 
 
   private def categoryToJson(category: Category, isDefault: Boolean,
@@ -376,28 +342,6 @@ class ForumController @Inject()(cc: ControllerComponents, edContext: EdContext)
       "frozenAtMs" -> dateOrNull(topic.meta.frozenAt),
       "hiddenAtMs" -> JsWhenMsOrNull(topic.meta.hiddenAt),
       "deletedAtMs" -> JsDateMsOrNull(topic.meta.deletedAt))
-  }
-
-
-  def permissionToJson(permsOnPages: PermsOnPages): JsObject = {
-    Json.obj(
-      "id" -> permsOnPages.id,
-      "forPeopleId" -> permsOnPages.forPeopleId,
-      "onWholeSite" -> JsBooleanOrNull(permsOnPages.onWholeSite),
-      "onCategoryId" -> JsNumberOrNull(permsOnPages.onCategoryId),
-      "onPageId" -> JsStringOrNull(permsOnPages.onPageId),
-      "onPostId" -> JsNumberOrNull(permsOnPages.onPostId),
-      // later: "onTagId" -> JsNumberOrNull(permsOnPages.onTagId),
-      "mayEditPage" -> JsBooleanOrNull(permsOnPages.mayEditPage),
-      "mayEditComment" -> JsBooleanOrNull(permsOnPages.mayEditComment),
-      "mayEditWiki" -> JsBooleanOrNull(permsOnPages.mayEditWiki),
-      "mayEditOwn" -> JsBooleanOrNull(permsOnPages.mayEditOwn),
-      "mayDeletePage" -> JsBooleanOrNull(permsOnPages.mayDeletePage),
-      "mayDeleteComment" -> JsBooleanOrNull(permsOnPages.mayDeleteComment),
-      "mayCreatePage" -> JsBooleanOrNull(permsOnPages.mayCreatePage),
-      "mayPostComment" -> JsBooleanOrNull(permsOnPages.mayPostComment),
-      "maySee" -> JsBooleanOrNull(permsOnPages.maySee),
-      "maySeeOwn" -> JsBooleanOrNull(permsOnPages.maySeeOwn))
   }
 
 
