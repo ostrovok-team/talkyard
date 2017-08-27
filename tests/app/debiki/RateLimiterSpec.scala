@@ -19,10 +19,9 @@ package debiki
 
 import com.debiki.core._
 import com.debiki.core.Prelude._
+import debiki.dao.DaoAppSuite
 import ed.server.http.DebikiRequest
-import org.scalatest._
-import org.scalatest.mock.MockitoSugar
-import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import org.scalatest.mockito.MockitoSugar
 import org.mockito.Mockito._
 import play.api.http.Status.TOO_MANY_REQUESTS
 import play.{api => p}
@@ -30,11 +29,11 @@ import java.{util => ju}
 
 
 
-class RateLimiterSpec extends FreeSpec with MustMatchers with MockitoSugar
-    with GuiceOneAppPerSuite {
+class RateLimiterSpec extends DaoAppSuite with MockitoSugar {
 
   import RateLimits.Unlimited
 
+  lazy val RateLimiter = new _root_.debiki.RateLimiter(globals, context.security)
 
   var nextIp = 0
 
@@ -91,7 +90,7 @@ class RateLimiterSpec extends FreeSpec with MustMatchers with MockitoSugar
       fail("Was not rate limited")
     }
     catch {
-      case exception: DebikiHttp.ResultException =>
+      case exception: EdHttp.ResultException =>
         exception.result.header.status mustBe TOO_MANY_REQUESTS
     }
   }
