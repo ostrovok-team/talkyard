@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2013 Kaj Magnus Lindberg (born 1979)
+ * Copyright (c) 2016 Kaj Magnus Lindberg
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -20,10 +20,10 @@ package ed.server
 import com.debiki.core._
 import com.debiki.core.Prelude._
 import debiki.dao.PageStuff
-import org.elasticsearch.search.highlight.HighlightField
-import org.{elasticsearch => es}
 import debiki.ReactJson._
-import org.scalactic.{Or, Good, Bad, ErrorMessage}
+import org.{elasticsearch => es}
+import org.elasticsearch.search.fetch.subphase.highlight.HighlightField
+import org.scalactic.{Bad, ErrorMessage, Good, Or}
 import play.api.libs.json._
 import scala.collection.immutable
 
@@ -226,7 +226,7 @@ package object search {
     // is placed one shard only, so more shards –> smaller shards –> faster searches?
     // How make this work well both for 1) installations for single forum, single server, only
     // and for 2) many servers serving many 9999 forums? I guess config values will be needed.
-    def indexSettingsString: String = i"""
+    def indexSettingsYamlString: String = i"""
       |number_of_shards: 5
       |number_of_replicas: 0
       |"""
@@ -247,7 +247,7 @@ package object search {
     //   language documents.
     // - A type: keyword field doesn't have any 'analyzer' property (instead, exact matches only).
     //
-    def postMappingString: String = i"""{
+    def postMappingJsonString: String = i"""{
       |"$PostDocType": {
       |  "_all": { "enabled": false  },
       |  "properties": {

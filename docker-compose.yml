@@ -60,15 +60,17 @@ services:
     # If too low, the 'search' container will suddenly exit with code 137. No error message
     # will get logged — instead it just exits, suddenly. Why? OOM-killed? In Docker? Hmm.
     #mem_limit: 800M
-    image: elasticsearch:5.0.0-alpha4
+    image: docker.elastic.co/elasticsearch/elasticsearch:5.5.2
     volumes:
-      - ./docker/search/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+      - ./docker/search/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
       - ./docker/data/search/:/usr/share/elasticsearch/data/
     ports:
       - '9200:9200'
       - '9300:9300'
     environment:
-      ES_JAVA_OPTS: '-Xms500m -Xmx500m'
+      # - cluster.name=es-docker-cluster
+      #- bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
 
   rdb:
     #mem_limit: 200M
