@@ -116,7 +116,8 @@ services:
       - web:test-site-2.web
       - web:test-site-3.web
     # Don't want this container to start at all by default.
-    command: 'exit 0'
+    #command: 'sleep 99' # 'exit 0'
+    command: node --debug-brk --inspect=9229 node_modules/.bin/tape target/security-tests/**/*.js --host web
 
   # The same as the 'test' container, except that 'gulp' won't start the rest of the stack,
   # instead it just transpiles Typescript and Stylus.

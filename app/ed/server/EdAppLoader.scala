@@ -79,6 +79,7 @@ class EdAppComponents(appLoaderContext: ApplicationLoader.Context)
     new _root_.controllers.LoginAsGuestController(cc, context),
     new _root_.controllers.LoginWithPasswordController(cc, context),
     loginWithOpenAuthController,
+    new _root_.controllers.SingleSignOnController(cc, context),
     new _root_.controllers.ImpersonateController(cc, context, loginController),
     new ed.server.pubsub.SubscriberController(cc, context),
     new _root_.controllers.EmbeddedTopicsController(cc, context),
