@@ -190,8 +190,8 @@ class UserController @Inject()(cc: ControllerComponents, edContext: EdContext)
     if (callerIsStaff || callerIsUserHerself) {
       val anyApprover = user.approvedById.flatMap(usersById.get)
       val safeEmail =
-        if (callerIsAdmin || callerIsUserHerself) user.emailAddress
-        else hideEmailLocalPart(user.emailAddress)
+        if (callerIsAdmin || callerIsUserHerself) user.primaryEmailAddress
+        else hideEmailLocalPart(user.primaryEmailAddress)
 
       userJson += "email" -> JsString(safeEmail)
       userJson += "emailForEveryNewPost" -> JsBoolean(user.emailForEveryNewPost)

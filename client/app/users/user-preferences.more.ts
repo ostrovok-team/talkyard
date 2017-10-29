@@ -24,11 +24,53 @@
 //------------------------------------------------------------------------------
 
 const r = React.DOM;
+const emailsLogins = 'emails-logins';
 
 
-export const UserPreferencesComponent = React.createClass({
+export const UserPreferencesComponent = React.createClass(<any> {
+  contextTypes: {
+    router: React.PropTypes.object.isRequired
+  },
+
+  transitionTo: function(what) {
+    this.props.transitionTo('preferences/' + what);
+  },
+
   render: function() {
-    const me: Myself = this.props.me;
+    // Some dupl code [3GKR8L6].
+    const user: User = this.props.user;
+    const childProps = {
+      store: this.props.store,
+      user: user,
+      reloadUser: this.props.loadCompleteUser,
+      transitionTo: this.transitionTo,
+    };
+    const activeRouteName = this.props.routes[3].path;
+
+    const isGuest = user_isGuest(user);
+    return (
+      // Without table-layout: fixed, the table can become 5000 px wide, because otherwise the
+      // default layout is width = as wide as the widest cell wants to be.
+      r.div({ style: { display: 'table', width: '100%', tableLayout: 'fixed' }},
+        r.div({ style: { display: 'table-row' }},
+          r.div({ className: 's_UP_Act_Nav' },
+            rb.Nav({ bsStyle: 'pills', activeKey: activeRouteName,
+                onSelect: this.transitionTo, className: 'dw-sub-nav nav-stacked' },
+              rb.NavItem({ eventKey: 'about', className: 's_UP_Act_Nav_PostsB' }, "About"),
+              isGuest ? null :
+                  rb.NavItem({ eventKey: emailsLogins, className: 's_UP_Act_Nav_TopicsB' },
+                    "Emails, Logins"))),
+         r.div({ className: 's_UP_Act_List' },
+           React.cloneElement(this.props.children, childProps)))));
+  }
+});
+
+
+
+export const AboutUserComponent = createComponent({
+  render: function() {
+    const store: Store = this.props.store;
+    const me: Myself = store.me;
     const user: MemberInclDetails = this.props.user;
 
     const mayViewPrefs = isStaff(me) || (me.isAuthenticated && me.id === user.id);
@@ -46,7 +88,7 @@ export const UserPreferencesComponent = React.createClass({
 
     const preferences = isGuest(user)
         ? GuestPreferences({ guest: user })
-        : MemberPreferences({ user: user, me: me, reloadUser: this.props.reloadUser });
+        : MemberPreferences(this.props);
 
     return (
       r.div({ className: 's_UP_Prefs' },
@@ -54,6 +96,15 @@ export const UserPreferencesComponent = React.createClass({
         preferences));
   }
 });
+
+
+
+export const EmailsLoginsComponent = createComponent({
+  render: function() {
+    return r.p({}, "To do: List emails, add new, set primary. List logins, e.g. Gmail, Facebook.");
+  }
+});
+
 
 
 const GuestPreferences = createComponent({
@@ -82,25 +133,24 @@ const GuestPreferences = createComponent({
 
     let savingInfo = null;
     if (this.state.savingStatus === 'Saving') {
-      savingInfo = r.i({}, ' Saving...');
+      savingInfo = r.i({}, " Saving...");
     }
     else if (this.state.savingStatus === 'Saved') {
-      savingInfo = r.i({}, ' Saved.');
+      savingInfo = r.i({}, " Saved.");
     }
 
     return (
       r.form({ role: 'form', onSubmit: this.savePrefs },
 
         r.div({ className: 'form-group' },
-          r.label({ htmlFor: 'fullName' }, 'Name'),
+          r.label({ htmlFor: 'fullName' }, "Name"),
           r.input({ className: 'form-control', id: 'fullName', defaultValue: guest.fullName,
               onChange: (event) => { this._fullName = event.target.value }, required: true })),
 
         r.div({ className: 'form-group' },
-          r.label({ htmlFor: 'emailAddress' }, 'Email address'),
-          r.input({ type: 'email', className: 'form-control', id: 'emailAddress',
-              defaultValue: guest.email, disabled: true }),
-          r.p({ className: 'help-block' }, 'Not shown publicly. Cannot be changed.')),
+          r.label({}, "Email address"),
+          r.div({}, r.samp({}, guest.email)),
+          r.p({ className: 'help-block' }, "Not shown publicly. Cannot be changed.")),
 
         InputTypeSubmit({ id: 'e2eUP_Prefs_SaveB', value: "Save" }),
         savingInfo));
@@ -199,7 +249,8 @@ const MemberPreferences = createComponent({
   },
 
   render: function() {
-    const me: Myself = this.props.me;
+    const store: Store = this.props.store;
+    const me: Myself = store.me;
     const user: MemberInclDetails = this.props.user;
     const username = user.username || '(not specified)';
 
@@ -282,13 +333,12 @@ const MemberPreferences = createComponent({
 
         usernameStuff,
 
-        // Disable the email input — I've not implemented confirmation-emails-to-new-address
-        // or any double-check-password-before-changing-email.
         isBuiltInUser ? null : r.div({ className: 'form-group' },
-          r.label({ htmlFor: 'emailAddress' }, "Email address"),
-          r.input({ type: 'email', className: 'form-control', id: 'emailAddress',
-              onChange: (event) => { this._email = event.target.value },
-              defaultValue: user.email, disabled: true }),
+          r.label({}, "Email address"),
+          r.div({},
+            r.samp({}, user.email),
+            r.button({ className: 'btn btn-default s_UP_Prefs_ChangeEmailB',
+              onClick: () => this.props.transitionTo(emailsLogins) }, "Change ...")),
           r.p({ className: 'help-block' }, "Not shown publicly.")),
 
         activitySummaryStuff,

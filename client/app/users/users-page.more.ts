@@ -58,7 +58,10 @@ export function routes() {
           ),
         Route({ path: 'summary', component: UserSummaryComponent }),
         Route({ path: 'notifications', component: UserNotificationsComponent }),
-        Route({ path: 'preferences', component: debiki2.users.UserPreferencesComponent }),
+        Redirect({ from: 'preferences', to: 'preferences/about' }),
+        Route({ path: 'preferences', component: UserPreferencesComponent },
+          Route({ path: 'about', component: AboutUserComponent  }),
+          Route({ path: 'emails-logins', component: EmailsLoginsComponent })),
         Route({ path: 'invites', component: debiki2.users.UserInvitesComponent }))));
 }
 

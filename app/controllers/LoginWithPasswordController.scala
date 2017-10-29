@@ -64,12 +64,12 @@ class LoginWithPasswordController @Inject()(cc: ControllerComponents, edContext:
   }
 
 
-  private def doLogin(request: ApiRequest[_], dao: SiteDao, email: String, password: String)
+  private def doLogin(request: ApiRequest[_], dao: SiteDao, emailOrUsername: String, password: String)
         : Seq[Cookie] = {
     val loginAttempt = PasswordLoginAttempt(
       ip = request.ip,
       date = request.ctime,
-      email = email,
+      emailOrUsername = emailOrUsername,
       password = password)
 
     // The browser checks for 'EsE403BPWD' so don't change it.

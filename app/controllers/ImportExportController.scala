@@ -358,7 +358,7 @@ class ImportExportController @Inject()(cc: ControllerComponents, edContext: EdCo
         isApproved = readOptBool(jsObj, "isApproved"),
         approvedAt = readOptDateMs(jsObj, "approvedAtMs"),
         approvedById = readOptInt(jsObj, "approvedById"),
-        emailAddress = readString(jsObj, "emailAddress").trim,
+        primaryEmailAddress = readString(jsObj, "emailAddress").trim,
         emailNotfPrefs = EmailNotfPrefs.Receive, // [readlater]
         emailVerifiedAt = readOptDateMs(jsObj, "emailVerifiedAtMs"),
         emailForEveryNewPost = readOptBool(jsObj, "emailForEveryNewPost") getOrElse false,

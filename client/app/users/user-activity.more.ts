@@ -21,13 +21,13 @@
    namespace debiki2.users {
 //------------------------------------------------------------------------------
 
-let r = React.DOM;
-let Nav = rb.Nav;
-let NavItem = rb.NavItem;
-let Post = page.Post;
+const r = React.DOM;
+const Nav = rb.Nav;
+const NavItem = rb.NavItem;
+const Post = page.Post;
 
 
-export let UsersActivityComponent = React.createClass(<any> {
+export const UsersActivityComponent = React.createClass(<any> {
   contextTypes: {
     router: React.PropTypes.object.isRequired
   },
@@ -37,12 +37,13 @@ export let UsersActivityComponent = React.createClass(<any> {
   },
 
   render: function() {
-    let childProps = {
+    // Dupl code [3GKR8L6].
+    const childProps = {
       store: this.props.store,
       user: this.props.user,
       reloadUser: this.props.loadCompleteUser,
     };
-    let activeRouteName = this.props.routes[3].path;
+    const activeRouteName = this.props.routes[3].path;
 
     return (
       // Without table-layout: fixed, the table can become 5000 px wide, because otherwise the
@@ -63,7 +64,7 @@ export let UsersActivityComponent = React.createClass(<any> {
 
 
 
-export let PostsComponent = React.createClass(<any> {
+export const PostsComponent = React.createClass(<any> {
   getInitialState: function() {
     return { posts: null };
   },
