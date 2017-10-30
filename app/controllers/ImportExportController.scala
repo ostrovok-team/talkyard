@@ -259,7 +259,8 @@ class ImportExportController @Inject()(cc: ControllerComponents, edContext: EdCo
 
       siteData.users foreach { user =>
         transaction.insertMember(user)
-        // [readlater] export & import username usages, later. For now, create new here.
+        // [readlater] export & import username usages & emails, later. For now, create new here.
+        transaction.insertUserEmailAddress(user.primaryEmailInfo)
         transaction.insertUsernameUsage(UsernameUsage(
           usernameLowercase = user.usernameLowercase, inUseFrom = transaction.now, userId = user.id))
         // [readlater] export & import UserStats. For now, create new "empty" here.

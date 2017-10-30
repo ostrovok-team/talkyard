@@ -42,7 +42,7 @@ export const UserPreferencesComponent = React.createClass(<any> {
     const childProps = {
       store: this.props.store,
       user: user,
-      reloadUser: this.props.loadCompleteUser,
+      reloadUser: this.props.reloadUser,
       transitionTo: this.transitionTo,
     };
     const activeRouteName = this.props.routes[3].path;

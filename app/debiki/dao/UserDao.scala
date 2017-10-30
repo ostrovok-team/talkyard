@@ -95,7 +95,9 @@ trait UserDao {
       invite = invite.copy(acceptedAt = Some(transaction.now.toJavaDate), userId = Some(userId))
 
       // COULD loop and append 1, 2, 3, ... until there's no username clash.
+      transaction.deferConstraints()
       transaction.insertMember(newUser)
+      transaction.insertUserEmailAddress(newUser.primaryEmailInfo)
       transaction.insertUsernameUsage(UsernameUsage(
         newUser.usernameLowercase, inUseFrom = transaction.now, userId = newUser.id))
       transaction.upsertUserStats(UserStats.forNewUser(
@@ -356,7 +358,9 @@ trait UserDao {
       val identityId = transaction.nextIdentityId
       val identity = newUserData.makeIdentity(userId = userId, identityId = identityId)
       ensureSiteActiveOrThrow(user, transaction)
+      transaction.deferConstraints()
       transaction.insertMember(user)
+      transaction.insertUserEmailAddress(user.primaryEmailInfo)
       transaction.insertUsernameUsage(UsernameUsage(
         usernameLowercase = user.usernameLowercase, inUseFrom = transaction.now, userId = user.id))
       transaction.upsertUserStats(UserStats.forNewUser(
@@ -400,7 +404,9 @@ trait UserDao {
       val userId = transaction.nextMemberId
       val user = userData.makeUser(userId)
       ensureSiteActiveOrThrow(user, transaction)
+      transaction.deferConstraints()
       transaction.insertMember(user)
+      transaction.insertUserEmailAddress(user.primaryEmailInfo)
       transaction.insertUsernameUsage(UsernameUsage(
         usernameLowercase = user.usernameLowercase, inUseFrom = now, userId = user.id))
       transaction.upsertUserStats(UserStats.forNewUser(
@@ -936,6 +942,7 @@ trait UserDao {
       var user = transaction.loadTheMemberInclDetails(userId)
       user = user.copy(emailVerifiedAt = Some(verifiedAt))
       transaction.updateMemberInclDetails(user)
+      transaction.updateUserEmailAddress(user.primaryEmailInfo)
       // Now, when email verified, perhaps time to start sending summary emails.
       transaction.reconsiderSendingSummaryEmailsTo(user.id)
     }
