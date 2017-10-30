@@ -293,6 +293,10 @@ class UserController @Inject()(cc: ControllerComponents, edContext: EdContext)
   }
 
 
+  def loadUserEmailsLogins: Action[JsValue] = StaffPostJsonAction(maxBytes = 100) { request =>
+  }
+
+
   def approveRejectUser: Action[JsValue] = StaffPostJsonAction(maxBytes = 100) { request =>
     val userId = (request.body \ "userId").as[UserId]
     val doWhat = (request.body \ "doWhat").as[String]

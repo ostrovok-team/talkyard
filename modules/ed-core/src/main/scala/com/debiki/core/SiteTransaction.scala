@@ -356,8 +356,9 @@ trait SiteTransaction {
   def updateMemberInclDetails(user: MemberInclDetails): Boolean
   def updateGuest(guest: Guest): Boolean
 
-  def insertUserEmailAddress(member: UserEmailAddress)
-  def updateUserEmailAddress(member: UserEmailAddress)
+  def insertUserEmailAddress(userEmailAddress: UserEmailAddress)
+  def updateUserEmailAddress(userEmailAddress: UserEmailAddress)
+  def loadUserEmailAddresses(userId: UserId): Seq[UserEmailAddress]
 
   def insertUsernameUsage(usage: UsernameUsage)
   def updateUsernameUsage(usage: UsernameUsage)
