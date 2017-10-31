@@ -99,14 +99,6 @@ export const AboutUserComponent = createComponent({
 
 
 
-export const EmailsLoginsComponent = createComponent({
-  render: function() {
-    return r.p({}, "To do: List emails, add new, set primary. List logins, e.g. Gmail, Facebook.");
-  }
-});
-
-
-
 const GuestPreferences = createComponent({
   displayName: 'GuestPreferences',
 
@@ -156,6 +148,7 @@ const GuestPreferences = createComponent({
         savingInfo));
   }
 });
+
 
 
 const MemberPreferences = createComponent({
@@ -379,6 +372,37 @@ const MemberPreferences = createComponent({
     'Do not suppress email notifications when I am active on the site'
     */
   }
+});
+
+
+
+export const EmailsLoginsComponent = createComponent({
+  componentDidMount: function() {
+    let user: MemberInclDetails = this.props.user;
+    this.loadEmailsLogins(user.id);
+  },
+
+  componentWillReceiveProps: function(nextProps) {
+    // a bit dupl code [5AWS2E9]
+    let me: Myself = this.props.store.me;
+    let user: MemberInclDetails = this.props.user;
+    let nextMe: Myself = nextProps.store.me;
+    let nextUser: MemberInclDetails = nextProps.user;
+    // If we log in as someone else, what stuff we may see might change.
+    if (me.id !== nextMe.id || user.id !== nextUser.id) {
+      this.loadEmailsLogins(nextUser.id);
+    }
+  },
+
+  loadEmailsLogins: function(userId: UserId) {
+    Server.loadEmailAddressesAndLoginMethods(userId, response => {
+      this.setState(response);
+    });
+  },
+
+  render: function() {
+   return r.p({}, "THE STUFF:", r.br(), r.br(), r.pre({}, JSON.stringify(this.state)));
+ }
 });
 
 

@@ -293,7 +293,49 @@ class UserController @Inject()(cc: ControllerComponents, edContext: EdContext)
   }
 
 
-  def loadUserEmailsLogins: Action[JsValue] = StaffPostJsonAction(maxBytes = 100) { request =>
+  def loadUserEmailsLogins(userId: UserId): Action[Unit] = GetAction {
+        request =>
+    // Could refactor and break out functions. Later some day maybe.
+
+    import request.{dao, theRequester => requester}
+    throwForbiddenIf(requester.id != userId && !requester.isAdmin,
+      "EdE5JKWTDY2", "You may not see someone elses email addresses")
+
+    val (memberInclDetails, emails, identities) = dao.readOnlyTransaction { tx =>
+      (tx.loadMemberInclDetails(userId),
+        tx.loadUserEmailAddresses(userId),
+        tx.loadIdentities(userId))
+    }
+
+    val emailsJson = JsArray(emails map { userEmailAddress =>
+      Json.obj(
+        "emailAddresss" -> userEmailAddress.emailAddress,
+        "addedAt" -> JsWhenMs(userEmailAddress.addedAt),
+        "verifiedAt" -> JsWhenMsOrNull(userEmailAddress.verifiedAt),
+        "removedAt" -> JsWhenMsOrNull(userEmailAddress.removedAt))
+    })
+
+    var loginsJson = JsArray(identities map { identity: Identity =>
+      val (provider, email) = identity match {
+        case oa: OpenAuthIdentity =>
+          val details = oa.openAuthDetails
+          (details.providerId, details.email)
+        case oid: IdentityOpenId =>
+          val details = oid.openIdDetails
+          (details.oidEndpoint, details.email)
+        case x =>
+          (classNameOf(x), None)
+      }
+      Json.obj(
+        "loginType" -> classNameOf(identity),
+        "provider" -> provider,
+        "email" -> JsStringOrNull(email))
+    })
+    // if (memberInclDetails.hasPasswordLogin)  add pwd login entry
+
+    OkSafeJson(Json.obj(
+      "emailAddresses" -> emailsJson,
+      "loginMethods" -> loginsJson))
   }
 
 

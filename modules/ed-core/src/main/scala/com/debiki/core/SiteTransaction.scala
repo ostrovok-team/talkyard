@@ -313,6 +313,8 @@ trait SiteTransaction {
   def nextIdentityId: IdentityId
   def insertIdentity(Identity: Identity)
   def loadIdtyDetailsAndUser(userId: UserId): Option[(Identity, User)]
+  def loadIdentities(userId: UserId): Seq[Identity] =
+    loadIdtyDetailsAndUser(userId).map(_._1).toVector // for now
 
   def nextMemberId: UserId
   def insertMember(user: MemberInclDetails)

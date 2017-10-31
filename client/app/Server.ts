@@ -565,8 +565,15 @@ export function loadUserAnyDetails(userIdOrUsername: UserId | string,
 
 
 export function listCompleteUsers(whichUsers, success: (users: MemberInclDetails[]) => void) {
-  get('/-/list-complete-users?whichUsers=' + whichUsers, response => {
+  get(`/-/list-complete-users?whichUsers=${whichUsers}`, response => {
     success(response.users);
+  });
+}
+
+
+export function loadEmailAddressesAndLoginMethods(userId: UserId, success) {
+  get(`/-/load-email-addrs-login-methods?userId=${userId}`, response => {
+    success(response);
   });
 }
 
