@@ -728,7 +728,7 @@ case class UserEmailAddress(
   emailAddress: String,
   addedAt: When,
   verifiedAt: Option[When],
-  removedAt: Option[When]) {
+  removedAt: Option[When] = None) {
 
   require(isValidNonLocalEmailAddress(emailAddress), "EdE4JUKS0")
   require(!verifiedAt.exists(_.isBefore(addedAt)), "EdE6JUKW1A")
@@ -935,6 +935,8 @@ sealed abstract class Identity {
 
   def id: IdentityId
   def userId: UserId
+  def usesEmailAddress(emailAddress: String): Boolean
+  def loginMethodName: String
 
   //checkId(id, "DwE02krc3g")  TODO check how?
   require(isOkayUserId(userId), "DwE864rsk215")
@@ -959,6 +961,13 @@ case class IdentityEmailId(
 ) extends Identity {
   // Either only email id known, or all info known.
   // require((userId startsWith "?") == emailSent.isEmpty)    TODO what?
+
+  /* After the email has been sent, the email address isn't used any more, and can be removed;
+   * this is one-time login only.
+   */
+  def usesEmailAddress(emailAddress: String) = false
+  def loginMethodName: String = "Email link"
+
 }
 
 
@@ -968,6 +977,12 @@ case class IdentityOpenId(
   openIdDetails: OpenIdDetails) extends Identity {
 
   def displayName: String = openIdDetails.firstName
+  def usesEmailAddress(emailAddress: String): Boolean =
+    openIdDetails.email is emailAddress
+
+  /** Needn't look nice, no one uses OpenID nowadays anyway? It's dead? */
+  def loginMethodName = s"OpenID ${openIdDetails.oidEndpoint}"
+
 }
 
 
@@ -994,6 +1009,11 @@ case class OpenAuthIdentity(
   id: IdentityId,
   override val userId: UserId,
   openAuthDetails: OpenAuthDetails) extends Identity {
+
+  def usesEmailAddress(emailAddress: String): Boolean =
+    openAuthDetails.email is emailAddress
+
+  def loginMethodName: String = openAuthDetails.providerId
 
   require(userId >= LowestAuthenticatedUserId, "EdE4KFJ7C")
 }

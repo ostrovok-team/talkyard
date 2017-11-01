@@ -583,6 +583,16 @@ export function sendAddressVerifEmailAgain(success) {
 }
 
 
+export function addEmailAddresses(userId: UserId, emailAddress: string, success) {
+  postJsonSuccess('/-/add-email-address', success, { userId, emailAddress });
+}
+
+
+export function removeEmailAddresses(userId: UserId, emailAddress: string, success) {
+ postJsonSuccess('/-/remove-email-address', success, { userId, emailAddress });
+}
+
+
 export function sendInvite(toEmailAddress: string, success: (invite: Invite) => void,
       error: (failedRequest: HttpRequest) => ErrorPolicy) {
   postJsonSuccess('/-/send-invite', success, error, { toEmailAddress: toEmailAddress });

@@ -409,7 +409,6 @@ export const EmailsLoginsComponent = createComponent({
   },
 
   doAddEmail: function() {
-    console.log(`Time to add: ${this.state.newEmailAddr}`);
     this.setState({ showAddEmailInput: false, isAddingEmail: true });
     const user: MemberInclDetails = this.props.user;
     Server.addEmailAddresses(user.id, this.state.newEmailAddr, response => {
@@ -418,9 +417,9 @@ export const EmailsLoginsComponent = createComponent({
     });
   },
 
-  removeEmail: function(emailAddress: string) {
+  removeEmailAddress: function(emailAddress: string) {
     const user: MemberInclDetails = this.props.user;
-    Server.removeEmailAddresses(user.id, response => {
+    Server.removeEmailAddresses(user.id, emailAddress, response => {
       this.setState(response);
     });
   },
@@ -438,49 +437,66 @@ export const EmailsLoginsComponent = createComponent({
     const loginMethods: UserLoginMethods[] = this.state.loginMethods;
 
     const emailsTable =
-      r.table({},
+      r.table({ className: 's_UP_EmLg_EmT' },
         r.thead({},
           r.tr({},
-            r.th({}, "Address"), r.th({}, "Verified?"), r.th())),
+            r.th({}, "Address"), r.th({}, "Status"), r.th())),
         r.tbody({},
           emailAddrs.map((addr) => {
+            let status = '';
+
+            if (addr.verifiedAt || (
+                // Gmail = verified by Google: if one can login to Gmail, it's one's own address.
+                addr.emailAddress.indexOf('@gmail.com') >= 0)) {  // [2PKTRF0T]
+              status += "Verified. ";
+            }
+
             let isLoginMethod = false;
-            _.each(loginMethods, method => {
+            _.each(loginMethods, (method: UserLoginMethods) => {
               if (method.email === addr.emailAddress) {
                 isLoginMethod = true;
+                status += `For login with ${method.provider}. `;
               }
             });
-            const isVerified = addr.verifiedAt || (
-              // Gmail = verified by Google: if one can login to Gmail, it's one's own address.
-              addr.emailAddress.indexOf('@gmail.com') >= 0);  // [2PKTRF0T]
+
+            const isPrimary = user.email === addr.emailAddress;
+            if (isPrimary) {
+              status += "Primary. ";
+            }
 
             return r.tr({ key: addr.emailAddress },
               r.td({}, addr.emailAddress),
-              r.td({}, isVerified ? "Yes" : ''),
+              r.td({}, status),
               r.td({},
-                Button({ disabled: isLoginMethod }, "Remove"),
-                isLoginMethod ? r.span({}, " (Remove login method instead)") : null));
+                isPrimary || isLoginMethod ? null :
+                  Button({ onClick: () => this.removeEmailAddress(addr.emailAddress) }, "Remove")));
           })));
 
-    const showAddEmailInputButton = this.state.showAddEmailInput ? null :
-        Button({ onClick: () => this.setState({ showAddEmailInput: true }) },
-          "Add email address");
+    // Don't show the Add button again after one email added. Then it's harder to see
+    // the "check your inbox" message.
+    const showAddEmailInputButton = emailAddrs.length >= MaxEmailsPerUser
+        ? r.span({}, `(You cannot add more than ${MaxEmailsPerUser} addresses.)`)
+        : (this.state.showAddEmailInput || this.state.isAddingEmail || this.state.doneAddingEmail
+            ? null
+            : Button({ onClick: () => this.setState({ showAddEmailInput: true }) },
+                "Add email address"));
 
     const addEmailInput = !this.state.showAddEmailInput ? null :
       r.div({},
-        EmailInput({ label: "Address:", placeholder: "your.email@example.com",
+        EmailInput({ label: "Type a new email address:", placeholder: "your.email@example.com",
           onChangeValueOk: (value, ok) => this.setState({ newEmailAddr: value, emailOk: ok }) }),
-        Button({ onClick: this.doAddEmail, disableed: !this.state.emailOk },
+        PrimaryButton({ onClick: this.doAddEmail, disabled: !this.state.emailOk },
           "Add"));
 
     const isAddingEmailInfo = !this.state.isAddingEmail ? null :
       r.div({}, "Adding...");
 
     const doneAddingEmailInfo = !this.state.doneAddingEmail ? null :
-      r.div({}, "Added, done.");
+      r.div({}, "Added, done. We've sent you a verification email — ",
+          r.b({}, "check your email inbox", '.'));
 
     const loginsTable =
-      r.table({},
+      r.table({ className: 's_UP_EmLg_LgT' },
         r.thead({},
           r.tr({},
             r.th({}, "Where"), r.th({}, "ID or email"), r.th())),
@@ -493,9 +509,11 @@ export const EmailsLoginsComponent = createComponent({
           })));
 
     return (
-      r.div({},
+      r.div({ className: 's_UP_EmLg' },
         r.h3({}, "Email addresses"),
-        r.p({}, `(Verified = ${youOrHen} clicked a verification link in the email.)`),
+        r.p({ className: 's_UP_EmLg_StatusExpl' },
+          `('Primary' means ${youOrHen} can login via this address, and we send notifications to it.` +
+          ` 'Verified' means ${youOrHen} clicked a verification link in an address verification email.)`),
         emailsTable,
         r.br(),
         showAddEmailInputButton,
@@ -504,9 +522,10 @@ export const EmailsLoginsComponent = createComponent({
         doneAddingEmailInfo,
         r.br(),
         r.h3({}, "Login methods"),
-        loginsTable,
+        loginsTable /*
         r.br(),
-        Button({ disabled: true }, "Add login method (not implemented)")));
+        Button({ disabled: true }, "Add login method (not implemented)") */
+      ));
   }
 });
 

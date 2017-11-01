@@ -40,6 +40,8 @@ declare const LastStarMark;
 
 declare const MaxNumFirstPosts;
 
+declare const MaxEmailsPerUser;
+
 declare const IgnoreThisError: number;
 
 

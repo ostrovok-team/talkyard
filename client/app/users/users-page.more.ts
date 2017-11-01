@@ -61,7 +61,7 @@ export function routes() {
         Redirect({ from: 'preferences', to: 'preferences/about' }),
         Route({ path: 'preferences', component: UserPreferencesComponent },
           Route({ path: 'about', component: AboutUserComponent  }),
-          Route({ path: 'emails-logins', component: EmailsLoginsComponent })),
+          Route({ path: 'emails-logins', component: EmailsLoginsComponent })),  // [4JKT28TS]
         Route({ path: 'invites', component: debiki2.users.UserInvitesComponent }))));
 }
 

@@ -230,9 +230,9 @@ object RateLimits {
   object AddEmailLogin extends RateLimits {
     val key = "EmLg"
     val what = "added an email address or login method too many times"
-    def maxPerFifteenSeconds = 2
-    def maxPerFifteenMinutes = 8
-    def maxPerDay = 10
+    def maxPerFifteenSeconds = 5
+    def maxPerFifteenMinutes = 10
+    def maxPerDay = 20
     def maxPerDayNewUser = Unlimited
   }
 

@@ -360,6 +360,7 @@ trait SiteTransaction {
 
   def insertUserEmailAddress(userEmailAddress: UserEmailAddress)
   def updateUserEmailAddress(userEmailAddress: UserEmailAddress)
+  def deleteUserEmailAddress(userId: UserId, emailAddress: String)
   def loadUserEmailAddresses(userId: UserId): Seq[UserEmailAddress]
 
   def insertUsernameUsage(usage: UsernameUsage)
