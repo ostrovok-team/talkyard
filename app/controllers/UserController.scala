@@ -309,7 +309,7 @@ class UserController @Inject()(cc: ControllerComponents, edContext: EdContext)
 
     val emailsJson = JsArray(emails map { userEmailAddress =>
       Json.obj(
-        "emailAddresss" -> userEmailAddress.emailAddress,
+        "emailAddress" -> userEmailAddress.emailAddress,
         "addedAt" -> JsWhenMs(userEmailAddress.addedAt),
         "verifiedAt" -> JsWhenMsOrNull(userEmailAddress.verifiedAt),
         "removedAt" -> JsWhenMsOrNull(userEmailAddress.removedAt))
@@ -336,6 +336,18 @@ class UserController @Inject()(cc: ControllerComponents, edContext: EdContext)
     OkSafeJson(Json.obj(
       "emailAddresses" -> emailsJson,
       "loginMethods" -> loginsJson))
+  }
+
+
+  def addUserEmail(userId: UserId, emailAddress: String): Action[JsValue] =
+        PostJsonAction(RateLimits.AddEmailLogin, maxBytes = 100) { request =>
+    ???
+  }
+
+
+  def removeUserEmail(userId: UserId, emailAddress: String): Action[JsValue] =
+        PostJsonAction(RateLimits.AddEmailLogin, maxBytes = 100) { request =>
+      ???
   }
 
 

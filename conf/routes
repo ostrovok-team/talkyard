@@ -129,7 +129,10 @@ POST  /-/block-guest            controllers.UserController.blockGuest
 POST  /-/unblock-guest          controllers.UserController.unblockGuest
 GET   /-/load-author-blocks     controllers.UserController.loadAuthorBlocks(postId: Int)
 GET   /-/redir-to-my-last-topic controllers.UserController.redirectToMyLastTopic
+
 GET   /-/load-email-addrs-login-methods controllers.UserController.loadUserEmailsLogins(userId: Int)
+POST  /-/add-email              controllers.UserController.addUserEmail(userId: Int, emailAddress)
+POST  /-/remove-email           controllers.UserController.removeUserEmail(userId: Int, emailAddress)
 
 GET   /-/unsubscribe            controllers.UnsubscriptionController.showForm(emailId)
 POST  /-/unsubscribe            controllers.UnsubscriptionController.handleForm(emailId)

@@ -15,6 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
 /// <reference path="../slim-bundle.d.ts" />
 /// <reference path="../util/UsernameInput.more.ts" />
 /// <reference path="./ActivitySummaryEmailsInterval.more.ts" />
@@ -23,7 +24,8 @@
    namespace debiki2.users {
 //------------------------------------------------------------------------------
 
-const r = React.DOM;
+import EmailInput = debiki2.util.EmailInput;
+     const r = React.DOM;
 const emailsLogins = 'emails-logins';
 
 
@@ -377,17 +379,23 @@ const MemberPreferences = createComponent({
 
 
 export const EmailsLoginsComponent = createComponent({
+  displayName: 'EmailsLoginsComponent',
+
+  getInitialState: function() {
+    return {};
+  },
+
   componentDidMount: function() {
-    let user: MemberInclDetails = this.props.user;
+    const user: MemberInclDetails = this.props.user;
     this.loadEmailsLogins(user.id);
   },
 
   componentWillReceiveProps: function(nextProps) {
     // a bit dupl code [5AWS2E9]
-    let me: Myself = this.props.store.me;
-    let user: MemberInclDetails = this.props.user;
-    let nextMe: Myself = nextProps.store.me;
-    let nextUser: MemberInclDetails = nextProps.user;
+    const me: Myself = this.props.store.me;
+    const user: MemberInclDetails = this.props.user;
+    const nextMe: Myself = nextProps.store.me;
+    const nextUser: MemberInclDetails = nextProps.user;
     // If we log in as someone else, what stuff we may see might change.
     if (me.id !== nextMe.id || user.id !== nextUser.id) {
       this.loadEmailsLogins(nextUser.id);
@@ -400,9 +408,106 @@ export const EmailsLoginsComponent = createComponent({
     });
   },
 
+  doAddEmail: function() {
+    console.log(`Time to add: ${this.state.newEmailAddr}`);
+    this.setState({ showAddEmailInput: false, isAddingEmail: true });
+    const user: MemberInclDetails = this.props.user;
+    Server.addEmailAddresses(user.id, this.state.newEmailAddr, response => {
+      this.setState({ isAddingEmail: false, doneAddingEmail: true });
+      this.setState(response);
+    });
+  },
+
+  removeEmail: function(emailAddress: string) {
+    const user: MemberInclDetails = this.props.user;
+    Server.removeEmailAddresses(user.id, response => {
+      this.setState(response);
+    });
+  },
+
   render: function() {
-   return r.p({}, "THE STUFF:", r.br(), r.br(), r.pre({}, JSON.stringify(this.state)));
- }
+    const me: Myself = this.props.store.me;
+    const user: MemberInclDetails = this.props.user;
+    const isMe = me.id === user.id;
+    const youOrHen = isMe ? "you" : "the user";
+
+    if (!this.state.emailAddresses)
+      return r.p({}, "Loading ...");
+
+    const emailAddrs: UserEmailAddress[] = this.state.emailAddresses;
+    const loginMethods: UserLoginMethods[] = this.state.loginMethods;
+
+    const emailsTable =
+      r.table({},
+        r.thead({},
+          r.tr({},
+            r.th({}, "Address"), r.th({}, "Verified?"), r.th())),
+        r.tbody({},
+          emailAddrs.map((addr) => {
+            let isLoginMethod = false;
+            _.each(loginMethods, method => {
+              if (method.email === addr.emailAddress) {
+                isLoginMethod = true;
+              }
+            });
+            const isVerified = addr.verifiedAt || (
+              // Gmail = verified by Google: if one can login to Gmail, it's one's own address.
+              addr.emailAddress.indexOf('@gmail.com') >= 0);  // [2PKTRF0T]
+
+            return r.tr({ key: addr.emailAddress },
+              r.td({}, addr.emailAddress),
+              r.td({}, isVerified ? "Yes" : ''),
+              r.td({},
+                Button({ disabled: isLoginMethod }, "Remove"),
+                isLoginMethod ? r.span({}, " (Remove login method instead)") : null));
+          })));
+
+    const showAddEmailInputButton = this.state.showAddEmailInput ? null :
+        Button({ onClick: () => this.setState({ showAddEmailInput: true }) },
+          "Add email address");
+
+    const addEmailInput = !this.state.showAddEmailInput ? null :
+      r.div({},
+        EmailInput({ label: "Address:", placeholder: "your.email@example.com",
+          onChangeValueOk: (value, ok) => this.setState({ newEmailAddr: value, emailOk: ok }) }),
+        Button({ onClick: this.doAddEmail, disableed: !this.state.emailOk },
+          "Add"));
+
+    const isAddingEmailInfo = !this.state.isAddingEmail ? null :
+      r.div({}, "Adding...");
+
+    const doneAddingEmailInfo = !this.state.doneAddingEmail ? null :
+      r.div({}, "Added, done.");
+
+    const loginsTable =
+      r.table({},
+        r.thead({},
+          r.tr({},
+            r.th({}, "Where"), r.th({}, "ID or email"), r.th())),
+        r.tbody({},
+          loginMethods.map((method) => {
+            return r.tr({ key: `${method.provider}:${method.email}` },
+              r.td({}, method.provider),
+              r.td({}, method.email),
+              r.td({}, Button({ disabled: true }, "Remove (not implemented)")))
+          })));
+
+    return (
+      r.div({},
+        r.h3({}, "Email addresses"),
+        r.p({}, `(Verified = ${youOrHen} clicked a verification link in the email.)`),
+        emailsTable,
+        r.br(),
+        showAddEmailInputButton,
+        addEmailInput,
+        isAddingEmailInfo,
+        doneAddingEmailInfo,
+        r.br(),
+        r.h3({}, "Login methods"),
+        loginsTable,
+        r.br(),
+        Button({ disabled: true }, "Add login method (not implemented)")));
+  }
 });
 
 
