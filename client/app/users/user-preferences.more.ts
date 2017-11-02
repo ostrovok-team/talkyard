@@ -449,11 +449,13 @@ export const EmailsLoginsComponent = createComponent({
       r.ul({ className: 's_UP_EmLg_EmL' },
         emailAddrs.map((addr) => {
           let status = '';
+          let isVerifeid = false;
 
           if (addr.verifiedAt || (
               // Gmail = verified by Google: if one can login to Gmail, it's one's own address.
               addr.emailAddress.indexOf('@gmail.com') >= 0)) {  // [2PKTRF0T]
             status += "Verified. ";
+            isVerifeid = true;
           }
 
           let isLoginMethod = false;
@@ -475,7 +477,7 @@ export const EmailsLoginsComponent = createComponent({
             r.div({},
               isPrimary || isLoginMethod ? null :
                 Button({ onClick: () => this.removeEmailAddress(addr.emailAddress) }, "Remove"),
-              isPrimary || !addr.verifiedAt ? null :
+              isPrimary || !isVerifeid ? null :
                 Button({ onClick: () => this.setPrimary(addr.emailAddress) }, "Make Primary")));
         }));
 
