@@ -8,6 +8,17 @@ t_ = the_Whatever (for ids)
 e_ = end-to-end-test_Whatever (classes only, for stuff to click in End-to-End tests)
 p_ = public api (classes only, not ids)
 
+In-the-middle or at-a-word-end abbreviations: (but not at the start of the selector)
+Em = email
+B  = button
+T  = table
+L  = list
+It = list item
+D  = dialog
+CB = checkbox
+Example: s_Whatever_SaveB = save button. Or s_SomethingElse_EmT = email addresses table.
+
+
 esWhatever = old (s_Whatever = new & better)
 
 [refactor] rename esForum_ to esF_ and esForum_Nav to esF_BB

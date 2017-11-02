@@ -445,43 +445,39 @@ export const EmailsLoginsComponent = createComponent({
     const emailAddrs: UserEmailAddress[] = this.state.emailAddresses;
     const loginMethods: UserLoginMethods[] = this.state.loginMethods;
 
-    const emailsTable =
-      r.table({ className: 's_UP_EmLg_EmT' },
-        r.thead({},
-          r.tr({},
-            r.th({}, "Address"), r.th({}, "Status"), r.th())),
-        r.tbody({},
-          emailAddrs.map((addr) => {
-            let status = '';
+    const emailAddressesList =
+      r.ul({ className: 's_UP_EmLg_EmL' },
+        emailAddrs.map((addr) => {
+          let status = '';
 
-            if (addr.verifiedAt || (
-                // Gmail = verified by Google: if one can login to Gmail, it's one's own address.
-                addr.emailAddress.indexOf('@gmail.com') >= 0)) {  // [2PKTRF0T]
-              status += "Verified. ";
+          if (addr.verifiedAt || (
+              // Gmail = verified by Google: if one can login to Gmail, it's one's own address.
+              addr.emailAddress.indexOf('@gmail.com') >= 0)) {  // [2PKTRF0T]
+            status += "Verified. ";
+          }
+
+          let isLoginMethod = false;
+          _.each(loginMethods, (method: UserLoginMethods) => {
+            if (method.email === addr.emailAddress) {
+              isLoginMethod = true;
+              status += `For login with ${method.provider}. `;
             }
+          });
 
-            let isLoginMethod = false;
-            _.each(loginMethods, (method: UserLoginMethods) => {
-              if (method.email === addr.emailAddress) {
-                isLoginMethod = true;
-                status += `For login with ${uppercaseFirst(method.provider)}. `;
-              }
-            });
+          const isPrimary = user.email === addr.emailAddress;
+          if (isPrimary) {
+            status += "Primary. ";
+          }
 
-            const isPrimary = user.email === addr.emailAddress;
-            if (isPrimary) {
-              status += "Primary. ";
-            }
-
-            return r.tr({ key: addr.emailAddress },
-              r.td({}, addr.emailAddress),
-              r.td({}, status),
-              r.td({},
-                isPrimary || isLoginMethod ? null :
-                  Button({ onClick: () => this.removeEmailAddress(addr.emailAddress) }, "Remove"),
-                isPrimary || !addr.verifiedAt ? null :
-                  Button({ onClick: () => this.setPrimary(addr.emailAddress) }, "Make Primary")));
-          })));
+          return r.li({ className: 's_UP_EmLg_EmL_It',  key: addr.emailAddress },
+            r.div({ className: 's_UP_EmLg_EmL_It_Em' }, addr.emailAddress),
+            r.div({}, status),
+            r.div({},
+              isPrimary || isLoginMethod ? null :
+                Button({ onClick: () => this.removeEmailAddress(addr.emailAddress) }, "Remove"),
+              isPrimary || !addr.verifiedAt ? null :
+                Button({ onClick: () => this.setPrimary(addr.emailAddress) }, "Make Primary")));
+        }));
 
     // Don't show the Add button again after one email added. Then it's harder to see
     // the "check your inbox" message.
@@ -504,21 +500,18 @@ export const EmailsLoginsComponent = createComponent({
       r.div({}, "Adding...");
 
     const doneAddingEmailInfo = !this.state.doneAddingEmail ? null :
-      r.div({}, "Added, done. We've sent you a verification email — ",
+      r.div({ className: 's_UP_EmLg_EmAdded' }, "Added. We've sent you a verification email — ",
           r.b({}, "check your email inbox", '.'));
 
-    const loginsTable =
-      r.table({ className: 's_UP_EmLg_LgT' },
-        r.thead({},
-          r.tr({},
-            r.th({}, "How"), r.th({}, "ID"), r.th())),
-        r.tbody({},
-          loginMethods.map((method) => {
-            return r.tr({ key: `${method.provider}:${method.email}` },
-              r.td({ className: 's_UP_EmLg_LgT_How' }, method.provider),
-              r.td({}, method.email))
-              // r.td({}, Button({ disabled: true }, "Remove")))  — fix later
-          })));
+    const loginsList =
+      r.ul({ className: 's_UP_EmLg_LgL' },
+        loginMethods.map((method) => {
+          return r.li({ className: 's_UP_EmLg_LgL_It', key: `${method.provider}:${method.email}` },
+            r.span({ className: 's_UP_EmLg_LgL_It_How' }, method.provider),
+            ", as: ",
+            r.span({ className: 's_UP_EmLg_LgL_It_Id' }, method.email))
+            // r.div({}, Button({}, "Remove")))  — fix later
+        }));
 
     return (
       r.div({ className: 's_UP_EmLg' },
@@ -526,7 +519,7 @@ export const EmailsLoginsComponent = createComponent({
         r.p({ className: 's_UP_EmLg_StatusExpl' },
           `('Primary' means ${youOrHen} can login via this address, and we send notifications to it.` +
           ` 'Verified' means ${youOrHen} clicked a verification link in an address verification email.)`),
-        emailsTable,
+        emailAddressesList,
         r.br(),
         showAddEmailInputButton,
         addEmailInput,
@@ -534,8 +527,8 @@ export const EmailsLoginsComponent = createComponent({
         doneAddingEmailInfo,
 
         r.h3({}, "Login methods"),
-        loginsTable
-        // Button({ disabled: true }, "Add login method")  — fix later
+        loginsList
+        // Button({}, "Add login method")  — fix later
       ));
   }
 });

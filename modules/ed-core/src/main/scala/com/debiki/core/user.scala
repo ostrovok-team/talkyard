@@ -581,12 +581,13 @@ case class MemberInclDetails(
 
   def createdWhen: When = When.fromDate(createdAt)
 
-  def primaryEmailInfo: UserEmailAddress = UserEmailAddress(
-    userId = id,
-    emailAddress = primaryEmailAddress,
-    addedAt = When.fromDate(createdAt),
-    verifiedAt = When.fromOptDate(emailVerifiedAt),
-    removedAt = None)
+  def primaryEmailInfo: Option[UserEmailAddress] =
+    if (primaryEmailAddress.isEmpty) None
+    else Some(UserEmailAddress(
+      userId = id,
+      emailAddress = primaryEmailAddress,
+      addedAt = When.fromDate(createdAt),
+      verifiedAt = When.fromOptDate(emailVerifiedAt)))
 
 
   def whenTimeForNexSummaryEmail(stats: UserStats, myGroups: immutable.Seq[Group])
@@ -727,12 +728,12 @@ case class UserEmailAddress(
   userId: UserId,
   emailAddress: String,
   addedAt: When,
-  verifiedAt: Option[When],
-  removedAt: Option[When] = None) {
+  verifiedAt: Option[When]) {
 
   require(isValidNonLocalEmailAddress(emailAddress), "EdE4JUKS0")
   require(!verifiedAt.exists(_.isBefore(addedAt)), "EdE6JUKW1A")
-  require(!removedAt.exists(_.isBefore(addedAt)), "EdE5HUSM0Z")
+
+  def isVerified: Boolean = verifiedAt.isDefined
 }
 
 

@@ -235,7 +235,7 @@ class LoginWithPasswordController @Inject()(cc: ControllerComponents, edContext:
       assErr("DwE8XK5", "Email was not sent to a role")
     }
 
-    request.dao.verifyEmail(roleId, request.ctime)
+    request.dao.verifyPrimaryEmailAddress(roleId, request.ctime)
     roleId
   }
 

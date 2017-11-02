@@ -97,7 +97,7 @@ trait UserDao {
       // COULD loop and append 1, 2, 3, ... until there's no username clash.
       transaction.deferConstraints()
       transaction.insertMember(newUser)
-      transaction.insertUserEmailAddress(newUser.primaryEmailInfo)
+      transaction.insertUserEmailAddress(newUser.primaryEmailInfo getOrDie "EdE3PDKR20")
       transaction.insertUsernameUsage(UsernameUsage(
         newUser.usernameLowercase, inUseFrom = transaction.now, userId = newUser.id))
       transaction.upsertUserStats(UserStats.forNewUser(
@@ -360,7 +360,7 @@ trait UserDao {
       ensureSiteActiveOrThrow(user, transaction)
       transaction.deferConstraints()
       transaction.insertMember(user)
-      transaction.insertUserEmailAddress(user.primaryEmailInfo)
+      user.primaryEmailInfo.foreach(transaction.insertUserEmailAddress)
       transaction.insertUsernameUsage(UsernameUsage(
         usernameLowercase = user.usernameLowercase, inUseFrom = transaction.now, userId = user.id))
       transaction.upsertUserStats(UserStats.forNewUser(
@@ -406,7 +406,7 @@ trait UserDao {
       ensureSiteActiveOrThrow(user, transaction)
       transaction.deferConstraints()
       transaction.insertMember(user)
-      transaction.insertUserEmailAddress(user.primaryEmailInfo)
+      user.primaryEmailInfo.foreach(transaction.insertUserEmailAddress)
       transaction.insertUsernameUsage(UsernameUsage(
         usernameLowercase = user.usernameLowercase, inUseFrom = now, userId = user.id))
       transaction.upsertUserStats(UserStats.forNewUser(
@@ -937,12 +937,14 @@ trait UserDao {
   }
 
 
-  def verifyEmail(userId: UserId, verifiedAt: ju.Date) {
+  def verifyPrimaryEmailAddress(userId: UserId, verifiedAt: ju.Date) {
     readWriteTransaction { transaction =>
       var user = transaction.loadTheMemberInclDetails(userId)
       user = user.copy(emailVerifiedAt = Some(verifiedAt))
+      val userEmailAddress = user.primaryEmailInfo getOrDie "EdE4JKA2S"
+      dieUnless(userEmailAddress.isVerified, "EdE7UNHR4")
       transaction.updateMemberInclDetails(user)
-      transaction.updateUserEmailAddress(user.primaryEmailInfo)
+      transaction.updateUserEmailAddress(userEmailAddress)
       // Now, when email verified, perhaps time to start sending summary emails.
       transaction.reconsiderSendingSummaryEmailsTo(user.id)
     }
@@ -1007,7 +1009,7 @@ trait UserDao {
         emailNotfPrefs: Option[EmailNotfPrefs] = None,
         activitySummaryEmailsIntervalMins: Option[Int] = None,
         isAdmin: Option[Boolean] = None, isOwner: Option[Boolean] = None) {
-    // Don't specify emailVerifiedAt here — use verifyEmail() instead; it refreshes the cache.
+    // Don't specify emailVerifiedAt — use verifyPrimaryEmailAddress() instead; it refreshes the cache.
     readWriteTransaction { transaction =>
       var user = transaction.loadTheMemberInclDetails(userId)
       emailNotfPrefs foreach { prefs =>

@@ -310,7 +310,7 @@ class UserController @Inject()(cc: ControllerComponents, edContext: EdContext)
 
     val (memberInclDetails, emails, identities) = dao.readOnlyTransaction { tx =>
       (tx.loadTheMemberInclDetails(userId),
-        tx.loadUserEmailAddresses(userId).filter(_.removedAt.isEmpty),
+        tx.loadUserEmailAddresses(userId),
         tx.loadIdentities(userId))
     }
 
@@ -318,8 +318,7 @@ class UserController @Inject()(cc: ControllerComponents, edContext: EdContext)
       Json.obj(
         "emailAddress" -> userEmailAddress.emailAddress,
         "addedAt" -> JsWhenMs(userEmailAddress.addedAt),
-        "verifiedAt" -> JsWhenMsOrNull(userEmailAddress.verifiedAt),
-        "removedAt" -> JsWhenMsOrNull(userEmailAddress.removedAt))
+        "verifiedAt" -> JsWhenMsOrNull(userEmailAddress.verifiedAt))
     })
 
     var loginMethodsJson = JsArray(identities map { identity: Identity =>
@@ -342,7 +341,7 @@ class UserController @Inject()(cc: ControllerComponents, edContext: EdContext)
     if (memberInclDetails.passwordHash.isDefined) {
       loginMethodsJson :+= Json.obj(
         "loginType" -> "Local",
-        "provider" -> "Password",
+        "provider" -> "password",
         "email" -> memberInclDetails.primaryEmailAddress)
     }
 
