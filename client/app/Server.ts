@@ -593,6 +593,11 @@ export function removeEmailAddresses(userId: UserId, emailAddress: string, succe
 }
 
 
+export function setPrimaryEmailAddresses(userId: UserId, emailAddress: string, success) {
+  postJsonSuccess('/-/set-primary-email-address', success, { userId, emailAddress });
+}
+
+
 export function sendInvite(toEmailAddress: string, success: (invite: Invite) => void,
       error: (failedRequest: HttpRequest) => ErrorPolicy) {
   postJsonSuccess('/-/send-invite', success, error, { toEmailAddress: toEmailAddress });

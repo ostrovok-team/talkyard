@@ -420,7 +420,16 @@ export const EmailsLoginsComponent = createComponent({
   removeEmailAddress: function(emailAddress: string) {
     const user: MemberInclDetails = this.props.user;
     Server.removeEmailAddresses(user.id, emailAddress, response => {
+      // Remove the check-your-inbox message, in case the user remoed the email just added.
+      this.setState({ doneAddingEmail: undefined, ...response });
+    });
+  },
+
+  setPrimary: function(emailAddress: string) {
+    const user: MemberInclDetails = this.props.user;
+    Server.setPrimaryEmailAddresses(user.id, emailAddress, response => {
       this.setState(response);
+      this.props.reloadUser();
     });
   },
 
@@ -455,7 +464,7 @@ export const EmailsLoginsComponent = createComponent({
             _.each(loginMethods, (method: UserLoginMethods) => {
               if (method.email === addr.emailAddress) {
                 isLoginMethod = true;
-                status += `For login with ${method.provider}. `;
+                status += `For login with ${uppercaseFirst(method.provider)}. `;
               }
             });
 
@@ -469,17 +478,20 @@ export const EmailsLoginsComponent = createComponent({
               r.td({}, status),
               r.td({},
                 isPrimary || isLoginMethod ? null :
-                  Button({ onClick: () => this.removeEmailAddress(addr.emailAddress) }, "Remove")));
+                  Button({ onClick: () => this.removeEmailAddress(addr.emailAddress) }, "Remove"),
+                isPrimary || !addr.verifiedAt ? null :
+                  Button({ onClick: () => this.setPrimary(addr.emailAddress) }, "Make Primary")));
           })));
 
     // Don't show the Add button again after one email added. Then it's harder to see
     // the "check your inbox" message.
-    const showAddEmailInputButton = emailAddrs.length >= MaxEmailsPerUser
-        ? r.span({}, `(You cannot add more than ${MaxEmailsPerUser} addresses.)`)
-        : (this.state.showAddEmailInput || this.state.isAddingEmail || this.state.doneAddingEmail
-            ? null
-            : Button({ onClick: () => this.setState({ showAddEmailInput: true }) },
-                "Add email address"));
+    const showAddEmailInputButton = this.state.doneAddingEmail ? null : (
+        emailAddrs.length >= MaxEmailsPerUser
+          ? r.span({}, `(You cannot add more than ${MaxEmailsPerUser} addresses.)`)
+          : (this.state.showAddEmailInput || this.state.isAddingEmail
+              ? null
+              : Button({ onClick: () => this.setState({ showAddEmailInput: true }) },
+                  "Add email address")));
 
     const addEmailInput = !this.state.showAddEmailInput ? null :
       r.div({},
@@ -499,13 +511,13 @@ export const EmailsLoginsComponent = createComponent({
       r.table({ className: 's_UP_EmLg_LgT' },
         r.thead({},
           r.tr({},
-            r.th({}, "Where"), r.th({}, "ID or email"), r.th())),
+            r.th({}, "How"), r.th({}, "ID"), r.th())),
         r.tbody({},
           loginMethods.map((method) => {
             return r.tr({ key: `${method.provider}:${method.email}` },
-              r.td({}, method.provider),
-              r.td({}, method.email),
-              r.td({}, Button({ disabled: true }, "Remove (not implemented)")))
+              r.td({ className: 's_UP_EmLg_LgT_How' }, method.provider),
+              r.td({}, method.email))
+              // r.td({}, Button({ disabled: true }, "Remove")))  — fix later
           })));
 
     return (
@@ -520,11 +532,10 @@ export const EmailsLoginsComponent = createComponent({
         addEmailInput,
         isAddingEmailInfo,
         doneAddingEmailInfo,
-        r.br(),
+
         r.h3({}, "Login methods"),
-        loginsTable /*
-        r.br(),
-        Button({ disabled: true }, "Add login method (not implemented)") */
+        loginsTable
+        // Button({ disabled: true }, "Add login method")  — fix later
       ));
   }
 });

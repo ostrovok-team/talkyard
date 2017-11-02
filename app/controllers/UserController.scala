@@ -309,7 +309,7 @@ class UserController @Inject()(cc: ControllerComponents, edContext: EdContext)
       "EdE5JKWTDY2", "You may not see someone elses email addresses")
 
     val (memberInclDetails, emails, identities) = dao.readOnlyTransaction { tx =>
-      (tx.loadMemberInclDetails(userId),
+      (tx.loadTheMemberInclDetails(userId),
         tx.loadUserEmailAddresses(userId).filter(_.removedAt.isEmpty),
         tx.loadIdentities(userId))
     }
@@ -322,7 +322,7 @@ class UserController @Inject()(cc: ControllerComponents, edContext: EdContext)
         "removedAt" -> JsWhenMsOrNull(userEmailAddress.removedAt))
     })
 
-    var loginsJson = JsArray(identities map { identity: Identity =>
+    var loginMethodsJson = JsArray(identities map { identity: Identity =>
       val (provider, email) = identity match {
         case oa: OpenAuthIdentity =>
           val details = oa.openAuthDetails
@@ -338,11 +338,42 @@ class UserController @Inject()(cc: ControllerComponents, edContext: EdContext)
         "provider" -> provider,
         "email" -> JsStringOrNull(email))
     })
-    // if (memberInclDetails.hasPasswordLogin)  add pwd login entry
+
+    if (memberInclDetails.passwordHash.isDefined) {
+      loginMethodsJson :+= Json.obj(
+        "loginType" -> "Local",
+        "provider" -> "Password",
+        "email" -> memberInclDetails.primaryEmailAddress)
+    }
 
     OkSafeJson(Json.obj(
       "emailAddresses" -> emailsJson,
-      "loginMethods" -> loginsJson))
+      "loginMethods" -> loginMethodsJson))
+  }
+
+
+  def setPrimaryEmailAddresses: Action[JsValue] =
+        PostJsonAction(RateLimits.AddEmailLogin, maxBytes = 300) { request =>
+    import request.{dao, body, theRequester => requester}
+
+    val userId = (body \ "userId").as[UserId]
+    val emailAddress = (body \ "emailAddress").as[String]
+
+    throwForbiddenIf(requester.id != userId && !requester.isAdmin,
+      "EdE4JTA2F0", "You may not add an email address to someone elses account")
+
+    dao.readWriteTransaction { tx =>
+      val member = tx.loadTheMemberInclDetails(userId)
+      throwBadRequestIf(member.primaryEmailAddress == emailAddress,
+        "EdE5GPTVXZ", "Already your primary address")
+      val userEmailAddrs = tx.loadUserEmailAddresses(userId)
+      val address = userEmailAddrs.find(_.emailAddress == emailAddress)
+      throwForbiddenIf(address.isEmpty, "EdE2YGUWF03", "Not your email address")
+      throwForbiddenIf(address.flatMap(_.verifiedAt).isEmpty, "EdE5AA20I", "Address not verified")
+      tx.updateMemberInclDetails(member.copy(primaryEmailAddress = emailAddress))
+    }
+
+    loadUserEmailsLoginsImpl(userId, request)
   }
 
 
