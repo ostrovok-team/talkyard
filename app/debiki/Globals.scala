@@ -72,6 +72,8 @@ object Globals {
   val SiteOwnerTermsUrl = "ed.siteOwnerTermsUrl"
   val SiteOwnerPrivacyUrl = "ed.siteOwnerPrivacyUrl"
 
+  val MayFastForwardTimeConfValName = "ed.mayFastForwardTime"
+
   def isProd: Boolean = _isProd
 
   /** One never changes from Prod to Dev or Test, or from Dev or Test to Prod, so we can safely
@@ -213,7 +215,7 @@ class Globals(
 
   val mayFastForwardTime: Boolean =
     if (!isProd) true
-    else conf.getBoolean("ed.mayFastForwardTime") getOrElse false
+    else conf.getBoolean(MayFastForwardTimeConfValName) getOrElse false
 
   def systemDao: SystemDao = state.systemDao  // [rename] to newSystemDao()?
 
@@ -703,6 +705,8 @@ class Globals(
 
   /** When running tests only. */
   def testSetTime(when: When) {
+    dieIf(!mayFastForwardTime, "EdE2TBP4", o"""May not change time; you need to set
+      config value $MayFastForwardTimeConfValName to true in the app server config file.""")
     timeStartMillis = Some(when.millis)
     timeOffsetMillis = 0
   }
