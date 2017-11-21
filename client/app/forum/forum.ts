@@ -53,15 +53,14 @@ const FilterShowDeleted = 'ShowDeleted';
 export function buildForumRoutes() {
   const store: Store = ReactStore.allData();
   const rootSlash = store.pagePath.value;
-  const rootNoSlash = rootSlash.substr(0, rootSlash.length - 1);
   const defaultPath = rootSlash + (store.settings.forumMainView || RoutePathLatest);
 
   // later, COULD incl top period in URL, perhaps: top/ —> top-past-day/
-  // Or  /top/bugs/past-day/ ?
+  // Or  /top/bugs/past-day/ or /top/bugs?period=PastDay
 
   return Switch({},
-    Redirect({ path: rootSlash, to: defaultPath, exact: true, strict: true }),
-    Redirect({ path: rootNoSlash, to: defaultPath, exact: true, strict: true }),
+    // This redirect e.g. '/forum/' and '/forum' to '/forum/latest':
+    Redirect({ path: rootSlash, to: defaultPath, exact: true }),
     Route({ path: rootSlash, component: ForumComponent }));
 
 }
