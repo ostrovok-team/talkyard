@@ -78,13 +78,15 @@ declare namespace debiki2 {
 
   // ReactRouter:
   const Router: any;
+  const Switch: any;
   const Route: any;
   var IndexRoute;
   const Redirect: any;
   var DefaultRoute;
 
-  var Link; // ReactRouter.Link
-  var NavLink: any;
+  var Link; // ReactRouterDOM.Link
+  var RouterNavLink; // ReactRouterDOM.NavLink, rename to NavLink?
+  var NavLink: any;  // EffectiveDiscussions own, rename to EdLink? or ListItemLink?
   var createComponent: any;
   var createClassAndFactory: any;
   function createFactory(componentDefinition);

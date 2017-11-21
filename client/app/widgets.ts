@@ -26,10 +26,23 @@ const r = React.DOM;
 
 export const Router: any = reactCreateFactory(
    isServerSide() ? ReactRouterDOM.MemoryRouter : ReactRouterDOM.BrowserRouter);
+export const Switch: any = reactCreateFactory(ReactRouterDOM.Switch);
 export const Route: any = reactCreateFactory(ReactRouterDOM.Route);
-export const IndexRoute: any = reactCreateFactory(ReactRouter.IndexRoute);
+export const IndexRoute: any = reactCreateFactory(ReactRouter.IndexRoute);  // remove
 export const Redirect: any = reactCreateFactory(ReactRouterDOM.Redirect);
-export const DefaultRoute: any = reactCreateFactory(ReactRouter.DefaultRoute);
+export const Link: any = reactCreateFactory(ReactRouterDOM.Link);
+export const RouterNavLink: any = reactCreateFactory(ReactRouterDOM.NavLink);
+export const DefaultRoute: any = reactCreateFactory(ReactRouter.DefaultRoute);  // remove
+
+// Redirs to path, which should be like '/some/path/', to just '/some/path' with no trailing slash.
+export function RedirToNoSlash({ path }) {
+  return Redirect({
+    path: path,
+    to: path.substr(0, path.length - 1),
+    exact: true,  // so won't match if there's more stuff after the last '/'
+    strict: true, // otherwise ignores the trailing '/'
+  });
+}
 
 export const PrimaryButton: any = makeWidget(r.button, ' btn btn-primary');
 export const Button: any = makeWidget(r.button, ' btn btn-default');
