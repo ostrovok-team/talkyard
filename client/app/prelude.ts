@@ -19,14 +19,16 @@
 /// <reference path="constants.ts" />
 
 declare const ReactDOMServer: any;
-declare const ReactRouter: any;
+declare const ReactRouterDOM: any;
 declare const createReactClass: any;
+declare const parseQueryString: (s: string) => any;
+declare const stringifyQueryString: (s: any) => string;
 
 // node_modules/@types/react-addons-css-transition-group doesn't work, so use ':any' instead.
 var ReactCSSTransitionGroup: any = isServerSide() ? null :
   reactCreateFactory(window['ReactTransitionGroup'].CSSTransitionGroup);
 
-var Router: any = reactCreateFactory(ReactRouter.Router);
+var ReactRouter: any = {}; // whilst upgrading to v4  REMOVE
 
 // Don't <reference>, causes lots of TS errors.
 declare const Bliss: any;

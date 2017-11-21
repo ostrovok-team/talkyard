@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2016 Kaj Magnus Lindberg
+ * Copyright (c) 2016, 2017 Kaj Magnus Lindberg
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -19,10 +19,11 @@
 /// <reference path="../widgets.more.ts" />
 
 //------------------------------------------------------------------------------
-   module debiki2.search {
+   namespace debiki2.search {
 //------------------------------------------------------------------------------
 
-var r = React.DOM;
+const r = React.DOM;
+const SearchRootPath = '/-/search';
 
 
 // COULD config the router to avoid % encoding in the URL inside tag names,
@@ -30,9 +31,8 @@ var r = React.DOM;
 //   http://stackoverflow.com/questions/75980/when-are-you-supposed-to-use-escape-instead-of-encodeuri-encodeuricomponent
 //   https://github.com/ReactTraining/react-router/issues/3764
 export function routes() {
-  return (
-    Route({ path: '/-/search', component: SearchPageComponent },
-      IndexRoute({ component: SearchPageContentComponent })));
+  return r.div({},
+    Route({ path: SearchRootPath, component: SearchPageComponent }));
 }
 
 
@@ -90,7 +90,7 @@ var SearchPageComponent = React.createClass(<any> {
           r.a({ className: 'esLegal_home_link', href: '/' }, "Home",
             r.span({ className: 'esLegal_home_arw' }, ' →'))),
         r.div({},
-          this.props.children)));
+          Route({ path: SearchRootPath, component: SearchPageContentComponent, exact: true }))));
   }
 });
 
@@ -119,15 +119,15 @@ var SearchPageContentComponent = React.createClass(<any> {
   },
 
   componentWillMount: function() {
-    let queryString = this.props.location.query;
-    let queryParam = queryString.q || '';
-    // queryParam has already been url decoded.
-    let query = parseSearchQueryInputText(queryParam);
+    const urlQueryParams = parseQueryString(this.props.location.search);
+    const searchQueryText = urlQueryParams.q || '';
+    // searchQueryText has already been url decoded.
+    const query = parseSearchQueryInputText(searchQueryText);
     this.setState({ query: query });
-    if (queryParam) {
+    if (searchQueryText) {
       this.search(query);
     }
-    if (this.props.location.query.advanced) {
+    if (urlQueryParams.advanced) {
       this.tagsLoaded = true;
       Server.loadTagsAndStats();
     }
@@ -140,11 +140,12 @@ var SearchPageContentComponent = React.createClass(<any> {
   search: function(query?: SearchQuery) {
     query = query || this.state.query;
     this.setState({ isSearching: true });
-    if (this.props.location.query.q !== query.rawQuery) {
-      let queryStringObj = _.assign({}, this.props.location.query, { q: query.rawQuery });
-      this.context.router.push({
+    // Update the URL if the user typed a new search query:
+    const urlQueryParams = parseQueryString(this.props.location.search);
+    if (urlQueryParams.q !== query.rawQuery) {
+      this.context.router.history.push({
         pathname: this.props.location.pathname,
-        query: queryStringObj,
+        search: stringifyQueryString({ ...urlQueryParams,  q: query.rawQuery }),
       });
     }
     Server.search(query.rawQuery, (results: SearchResults) => {
@@ -163,7 +164,7 @@ var SearchPageContentComponent = React.createClass(<any> {
   },
 
   toggleAdvanced: function() {
-    let queryStringObj = _.assign({}, this.props.location.query);
+    let queryStringObj = parseQueryString(this.props.location.search);
     if (queryStringObj.advanced) {
       delete queryStringObj.advanced;
     }
@@ -174,9 +175,9 @@ var SearchPageContentComponent = React.createClass(<any> {
       }
       queryStringObj.advanced = true;
     }
-    this.context.router.push({
+    this.context.router.history.push({
       pathname: this.props.location.pathname,
-      query: queryStringObj,
+      search: stringifyQueryString(queryStringObj),
     });
   },
 
@@ -208,12 +209,13 @@ var SearchPageContentComponent = React.createClass(<any> {
   },
 
   render: function() {
-    let store: Store = this.state.store;
-    let query: SearchQuery = this.state.query;
-    let searchResults: SearchResults = this.state.searchResults;
+    const store: Store = this.state.store;
+    const query: SearchQuery = this.state.query;
+    const searchResults: SearchResults = this.state.searchResults;
 
-    let isAdvancedOpen = !!this.props.location.query.advanced;
-    let advancedSearch =
+    const urlQueryParams = parseQueryString(this.props.location.search);
+    const isAdvancedOpen = !!urlQueryParams.advanced;
+    const advancedSearch =
       Expandable({ header: "Advanced Search", onHeaderClick: this.toggleAdvanced,
           openButtonId: 'e_SP_AdvB', className: 's_SP_Adv', isOpen: isAdvancedOpen },
         !isAdvancedOpen ? null :

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Kaj Magnus Lindberg
+ * Copyright (c) 2016, 2017 Kaj Magnus Lindberg
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -19,24 +19,16 @@
 /// <reference path="../more-bundle-already-loaded.d.ts" />
 
 //------------------------------------------------------------------------------
-   module debiki2.superadmin {
+   namespace debiki2.superadmin {
 //------------------------------------------------------------------------------
 
 const r = React.DOM;
-const reactCreateFactory = React.createFactory;
-
-const ReactRouter = window['ReactRouter'];
-const Route: any = reactCreateFactory(ReactRouter.Route);
-const Redirect: any = reactCreateFactory(ReactRouter.Redirect);
-
-
 const SuperAdminRoot = '/-/superadmin/';
 
+
 export function routes() {
-  return [
-    Redirect({ key: 'redir', from: SuperAdminRoot, to: SuperAdminRoot + '/dashboard' }),
-    Route({ key: 'routes', path: SuperAdminRoot, component: AdminAppComponent },
-      Route({ path: 'dashboard', component: DashboardPanelComponent }))];
+  return r.div({},
+    Route({ path: '/', component: AdminAppComponent }));
 }
 
 
@@ -65,14 +57,15 @@ const AdminAppComponent = React.createClass(<any> {
   },
 
   render: function() {
+    const store: Store = this.state.store;
     return (
-      r.div({ className: "container esSA" },
-        React.cloneElement(this.props.children, { store: this.state.store })));
+      r.div({ className: 'container esSA' },
+        Route({ path: SuperAdminRoot, render: () => DashboardPanelComponent({ store }) })));
   }
 });
 
 
-var DashboardPanelComponent = React.createClass(<any> {
+const DashboardPanelComponent = createFactory({
   render: function() {
     var store: Store = this.props.store;
     var stuff: SuperAdminStuff = store.superadmin;
@@ -84,7 +77,7 @@ var DashboardPanelComponent = React.createClass(<any> {
     return (
       r.div({},
         r.h2({}, "All sites"),
-        r.table({ className: "table" },
+        r.table({ className: 'table' },
           r.thead({},
             r.tr({},
               r.th({}, "ID"),

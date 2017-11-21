@@ -23,10 +23,12 @@
 
 const r = React.DOM;
 
-declare const ReactRouter: any;
-export const Route: any = reactCreateFactory(ReactRouter.Route);
+
+export const Router: any = reactCreateFactory(
+   isServerSide() ? ReactRouterDOM.MemoryRouter : ReactRouterDOM.BrowserRouter);
+export const Route: any = reactCreateFactory(ReactRouterDOM.Route);
 export const IndexRoute: any = reactCreateFactory(ReactRouter.IndexRoute);
-export const Redirect: any = reactCreateFactory(ReactRouter.Redirect);
+export const Redirect: any = reactCreateFactory(ReactRouterDOM.Redirect);
 export const DefaultRoute: any = reactCreateFactory(ReactRouter.DefaultRoute);
 
 export const PrimaryButton: any = makeWidget(r.button, ' btn btn-primary');

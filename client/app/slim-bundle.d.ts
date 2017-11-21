@@ -4,10 +4,12 @@
 // In constants.ts:
 
 declare const ReactCSSTransitionGroup: any;
-declare const Router: any;
+declare const ReactRouter: any; // old, whilst upgrading to v4 REMOVE
 declare function reactCreateFactory(x);
 declare function doNextFrameOrNow(x);
 declare function getSetCookie(cookieName: string, value?: string, options?: any): string;
+declare const parseQueryString: (s: string) => any;
+declare const stringifyQueryString: (s: any) => string;
 
 declare const ReactStartedClass;
 
@@ -75,15 +77,17 @@ declare namespace debiki2 {
   const $h: any;
 
   // ReactRouter:
-  var Route;
+  const Router: any;
+  const Route: any;
   var IndexRoute;
-  var Redirect;
+  const Redirect: any;
   var DefaultRoute;
 
   var Link; // ReactRouter.Link
   var NavLink: any;
   var createComponent: any;
   var createClassAndFactory: any;
+  function createFactory(componentDefinition);
 
   function replaceById(itemsWithId: any[], replacement);
   function deleteById(itemsWithId: any[], id);

@@ -35,7 +35,12 @@ export function createComponent(componentDefinition): any { // oops should obvio
 }
 
 
-export function createClassAndFactory(componentDefinition) { // rename createComponent to this
+export function createClassAndFactory(componentDefinition) { // rename createComponent to this NO... CLEAN_UP
+  return createComponent(componentDefinition);
+}
+
+
+export function createFactory(componentDefinition) { // ... let's name it "createFactory" only
   return createComponent(componentDefinition);
 }
 
