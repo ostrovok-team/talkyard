@@ -196,6 +196,14 @@ const ForumComponent = React.createClass(<any> {
     // This becomes e.g. ['new', 'ideas']:
     const routes = pathRelForumPage.split('/');
     const sortOrderRoute = routes[0];
+    switch (sortOrderRoute) {
+      case RoutePathLatest: break;
+      case RoutePathNew: break;
+      case RoutePathTop: break;
+      case RoutePathCategories: break;
+      default:
+        return r.p({}, `Bad route in the URL: '${sortOrderRoute}' [EdE2WKB4]`);
+    }
     const currentCategorySlug = routes[1];
     const activeCategory = this.getActiveCategory(currentCategorySlug);
 

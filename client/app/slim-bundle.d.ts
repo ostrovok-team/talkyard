@@ -82,6 +82,7 @@ declare namespace debiki2 {
   const Route: any;
   var IndexRoute;
   const Redirect: any;
+  function RedirToNoSlash({ path: string });
   var DefaultRoute;
 
   var Link; // ReactRouterDOM.Link

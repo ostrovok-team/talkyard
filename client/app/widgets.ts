@@ -25,7 +25,7 @@ const r = React.DOM;
 
 
 export const Router: any = reactCreateFactory(
-   isServerSide() ? ReactRouterDOM.MemoryRouter : ReactRouterDOM.BrowserRouter);
+   isServerSide() ? ReactRouterDOM.StaticRouter : ReactRouterDOM.BrowserRouter);
 export const Switch: any = reactCreateFactory(ReactRouterDOM.Switch);
 export const Route: any = reactCreateFactory(ReactRouterDOM.Route);
 export const IndexRoute: any = reactCreateFactory(ReactRouter.IndexRoute);  // remove

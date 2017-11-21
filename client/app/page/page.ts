@@ -127,7 +127,7 @@ export function renderTitleBodyCommentsToString() {
 
   // Comment in the next line to skip React server side and debug in browser only.
   return '<p class="dw-page" data-reactid=".123" data-react-checksum="123">react_skipped</p>'
-  /*
+/*
   const store: Store = debiki2.ReactStore.allData();
   if (store.pageRole === PageRole.Forum) {
     const routes = debiki2.forum.buildForumRoutes();
@@ -136,8 +136,7 @@ export function renderTitleBodyCommentsToString() {
     const store: Store = debiki2.ReactStore.allData();
     const path = store.pagePath.value + 'latest';
     return ReactDOMServer.renderToString(
-        // history: ReactRouter.createMemoryHistory(path) ?
-        Router({}, routes));
+        Router({ location: path }, routes));
   }
   else {
     return ReactDOMServer.renderToString(Page(store));
