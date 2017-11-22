@@ -533,7 +533,7 @@ const ForumButtons = createComponent({
     const anyPageTitle = showsCategoryTree ?
         r.div({ className: 'esF_BB_PageTitle' }, "Categories") : null;
 
-    const makeCategoryLink = (where, text, linkId, extraClass?) => RouterNavLink({
+    const makeCategoryLink = (where, text, linkId, extraClass?) => NavLink({
       to: { pathname: store.pagePath.value + where, search: this.props.location.search },
       id: linkId,
       className: 'btn esForum_catsNav_btn ' + (extraClass || ''),

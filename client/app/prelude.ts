@@ -28,8 +28,6 @@ declare const stringifyQueryString: (s: any) => string;
 var ReactCSSTransitionGroup: any = isServerSide() ? null :
   reactCreateFactory(window['ReactTransitionGroup'].CSSTransitionGroup);
 
-var ReactRouter: any = {}; // whilst upgrading to v4  REMOVE
-
 // Don't <reference>, causes lots of TS errors.
 declare const Bliss: any;
 declare function $$(selector: string): Element[];

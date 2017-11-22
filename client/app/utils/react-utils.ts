@@ -45,25 +45,6 @@ export function createFactory(componentDefinition) { // ... let's name it "creat
 }
 
 
-export const NavLink = createComponent({
-  contextTypes: {
-    router: React.PropTypes.object
-  },
-
-  render: function () {
-    const isActive = this.context.router.isActive(this.props.to, true);
-    let className = isActive ? 'active ' : '';
-    if (this.props.listItemClassName) {
-      className += this.props.listItemClassName;
-    }
-
-    return (
-      r.li({ className: className },
-        Link(this.props, this.props.children)));
-  }
-});
-
-
 export function whenMsToIsoDate(whenMs: number): string {
   return new Date(whenMs).toISOString().replace(/T/, ' ')
 }

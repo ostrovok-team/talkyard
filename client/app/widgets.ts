@@ -28,15 +28,13 @@ export const Router: any = reactCreateFactory(
    isServerSide() ? ReactRouterDOM.StaticRouter : ReactRouterDOM.BrowserRouter);
 export const Switch: any = reactCreateFactory(ReactRouterDOM.Switch);
 export const Route: any = reactCreateFactory(ReactRouterDOM.Route);
-export const IndexRoute: any = reactCreateFactory(ReactRouter.IndexRoute);  // remove
 export const Redirect: any = reactCreateFactory(ReactRouterDOM.Redirect);
 export const Link: any = reactCreateFactory(ReactRouterDOM.Link);
-export const RouterNavLink: any = reactCreateFactory(ReactRouterDOM.NavLink);
-export const DefaultRoute: any = reactCreateFactory(ReactRouter.DefaultRoute);  // remove
+export const NavLink: any = reactCreateFactory(ReactRouterDOM.NavLink);
 
 // A react-router NavLink wrapped in a <li>.
 export function LiNavLink(...propsAndContents) {
-  return r.li({}, RouterNavLink.apply(this, arguments));
+  return r.li({}, NavLink.apply(this, arguments));
 }
 
 // Redirs to path, which should be like '/some/path/', to just '/some/path' with no trailing slash.

@@ -81,6 +81,10 @@ export let PostsComponent = createFactory({
     this.loadPosts(user.id);
   },
 
+  componentWillUnmount: function() {
+    this.isGone = true;
+  },
+
   componentWillReceiveProps: function(nextProps) {
     // a bit dupl code [5AWS2E9]
     let me: Myself = this.props.store.me;
@@ -96,6 +100,7 @@ export let PostsComponent = createFactory({
   loadPosts: function(userId: UserId) {
     let me: Myself = this.props.store.me;
     Server.loadPostsByAuthor(userId, (response: any) => {
+      if (this.isGone) return;
       this.setState({
         posts: response.posts,
         author: response.author,
@@ -148,6 +153,10 @@ export let TopicsComponent = createFactory({
     this.loadTopics(user.id);
   },
 
+  componentWillUnmount: function() {
+    this.isGone = true;
+  },
+
   componentWillReceiveProps: function(nextProps) {
     // a bit dupl code [5AWS2E9]
     let me: Myself = this.props.store.me;
@@ -162,6 +171,7 @@ export let TopicsComponent = createFactory({
 
   loadTopics: function(userId: UserId) {
     Server.loadTopicsByUser(userId, (topics: Topic[]) => {
+      if (this.isGone) return;
       this.setState({ topics: topics });
     });
   },
