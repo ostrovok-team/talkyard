@@ -34,6 +34,11 @@ export const Link: any = reactCreateFactory(ReactRouterDOM.Link);
 export const RouterNavLink: any = reactCreateFactory(ReactRouterDOM.NavLink);
 export const DefaultRoute: any = reactCreateFactory(ReactRouter.DefaultRoute);  // remove
 
+// A react-router NavLink wrapped in a <li>.
+export function LiNavLink(...propsAndContents) {
+  return r.li({}, RouterNavLink.apply(this, arguments));
+}
+
 // Redirs to path, which should be like '/some/path/', to just '/some/path' with no trailing slash.
 export function RedirToNoSlash({ path }) {
   return Redirect({
@@ -43,6 +48,16 @@ export function RedirToNoSlash({ path }) {
     strict: true, // otherwise ignores the trailing '/'
   });
 }
+
+// Redirs to path + append.
+export function RedirAppend({ path, append }) {
+  return Redirect({
+    from: path,
+    to: path + append,
+    exact: true,  // so won't match if there's more stuff after the last '/'
+  });
+}
+
 
 export const PrimaryButton: any = makeWidget(r.button, ' btn btn-primary');
 export const Button: any = makeWidget(r.button, ' btn btn-default');

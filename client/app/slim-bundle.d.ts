@@ -83,11 +83,13 @@ declare namespace debiki2 {
   var IndexRoute;
   const Redirect: any;
   function RedirToNoSlash({ path: string });
+  function RedirAppend({ path, append });
   var DefaultRoute;
 
   var Link; // ReactRouterDOM.Link
   var RouterNavLink; // ReactRouterDOM.NavLink, rename to NavLink?
-  var NavLink: any;  // EffectiveDiscussions own, rename to EdLink? or ListItemLink?
+  function LiNavLink(props, ...contents);
+  var NavLink: any;  // EffectiveDiscussions own, CLEAN_UP REMOVE use LiNavLink instead
   var createComponent: any;
   var createClassAndFactory: any;
   function createFactory(componentDefinition);
