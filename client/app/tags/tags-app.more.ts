@@ -27,8 +27,8 @@ const TagsRoot = '/-/tags/';
 
 
 export function routes() {
-  return r.div({},
-    Redirect({ path: TagsRoot, to: TagsRoot + 'all', exact: true }),
+  return Switch({},
+    RedirAppend({ path: TagsRoot, append: 'all' }),
     Route({ path: TagsRoot, component: TagsAppComponent }));
 }
 

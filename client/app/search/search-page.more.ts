@@ -31,7 +31,7 @@ const SearchRootPath = '/-/search';
 //   http://stackoverflow.com/questions/75980/when-are-you-supposed-to-use-escape-instead-of-encodeuri-encodeuricomponent
 //   https://github.com/ReactTraining/react-router/issues/3764
 export function routes() {
-  return r.div({},
+  return (
     Route({ path: SearchRootPath, component: SearchPageComponent }));
 }
 
@@ -237,7 +237,7 @@ var SearchPageContentComponent = React.createClass(<any> {
     }
     else {
       let pagesAndHits: PageAndHits[] = searchResults.pagesAndHits;
-      resultsList = pagesAndHits.map(pageAndHits =>
+      resultsList = pagesAndHits.map((pageAndHits: PageAndHits) =>
           SearchResultListItem({ pageAndHits: pageAndHits, key: pageAndHits.pageId }));
     }
 
@@ -329,7 +329,7 @@ function makeTagLabelValues(tagsStuff: TagsStuff) {
 
 
 
-function SearchResultListItem(props: { pageAndHits: PageAndHits, key?: any }) {
+function SearchResultListItem(props: { pageAndHits: PageAndHits, key?: string | number }) {
   let pageAndHits: PageAndHits = props.pageAndHits;
   let hits = pageAndHits.hits.map(hit =>
       SearchResultHit({ hit: hit, pageId: pageAndHits.pageId, key: hit.postNr }));
@@ -342,7 +342,7 @@ function SearchResultListItem(props: { pageAndHits: PageAndHits, key?: any }) {
 
 
 
-function SearchResultHit(props: { hit: any, pageId: PageId, key?: any }) {
+function SearchResultHit(props: { hit: any, pageId: PageId, key?: string | number }) {
   let hit: SearchHit = props.hit;
   let pageId = props.pageId;
   // Any html stuff was escaped here: [7YK24W].

@@ -34,6 +34,7 @@ export function routes() {
 
 
 const AdminAppComponent = React.createClass(<any> {
+  displayName: 'AdminAppComponent',
   mixins: [debiki2.StoreListenerMixin],
 
   contextTypes: {
@@ -66,13 +67,16 @@ const AdminAppComponent = React.createClass(<any> {
 
 
 const DashboardPanelComponent = createFactory({
+  displayName: 'DashboardPanelComponent',
+
   render: function() {
     var store: Store = this.props.store;
     var stuff: SuperAdminStuff = store.superadmin;
     if (!stuff)
       return r.p({}, "Loading ...");
 
-    var sites = stuff.sites.map(site => SiteTableRow({ site: site, superAdminStuff: stuff }));
+    var sites = stuff.sites.map((site: SASite) =>
+        SiteTableRow({ key: site.id, site: site, superAdminStuff: stuff }));
 
     return (
       r.div({},
@@ -92,6 +96,8 @@ const DashboardPanelComponent = createFactory({
 
 
 var SiteTableRow = createComponent({
+  displayName: 'SiteTableRow',
+
   changeStatus: function(newStatus: SiteStatus) {
     var site: SASite = _.clone(this.props.site);
     site.status = newStatus;

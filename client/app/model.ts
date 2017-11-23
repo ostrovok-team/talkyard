@@ -1098,7 +1098,7 @@ interface SuperAdminStuff {
 
 
 interface SASite {
-  id: string;
+  id: number;
   status: SiteStatus;
   name: string;
   canonicalHostname: string;

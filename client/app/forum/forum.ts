@@ -242,19 +242,19 @@ const ForumComponent = React.createClass(<any> {
           const propsWithRouterStuff = { ...childProps, ...props, isCategoriesRoute: true };
           return r.div({},
             ForumButtons(propsWithRouterStuff),
-            LoadAndListCategoriesComponent(propsWithRouterStuff));
+            LoadAndListCategories(propsWithRouterStuff));
         }}),
-        Route({ path: rootSlash, strict: true, render: (props) => {
+        Route({ path: rootSlash + ':sortOrder?/:categorySlug?', strict: true, render: (props) => {
           const propsWithRouterStuff = { ...childProps, ...props };
           return r.div({},
             ForumButtons(propsWithRouterStuff),
-            LoadAndListTopicsComponent(propsWithRouterStuff));
+            LoadAndListTopics(propsWithRouterStuff));
         }})));
     /* SHOULD instead of the below, throw? show? some error, if invalid sort order or bad cat name
-        Route({ path: rootSlash, component: LoadAndListTopicsComponent }),
-        Route({ path: rootSlash + RoutePathLatest, component: LoadAndListTopicsComponent }),
-        Route({ path: rootSlash + RoutePathNew, component: LoadAndListTopicsComponent }),
-        Route({ path: rootSlash + RoutePathTop, component: LoadAndListTopicsComponent })));
+        Route({ path: rootSlash, component: LoadAndListTopics }),
+        Route({ path: rootSlash + RoutePathLatest, component: LoadAndListTopics }),
+        Route({ path: rootSlash + RoutePathNew, component: LoadAndListTopics }),
+        Route({ path: rootSlash + RoutePathTop, component: LoadAndListTopics })));
         */
 
     return (
@@ -266,10 +266,8 @@ const ForumComponent = React.createClass(<any> {
         r.div({ className: 'dw-page' }),
         ForumIntroText({ store: store }),
         helpMessage,
-        //ForumButtons(forumButtonProps),
         //topsAndCatsHelp,
         childRoutes)));
-        //React.cloneElement(this.props.children, childProps))));
   }
 });
 
@@ -520,9 +518,9 @@ const ForumButtons = createComponent({
       return !store.userSpecificDataAdded ? null : r.p({},
           r.br(),
           "Category not found. Did you just create it? Or renamed it? Or you're not allowed " +
-          "to access it? Or perhaps it doesn't exist? [EdE0CAT]",
+          "to access it? Or perhaps it doesn't exist? [EdE0CAT]",  // (4JKSWX2)
           r.br(), r.br(),
-          PrimaryLinkButton({ href: '/' }, "Go to the homepage."));
+          PrimaryLinkButton({ href: '/' }, "Go to the homepage"));
     }
 
     const queryParams = this.props.queryParams;
@@ -726,7 +724,9 @@ const ForumButtons = createComponent({
 
 
 
-const LoadAndListTopicsComponent = createFactory({
+const LoadAndListTopics = createFactory({
+  displayName: 'LoadAndListTopics',
+
   getInitialState: function(): any {
     // The server has included in the Flux store a list of the most recent topics, and we
     // can use that lis when rendering the topic list server side, or for the first time
@@ -914,6 +914,14 @@ export const ListTopicsComponent = createComponent({
     const store: Store = this.props.store;
     const me: Myself = store.me;
     const topics: Topic[] = this.props.topics;
+    const activeCategory: Category = this.props.activeCategory;
+    if (!activeCategory) {
+      // The category doesn't exist, or it's restricted, and maybe included in the
+      // user specific json. When the user specific json has been activated, either the
+      // category will exist and we won't get to here again, or a "category not found" message
+      // will be displayed (4JKSWX2). — But don't show any "Loading..." message here.
+      return null;
+    }
     if (!topics) {
       // The min height preserves scrollTop, even though the topic list becomes empty
       // for a short while (which would otherwise reduce the windows height which
@@ -929,7 +937,6 @@ export const ListTopicsComponent = createComponent({
 
     const useTable = this.props.useTable;
     const orderOffset: OrderOffset = this.props.orderOffset;
-    const activeCategory: Category = this.props.activeCategory;
 
     const topicElems = topics.map((topic: Topic) => {
       return TopicRow({
@@ -1326,7 +1333,9 @@ function topic_mediaThumbnailUrls(topic: Topic): string[] {
 }
 
 
-const LoadAndListCategoriesComponent = createFactory({
+const LoadAndListCategories = createFactory({
+  displayName: 'LoadAndListCategories',
+
   getInitialState: function() {
     return {};
   },

@@ -228,6 +228,7 @@ function compileServerTypescript() {
         'node_modules/create-react-class/create-react-class.min.js',
         // Don't need React CSS transitions server side.
         'node_modules/react-router-dom/umd/react-router-dom.js',
+        'client/third-party/tiny-querystring.umd.js',
         'node_modules/markdown-it/dist/markdown-it.min.js',
         'client/third-party/lodash-custom.js',
         'client/third-party/non-angular-slugify.js',

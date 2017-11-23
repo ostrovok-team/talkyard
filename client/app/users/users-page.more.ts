@@ -47,18 +47,6 @@ export function routes() {
 const UsersHomeComponent = React.createClass(<any> {
   displayName: 'UsersHomeComponent',
 
-  componentDidMount: function() {
-    if (window.location.hash.indexOf('#writeMessage') !== -1) {
-      const usernameOrId = this.props.match.params.usernameOrId;
-      dieIf(/[^0-9]/.test(usernameOrId), 'Not a user id [EsE5YK0P2]');
-      const toUserId = parseInt(usernameOrId);
-      const myUserId = ReactStore.getMe().id;
-      dieIf(toUserId === myUserId, 'EsE7UMKW2');
-      dieIf(userId_isGuest(toUserId), 'EsE6JKY20');
-      editor.openToWriteMessage(toUserId);
-    }
-  },
-
   render: function() {
     return (
       r.div({},
@@ -69,7 +57,6 @@ const UsersHomeComponent = React.createClass(<any> {
           Route({ path: UsersRoot + ':usernameOrId', exact: true, render: ({ match }) => {
             return Redirect({ to: UsersRoot + match.params.usernameOrId + '/activity' });
           }}),
-          //Redirect({ from: ':usernameOrId/', to: ':usernameOrId/activity' }),
           Route({ path: UsersRoot + ':usernameOrId', component: UserPageComponent }))));
   }
 });
@@ -139,7 +126,7 @@ const UserPageComponent = React.createClass(<any> {
 
   loadUserAnyDetails: function(redirectToCorrectUsername) {
     const usernameOrId: string | number = this.props.match.params.usernameOrId;
-    Server.loadUserAnyDetails(usernameOrId, (user, stats: UserStats) => {
+    Server.loadUserAnyDetails(usernameOrId, (user: MemberInclDetails, stats: UserStats) => {
       if (this.isGone) return;
       this.setState({ user: user, stats: stats });
       // 1) In case the user has changed his/her username, and userIdOrUsername is his/her *old*
@@ -151,11 +138,23 @@ const UserPageComponent = React.createClass(<any> {
           redirectToCorrectUsername !== false) {
         this.props.history.replace('/-/users/' + user.username.toLowerCase());
       }
+      this.maybeOpenMessageEditor(user.id);
     }, () => {
       if (this.isGone) return;
       // Error. We might not be allowed to see this user, so null it even if it was shown before.
       this.setState({ user: null });
     });
+  },
+
+  maybeOpenMessageEditor: function(userId: number) {
+    if (window.location.hash.indexOf('#writeMessage') >= 0 && !this.hasOpenedEditor) {
+      this.hasOpenedEditor = true;
+      dieIf(userId_isGuest(userId), 'EdE6JKY20');
+      const myUserId = ReactStore.getMe().id;
+      if (userId !== myUserId) {
+        editor.openToWriteMessage(userId);
+      }
+    }
   },
 
   render: function() {
