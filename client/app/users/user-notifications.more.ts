@@ -25,7 +25,9 @@
 var r = React.DOM;
 
 
-export const UserNotificationsComponent = createFactory({
+export const UserNotifications = createFactory({
+  displayName: 'UserNotifications',
+
   getInitialState: function() {
     return { notfs: null, error: false };
   },

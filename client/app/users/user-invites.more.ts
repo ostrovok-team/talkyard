@@ -32,7 +32,9 @@ var ModalFooter = rb.ModalFooter;
 var EmailInput = util.EmailInput;
 
 
-export var UserInvitesComponent = createFactory({
+export var UserInvites = createFactory({
+  displayName: 'UserInvites',
+
   getInitialState: function() {
     return { intives: null };
   },

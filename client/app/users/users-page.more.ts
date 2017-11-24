@@ -54,10 +54,13 @@ const UsersHomeComponent = React.createClass(<any> {
             backToSiteButtonTitle: "Back from user profile", extraMargin: true }),
         Switch({},
           Route({ path: UsersRoot, component: BadUrlComponent, exact: true }),
-          Route({ path: UsersRoot + ':usernameOrId', exact: true, render: ({ match }) => {
-            return Redirect({ to: UsersRoot + match.params.usernameOrId + '/activity' });
-          }}),
-          Route({ path: UsersRoot + ':usernameOrId', component: UserPageComponent }))));
+          Route({ path: UsersRoot + ':usernameOrId', exact: true,
+              render: ({ match }) =>
+                Redirect({
+                  to: UsersRoot + match.params.usernameOrId + '/activity' + this.props.location.hash })
+          }),
+          Route({ path: UsersRoot + ':usernameOrId/:section?/:subsection?',
+              component: UserPageComponent }))));
   }
 });
 
@@ -83,6 +86,7 @@ const UserPageComponent = React.createClass(<any> {
       myId: null,
       user: null,
       // Backw compat with react-router v3: (.slice removes '/-/' in '/-/users')
+      // CLEAN_UP remove 'routes', use params and params.section and .subsection instead
       routes: this.props.location.pathname.split('/').slice(2),  // (4GKQS2)
     };
   },
@@ -111,7 +115,14 @@ const UserPageComponent = React.createClass(<any> {
   },
 
   componentDidUpdate: function(prevProps) {
-    if (this.props.location.pathname !== prevProps.location.pathname) {
+    if (this.props.location.pathname === prevProps.location.pathname)
+      return;
+
+    const prevUsernameOrId: string = prevProps.match.params.usernameOrId;
+    const currentUser: MemberInclDetails = this.state.user;
+    const isSameUser = currentUser && (
+        '' + currentUser.id === prevUsernameOrId || currentUser.username === prevUsernameOrId);
+    if (!isSameUser) {
       this.loadUserAnyDetails();
     }
   },
@@ -125,9 +136,17 @@ const UserPageComponent = React.createClass(<any> {
   },
 
   loadUserAnyDetails: function(redirectToCorrectUsername) {
-    const usernameOrId: string | number = this.props.match.params.usernameOrId;
+    const params = this.props.match.params;
+    const usernameOrId: string | number = params.usernameOrId;
+
+    if (this.nowLoading === usernameOrId) return;
+    this.nowLoading = usernameOrId;
+
     Server.loadUserAnyDetails(usernameOrId, (user: MemberInclDetails, stats: UserStats) => {
+      this.nowLoading = null;
       if (this.isGone) return;
+      // This setState will trigger a rerender immediately, because we're not in a React event handler.
+      // But when rerendering here, the url might still show a user id, not a username. (5GKWS20)
       this.setState({ user: user, stats: stats });
       // 1) In case the user has changed his/her username, and userIdOrUsername is his/her *old*
       // name, user.username will be the current name — then show current name in the url [8KFU24R].
@@ -136,7 +155,11 @@ const UserPageComponent = React.createClass(<any> {
       const isNotLowercase = _.isString(usernameOrId) && usernameOrId !== usernameOrId.toLowerCase();
       if (user.username && (user.username.toLowerCase() !== usernameOrId || isNotLowercase) &&
           redirectToCorrectUsername !== false) {
-        this.props.history.replace('/-/users/' + user.username.toLowerCase());
+        let pathWithUsername = '/-/users/' + user.username.toLowerCase();
+        if (params.section) pathWithUsername += '/' + params.section;
+        if (params.subsection) pathWithUsername += '/' + params.subsection;
+        pathWithUsername += this.props.location.hash;
+        this.props.history.replace(pathWithUsername);
       }
       this.maybeOpenMessageEditor(user.id);
     }, () => {
@@ -161,7 +184,10 @@ const UserPageComponent = React.createClass(<any> {
     const store: Store = this.state.store;
     const me: Myself = store.me;
     const user: UserAnyDetails = this.state.user;
-    if (!user || !me)
+    const usernameOrId = this.props.match.params.usernameOrId;
+    // Wait until url updated to show username, instead of id, to avoid mounting & unmounting
+    // sub comoponents, which could result in duplicated load-data requests.  (5GKWS20)
+    if (!user || !me || parseInt(usernameOrId))
       return r.p({}, 'Loading...');
 
     dieIf(!this.state.routes || !this.state.routes[2], 'EsE5GKUW2');
@@ -198,13 +224,14 @@ const UserPageComponent = React.createClass(<any> {
 
     const childRoutes = Switch({},
       Route({ path: u + 'activity', exact: true, render: ({ match }) => {
-        return Redirect({ to: UsersRoot + match.params.usernameOrId + '/activity/posts' });
+        const hash = this.props.location.hash;
+        return Redirect({ to: UsersRoot + match.params.usernameOrId + '/activity/posts' + hash });
       }}),
-      Route({ path: u + 'activity', render: (ps) => UsersActivityComponent({ ...childProps, ...ps }) }),
-      Route({ path: u + 'summary', render: () => UserSummaryComponent(childProps) }),
-      Route({ path: u + 'notifications', render: () => UserNotificationsComponent(childProps) }),
-      Route({ path: u + 'preferences', render: () => UserPreferencesComponent(childProps) }),
-      Route({ path: u + 'invites', render: () => UserInvitesComponent(childProps) }));
+      Route({ path: u + 'activity', render: (ps) => UsersActivity({ ...childProps, ...ps }) }),
+      Route({ path: u + 'summary', render: () => UserSummary(childProps) }),
+      Route({ path: u + 'notifications', render: () => UserNotifications(childProps) }),
+      Route({ path: u + 'preferences', render: () => UserPreferences(childProps) }),
+      Route({ path: u + 'invites', render: () => UserInvites(childProps) }));
 
     return (
       r.div({ className: 'container esUP' },

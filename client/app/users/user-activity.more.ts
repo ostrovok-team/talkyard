@@ -27,8 +27,8 @@ let NavItem = rb.NavItem;
 let Post = page.Post;
 
 
-export let UsersActivityComponent = createFactory({
-  displayName: 'UsersActivityComponent',
+export let UsersActivity = createFactory({
+  displayName: 'UsersActivity',
 
   transitionTo: function(what) {
     this.props.transitionTo('activity/' + what);
@@ -98,8 +98,10 @@ export let PostsComponent = createFactory({
   },
 
   loadPosts: function(userId: UserId) {
-    let me: Myself = this.props.store.me;
+    if (this.nowLoading === userId) return;
+    this.nowLoading = userId;
     Server.loadPostsByAuthor(userId, (response: any) => {
+      this.nowLoading = null;
       if (this.isGone) return;
       this.setState({
         posts: response.posts,
@@ -170,7 +172,10 @@ export let TopicsComponent = createFactory({
   },
 
   loadTopics: function(userId: UserId) {
+    if (this.nowLoading === userId) return;
+    this.nowLoading = userId;
     Server.loadTopicsByUser(userId, (topics: Topic[]) => {
+      this.nowLoading = null;
       if (this.isGone) return;
       this.setState({ topics: topics });
     });

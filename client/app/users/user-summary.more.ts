@@ -24,7 +24,9 @@
 const r = React.DOM;
 
 
-export const UserSummaryComponent = createFactory({
+export const UserSummary = createFactory({
+  displayName: 'UserSummary',
+
   render: function() {
     const stats: UserStats = this.props.stats;
     return (
