@@ -30,7 +30,7 @@ const SearchRootPath = '/-/search';
 // e.g. ',' ':' '/' needn't be escaped in the query:
 //   http://stackoverflow.com/questions/75980/when-are-you-supposed-to-use-escape-instead-of-encodeuri-encodeuricomponent
 //   https://github.com/ReactTraining/react-router/issues/3764
-export function routes() {
+export function searchRoute() {
   return (
     Route({ path: SearchRootPath, component: SearchPageComponent }));
 }

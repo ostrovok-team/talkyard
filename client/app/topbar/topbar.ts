@@ -22,7 +22,9 @@
 /// <reference path="../utils/page-scroll-mixin.ts" />
 /// <reference path="../utils/scroll-into-view.ts" />
 /// <reference path="../utils/utils.ts" />
+/// <reference path="../utils/DropdownModal.ts" />
 /// <reference path="../avatar/avatar.ts" />
+/// <reference path="../Server.ts" />
 /// <reference path="../more-bundle-not-yet-loaded.ts" />
 
 //------------------------------------------------------------------------------
@@ -145,7 +147,7 @@ export const TopBar = createComponent({
   },
 
   openMyMenu: function() {
-    morebundle.openMyMenu(this.state.store, this.refs.myMenuButton);
+    //morebundle.openMyMenu(this.state.store, this.refs.myMenuButton, this.props.history);
   },
 
   viewOlderNotfs: function() {
@@ -186,7 +188,7 @@ export const TopBar = createComponent({
             let deletedClass = ancestor.isDeleted ? ' s_TB_Cs_C-Dd' : '';
             return (
                 r.li({ key: ancestor.categoryId, className: 's_TB_Cs_C' + deletedClass },
-                  r.a({ className: 'esTopbar_ancestors_link btn', href: ancestor.path },
+                  Link({ className: 'esTopbar_ancestors_link btn', to: ancestor.path },
                     ancestor.title)));
           }));
     }
@@ -232,10 +234,10 @@ export const TopBar = createComponent({
         avatar.Avatar({ user: me, tiny: true, ignoreClicks: true });
 
     const avatarNameDropdown = !me.isLoggedIn && !impersonatingStrangerInfo ? null :
-      Button({ onClick: this.openMyMenu,
+      utils.ModalDropdownButton({ //onClick: this.openMyMenu,
           // RENAME 'esAvtrName' + 'esMyMenu' to 's_MMB' (my-menu button).
           className: 'esAvtrName esMyMenu' + isImpersonatingClass,
-          ref: 'myMenuButton' },
+          ref: 'myMenuButton', title: r.span({},
         urgentReviewTasks,
         otherReviewTasks,
         impersonatingStrangerInfo,
@@ -244,7 +246,8 @@ export const TopBar = createComponent({
         r.span({ className: 'esAvtrName_you' }, "You"), // if screen narrow
         talkToMeNotfs,
         talkToOthersNotfs,
-        otherNotfs);
+        otherNotfs) },
+          MoreScriptsRoutesComponent({ store }));
 
 
     // ------- Login button
@@ -407,6 +410,22 @@ export const TopBar = createComponent({
           openContextbarButton,
           r.div({ className: 'container' },
             topbar))));
+  }
+});
+
+
+const MoreScriptsRoutesComponent = createFactory({   // dupl code [4WKBTP0]
+  componentWillMount: function() {
+    Server.loadMoreScriptsBundle(() => {
+      this.setState({ moreScriptsLoaded: true });
+    });
+  },
+
+  render: function() {
+    if (!this.state)
+      return r.p({}, "Loading...");
+
+    return debiki2['topbar'].MyMenuDropdownModal({ store: this.props.store });
   }
 });
 

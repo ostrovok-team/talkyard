@@ -35,6 +35,7 @@ declare namespace debiki2 {
 
   namespace topbar {
     function openMyMenu(store, where);
+    var MyMenuDropdownModal;
   }
 
   namespace editor {
@@ -42,7 +43,7 @@ declare namespace debiki2 {
   }
 
   namespace search {
-    function routes(): any;
+    function searchRoute(): any;
     function urlEncodeSearchQuery(query: string): string;
   }
 
@@ -114,7 +115,7 @@ declare namespace debiki2.forum {
 }
 
 declare namespace debiki2.users {
-  var routes;
+  function usersRoute();
   var InviteRow;
   function openInviteSomeoneDialog(addInvite);
 }

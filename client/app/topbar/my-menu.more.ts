@@ -26,23 +26,23 @@
 const r = ReactDOMFactories;
 const DropdownModal = utils.DropdownModal;
 
-
+/*
 var myMenuDropdownModal;
 
-export function openMyMenu(store: Store, where) {
+export function openMyMenu(store: Store, where, history) {
   if (!myMenuDropdownModal) {
     myMenuDropdownModal = ReactDOM.render(MyMenuDropdownModal(), utils.makeMountNode());
   }
-  myMenuDropdownModal.openAt(store, where);
-}
+  myMenuDropdownModal.openAt(store, where, history);
+} */
 
 
-var MyMenuDropdownModal = createComponent({
+export const MyMenuDropdownModal = createFactory({
   displayName: 'MyMenuDropdownModal',
 
   getInitialState: function() {
     return {
-      isOpen: false,
+      isOpen: true,
     };
   },
 
@@ -68,7 +68,7 @@ var MyMenuDropdownModal = createComponent({
   },
 
   viewOlderNotfs: function() {
-    let store: Store = this.state.store;
+    let store: Store = this.props.store;
     ReactActions.goToUsersNotifications(store.me.id);
   },
 
@@ -76,7 +76,7 @@ var MyMenuDropdownModal = createComponent({
     var menuContent;
 
     if (this.state.isOpen) {
-      var store: Store = this.state.store;
+      var store: Store = this.props.store;
       var me: Myself = store.me;
 
       // ------- Staff link, notfs, help
@@ -176,11 +176,13 @@ var MyMenuDropdownModal = createComponent({
     }
 
 
+    return menuContent; /*
     return (
       DropdownModal({ show: this.state.isOpen, onHide: this.close, showCloseButton: true,
           atRect: this.state.buttonRect, windowWidth: this.state.windowWidth,
           className: 'esAvtrName esMyMenu' },
         menuContent));
+        */
   }
 });
 

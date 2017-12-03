@@ -37,7 +37,7 @@
 const r = ReactDOMFactories;
 
 
-var PageWithState = createComponent({
+export const PageWithState = createReactClass(<any> {
   mixins: [debiki2.StoreListenerMixin],
 
   getInitialState: function() {
@@ -49,12 +49,13 @@ var PageWithState = createComponent({
   },
 
   render: function() {
-    return Page(this.state);
+    // Send router props to the page.
+    return Page({ store: this.state, ...this.props });
   }
 });
 
 
-var Page = createComponent({
+const Page = createComponent({
   getInitialState: function() {
     return {
       useWideLayout: this.isPageWide(),
@@ -86,7 +87,7 @@ var Page = createComponent({
 
   render: function() {
     const isEmbeddedComments: boolean = debiki.internal.isInEmbeddedCommentsIframe;
-    const store: Store = this.props;
+    const store: Store = this.props.store;
     const content = page_isChatChannel(store.pageRole)
         ? debiki2.page.ChatMessages({ store: store })
         : debiki2.page.TitleBodyComments({ store: store });
@@ -94,7 +95,8 @@ var Page = createComponent({
     const pageTypeClass = ' s_PT-' + store.pageRole;
     return (
       r.div({ className: 'esPage' + compactClass + pageTypeClass },
-        page_isChatChannel(store.pageRole) ? null : debiki2.reactelements.TopBar({}),
+        page_isChatChannel(store.pageRole) ? null : debiki2.reactelements.TopBar({
+          location: this.props.location, match: this.props.match, history: this.props.history }),
         isEmbeddedComments ? null : debiki2.page.ScrollButtons(),
         r.div({ className: 'container' },
           r.article({},
@@ -103,7 +105,7 @@ var Page = createComponent({
 });
 
 
-export function renderTitleBodyComments() {
+export function xxrenderTitleBodyComments() {
   const root = document.getElementById('dwPosts');
   if (!root)
     return;
