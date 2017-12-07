@@ -101,6 +101,12 @@ export const ForumComponent = createReactClass(<any> {
     });
   },
 
+  componentWillMount: function() {
+    const store: Store = this.state.store;
+    const newUrlPath = this.props.location.pathname;
+    ReactActions.maybeLoadAndShowNewPage(store, newUrlPath);
+  },
+
   componentDidMount: function() {
     // Dupl code [5KFEWR7]
     this.timerHandle = setInterval(this.checkSizeChangeLayout, 200);
@@ -130,6 +136,7 @@ export const ForumComponent = createReactClass(<any> {
 
   getActiveCategory: function(currentCategorySlug: string) {
     const store: Store = this.state.store;
+    const forumPage: Page = store.currentPage;
     let activeCategory: any;
     const activeCategorySlug = store.newCategorySlug || currentCategorySlug;
     if (activeCategorySlug) {
@@ -142,7 +149,7 @@ export const ForumComponent = createReactClass(<any> {
     else {
       activeCategory = {
         name: "All categories",
-        id: store.categoryId, // the forum root category id
+        id: forumPage.categoryId,
         isForumItself: true,
         newTopicTypes: [],
       };
@@ -807,6 +814,23 @@ const LoadAndListTopics = createFactory({
       this.props.location.pathname !== nextProps.location.pathname ||
       this.props.location.search !== nextProps.location.search ||
       this.props.topPeriod !== nextProps.topPeriod;
+
+    const store: Store = nextProps.store;
+    let currentPageIsForumPage;
+    _.each(store.pagesById, (page: Page) => {
+      if (page.pagePath.value !== store.forumPath)
+        return;
+      if (page.pageId === store.currentPageId) {
+        currentPageIsForumPage = true;
+      }
+    });
+
+    if (!currentPageIsForumPage) {
+      // Then it's too soon, now, to load topics. The store hasn't currently been updated
+      // to use the forum page. The current page is some other page, with the wrong category id.
+      // It might take a HTTP request, before the forum page has been loaded & is in use.
+      return;
+    }
 
     this.countTopicsWaitingForCritique(); // for now only
 

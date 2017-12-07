@@ -208,7 +208,7 @@ ReactDispatcher.register(function(payload) {
         firstDefinedOf(action.htmlHeadDescription, currentPage.pageHtmlHeadDescription);
       currentPage.ancestorsRootFirst = action.newAncestorsRootFirst;
       const parent: Ancestor = <Ancestor> _.last(action.newAncestorsRootFirst);
-      store.categoryId = parent ? parent.categoryId : null;
+      currentPage.categoryId = parent ? parent.categoryId : null;
       const was2dTree = currentPage.horizontalLayout;
       currentPage.pageRole = action.newPageRole || currentPage.pageRole;
       currentPage.horizontalLayout = action.newPageRole === PageRole.MindMap || currentPage.is2dTreeDefault;
@@ -515,8 +515,10 @@ ReactStore.activateMyself = function(anyNewMe: Myself) {
   });
 
   if (_.isArray(store.topics)) {
+    const currentPage: Page = store.currentPage;
     store.topics = store.topics.concat(store.me.restrictedTopics);
-    store.topics.sort((t: Topic, t2: Topic) => topic_sortByLatestActivity(t, t2, store.categoryId));
+    store.topics.sort((t: Topic, t2: Topic) =>
+        topic_sortByLatestActivity(t, t2, currentPage.categoryId));
     // later: BUG COULD try to avoid gaps, e.g. don't load restricted topics back to year 2000
     // but public topics back to 2010 only.
     // BUG we always sort by time, but sometimes, we want to sort by most-popular-first, or created-at,
@@ -649,7 +651,7 @@ ReactStore.getCategories = function() {
 
 
 ReactStore.getCategoryId = function(): number {
-  return store.categoryId;
+  return store.currentPage.categoryId;
 };
 
 
