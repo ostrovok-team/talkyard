@@ -19,6 +19,7 @@
 /// <reference path="sidebar/sidebar.ts" />
 /// <reference path="watchbar/watchbar.ts" />
 /// <reference path="page/metabar.ts" />
+/// <reference path="page/hacks.ts" />
 /// <reference path="react-elements/name-login-btns.ts" />
 /// <reference path="more-bundle-already-loaded.d.ts" />
 /// <reference path="staff-bundle-already-loaded.d.ts" />
@@ -129,20 +130,25 @@ export function startMainReactRoot() {
   else {
     // Compare with [2FKB5P].
     // Nothing below path /-/ is rendered server side (as of now), so then don't try to reuse any html.
-    const skipHydrate = location.pathname.search('/-/') === 0;
+    const skipHydrate = true; // location.pathname.search('/-/') === 0;
     const renderOrHydrate = skipHydrate ? ReactDOM.render : ReactDOM.hydrate;
+    const isEmbCmts: boolean = debiki.internal.isInEmbeddedCommentsIframe;
     renderOrHydrate(
         Router({},
-          Switch({},
-            // more-bundle.js is loaded directly on non-pages. Good for performance? since used here. [5WKE24]
-            Route({ path: '/-/', component: MoreScriptsRoutesComponent }),
-            // This redirects e.g. '/forum/' and '/forum' to '/forum/latest':
-            Redirect({ path: forumRootSlash, to: forumDefaultPath, exact: true }),
-            Route({ path: forumRootSlash + RoutePathLatest, component: forum.ForumComponent }),
-            Route({ path: forumRootSlash + RoutePathNew, component: forum.ForumComponent }),
-            Route({ path: forumRootSlash + RoutePathTop, component: forum.ForumComponent }),
-            Route({ path: forumRootSlash + RoutePathCategories, component: forum.ForumComponent }),
-            Route({ path: '/', component: PageWithStateComponent }))),
+          rFragment({},
+            debiki2.topbar.TopBar({}),
+            isEmbCmts ? null : debiki2.page.ScrollButtons(),
+            isEmbCmts ? null : Route({ component: debiki2.page.Hacks.ExtReactRootNavComponent }),
+            Switch({},
+              // more-bundle.js is loaded directly on non-pages. Good for performance? since used here. [5WKE24]
+              Route({ path: '/-/', component: MoreScriptsRoutesComponent }),
+              // This redirects e.g. '/forum/' and '/forum' to '/forum/latest':
+              Redirect({ path: forumRootSlash, to: forumDefaultPath, exact: true }),
+              Route({ path: forumRootSlash + RoutePathLatest, component: forum.ForumComponent }),
+              Route({ path: forumRootSlash + RoutePathNew, component: forum.ForumComponent }),
+              Route({ path: forumRootSlash + RoutePathTop, component: forum.ForumComponent }),
+              Route({ path: forumRootSlash + RoutePathCategories, component: forum.ForumComponent }),
+              Route({ path: '/', component: PageWithStateComponent })))),
       userPageElem || searchPageElem || pageElem);
   }
 }

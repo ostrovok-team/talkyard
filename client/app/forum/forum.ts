@@ -259,16 +259,13 @@ export const ForumComponent = createReactClass(<any> {
         */
 
     return (
-     r.div({},
-      debiki2.topbar.TopBar({}),
-      debiki2.page.ScrollButtons(),
       r.div({ className: 'container dw-forum' },
         // Include .dw-page to make renderDiscussionPage() in startup.js run: (a bit hacky)
         r.div({ className: 'dw-page' }),
         ForumIntroText({ store: store }),
         helpMessage,
         //topsAndCatsHelp,
-        childRoutes)));
+        childRoutes));
   }
 });
 
@@ -735,16 +732,10 @@ const LoadAndListTopics = createFactory({
     // can use that lis when rendering the topic list server side, or for the first time
     // in the browser (but not after that, because then new topics might have appeared).
     const store: Store = this.props.store;
-    // If we're authenticated, the topic list depends a lot on our permissions & groups.
-    // Then, send a request, to get the correct topic list (otherwise,
-    // as of 2016-12, hidden topics won't be included even if they should be [7RIQ29]).
-    const me: Myself = (debiki.volatileDataFromServer || {}).me;
-    const canUseTopicsInScriptTag = !me || !me.isAuthenticated;
-    if (!this.props.topicsInStoreMightBeOld && this.isAllLatestTopicsView() &&
-        canUseTopicsInScriptTag) {
+    if (this.canUseTopicsInScriptTag()) {
       return {
         topics: store.topics,
-        showLoadMoreButton: store.topics.length >= NumNewTopicsPerRequest
+        showLoadMoreButton: store.topics && store.topics.length >= NumNewTopicsPerRequest
       };
     }
     else {
@@ -756,13 +747,17 @@ const LoadAndListTopics = createFactory({
     // REFACTOR should probably use the store, for the topic list, so need not do this.
     const store: Store = this.props.store;
     if (this.state.isLoading === undefined) {
+      if (!this.canUseTopicsInScriptTag())
+        return;
+
       // We're still using a copy of the topics list in the store, so update the copy,
       // maybe new user-specific data has been added.
       const category: Category = this.props.activeCategory;
       let topics;
       if (category) {
+        // Is null, if topics not yet loaded.
         topics = _.clone(store.topics);
-        topics.sort((t: Topic, t2: Topic) => topic_sortByLatestActivity(t, t2, category.id));
+        !topics || topics.sort((t: Topic, t2: Topic) => topic_sortByLatestActivity(t, t2, category.id));
       }
       else {
         // A restricted category, we may not see it?
@@ -772,7 +767,11 @@ const LoadAndListTopics = createFactory({
     }
   },
 
-  isAllLatestTopicsView: function() {
+  canUseTopicsInScriptTag: function() {
+    if (this.props.topicsInStoreMightBeOld)
+      return false;
+
+    // The server includes topics for the active-topics sort order, all categories.
     return this.props.sortOrderRoute === RoutePathLatest &&
         !this.props.match.params.categorySlug;
   },
@@ -905,12 +904,8 @@ const LoadAndListTopics = createFactory({
       orderOffset: this.getOrderOffset(),
       topPeriod: this.props.topPeriod,
       setTopPeriod: this.props.setTopPeriod,
-      // `location` needed because category clickable. [7FKR0QA]
-      // COULD try to find some other way to link categories to URL paths, that works
-      // also in the user-activity.more.ts topic list. [7FKR0QA]
       linkCategories: true,
       sortOrderRoute: this.props.sortOrderRoute,
-      location: this.props.location,
     });
   },
 });
@@ -964,7 +959,7 @@ export const ListTopicsComponent = createComponent({
     const topicElems = topics.map((topic: Topic) => {
       return TopicRow({
           store, topic, categories: store.categories, activeCategory, now: store.now, orderOffset,
-          key: topic.pageId, location: this.props.location,
+          key: topic.pageId, sortOrderRoute: this.props.sortOrderRoute,
           inTable: useTable });
     });
 
@@ -1182,17 +1177,6 @@ const TopicRow = createComponent({
     return store.forumPath + sortOrderPath + '/' + category.slug;
   },
 
-  makeOnCategoryClickFn: function(category: Category) {
-    return (event) => {
-      event.preventDefault();
-      let urlPath = this.makeCategoryLink(category, true);
-      this.props.history.push({
-        pathname: urlPath,
-        search: this.props.location.search,  // [7FKR0QA]
-      });
-    };
-  },
-
   render: function() {
     const store: Store = this.props.store;
     const page: Page = store.currentPage;
@@ -1280,8 +1264,7 @@ const TopicRow = createComponent({
 
     let showCategories = settings_showCategories(settings, me);
     let categoryName = !category || !showCategories ? null :
-      r.a({ href: this.makeCategoryLink(category), className: 'esF_Ts_T_CName',
-            onClick: this.makeOnCategoryClickFn(category) },
+      Link({ to: this.makeCategoryLink(category), className: 'esF_Ts_T_CName' },
         category.name);
 
     const activityAgo = prettyLetterTimeAgo(topic.bumpedAtMs || topic.createdAtMs);
@@ -1617,7 +1600,7 @@ function makeTitle(topic: Topic, className: string, settings: SettingsVisibleCli
   // the pin icon, + topic type icon, looks ugly. But for now, just hide the topic type
   // icon in CSS instead: [6YK320W].
   return (
-      r.a({ href: topic.url, title: tooltip, className: className }, title));
+      Link({ to: topic.url, title: tooltip, className: className }, title));
 }
 
 

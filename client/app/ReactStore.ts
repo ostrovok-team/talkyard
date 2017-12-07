@@ -77,7 +77,7 @@ function makeAutoPage(): any {
 // This is for avoiding null errors, 1) when the current user visits an auto page, or 2) when
 // the user is new at the site and doesn't have any custom data/settings for the current page.
 // Dupl code [4FBR20].
-function makeNoPageData(): MyPageData {
+export function makeNoPageData(): MyPageData {
   return {
     dbgSrc: 'MyNP',
     rolePageSettings: {notfLevel: NotfLevel.Normal},
@@ -336,6 +336,10 @@ ReactDispatcher.register(function(payload) {
     case ReactActions.actionTypes.PatchTheStore:
       patchTheStore(action.storePatch);
       break;
+
+    case ReactActions.actionTypes.ShowNewPage:
+      showNewPage(action.newPage, action.newUsers, action.myData);
+    break;
 
     case ReactActions.actionTypes.UpdateUserPresence:
       if (action.presence === Presence.Active) {
@@ -1251,6 +1255,18 @@ function patchTheStore(storePatch: StorePatch) {
       Server.markCurrentPageAsSeen();
     }
   }
+}
+
+
+function showNewPage(newPage: Page, newUsers: BriefUser[], myData: MyPageData) {
+  store.pagesById[newPage.pageId] = newPage;
+  store.currentPage = newPage;
+  store.currentPageId = newPage.pageId;
+  store.me.myDataByPageId[newPage.pageId] = myData;
+  store.me.myCurrentPageData = myData;
+  _.each(newUsers, (user: BriefUser) => {
+    store.usersByIdBrief[user.id] = user;
+  });
 }
 
 

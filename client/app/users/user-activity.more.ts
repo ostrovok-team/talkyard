@@ -193,10 +193,7 @@ const UsersTopics = createFactory({
       showLoadMoreButton: false,
       activeCategory: {},
       orderOffset: <OrderOffset> { sortOrder: TopicSortOrder.CreatedAt },
-      // `routes` and `location` only needed if making categories clickable. [7FKR0QA]
       linkCategories: false,
-      routes: null,
-      location: null,
     });
 
     return (

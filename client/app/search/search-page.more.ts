@@ -82,15 +82,14 @@ var SearchPageComponent = createReactClass(<any> {
 
   render: function() {
     return (
-      r.div({},
-        topbar.TopBar({ backToSiteButtonTitle: "Back" }),
+        //topbar.TopBar({ backToSiteButtonTitle: "Back" }),
         r.div({ className: 'esLegal_home container', style: { marginTop: '20px' } },
           // href="/" will be wrong if coming from the forum and it's base path isn't /, but e.g.
           // /forum/. Ignore this minor problem, for now. [7KUFS25]
           r.a({ className: 'esLegal_home_link', href: '/' }, "Home",
             r.span({ className: 'esLegal_home_arw' }, ' →'))),
         r.div({},
-          Route({ path: SearchRootPath, component: SearchPageContentComponent, exact: true }))));
+          Route({ path: SearchRootPath, component: SearchPageContentComponent, exact: true })));
   }
 });
 

@@ -127,11 +127,12 @@ export function MenuItem(props, ...children) {
 export function MenuItemLink(props, ...children) {
   // Don't do  r.a(props, children)  because that'd result in an """an array or iterator
   // should have a unique "key" prop""" React.js warning.
-  var linkProps = { role: 'button', href: props.href, tabIndex: props.tabIndex || -1,
+  const linkFn = props.external ? r.a : Link;
+  const linkProps = { role: 'button', to: props.to, tabIndex: props.tabIndex || -1,
     target: props.target, id: props.id };
   return (
     r.li({ role: 'presentation', className: props.className, key: props.key },
-      r.a.apply(null, [linkProps].concat(children))));
+      linkFn.apply(null, [linkProps].concat(children))));
 }
 
 

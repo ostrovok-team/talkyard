@@ -19,7 +19,6 @@
 /// <reference path="../utils/utils.ts" />
 /// <reference path="../utils/react-utils.ts" />
 /// <reference path="../help/help.ts" />
-/// <reference path="../topbar/topbar.ts" />
 /// <reference path="../help/help.ts" />
 /// <reference path="../rules.ts" />
 /// <reference path="discussion.ts" />
@@ -42,11 +41,72 @@ export const PageWithStateComponent = createReactClass(<any> {
   mixins: [debiki2.StoreListenerMixin],
 
   getInitialState: function() {
-    return { store: debiki2.ReactStore.allData() };
+    return { store: ReactStore.allData() };
   },
 
   onChange: function() {
-    this.setState({ store: debiki2.ReactStore.allData() });
+    this.setState({ store: ReactStore.allData() });
+  },
+
+  componentWillMount: function() {
+    const store: Store = this.state.store;
+    const newUrlPath = this.props.location.pathname;
+    // The page can be in the store already, either because it's included in html from the
+    // server, or because we were on the page, navigated away, and went back.
+    let hasPageAlready = false;
+    _.each(store.pagesById, (page: Page) => {
+      if (page.pagePath.value === newUrlPath) {
+        hasPageAlready = true;
+        if (page.pageId === store.currentPageId) {
+          // We just loaded the whole html page from the server, and are already trying to
+          // render 'page'. Don't try to show that page again here.
+        }
+        else {
+          // If navigating back to EmptyPageId, maybe there'll be no myData; then create empty data.
+          const myData = store.me.myDataByPageId[page.pageId] || makeNoPageData();
+          ReactActions.showNewPage(page, [], myData);
+        }
+      }
+    });
+    if (!hasPageAlready) {
+      this.loadNewPage(newUrlPath);
+    }
+  },
+
+  componentWillReceiveProps: function(nextProps) {
+    const newUrlPath = nextProps.location.pathname;
+    const isNewPath = this.props.location.pathname !== newUrlPath;
+    this.loadNewPage(newUrlPath);
+  },
+
+  loadNewPage: function(newUrlPath) {
+    // UX maybe dim & overlay-cover the current page, to prevent interactions, until request completes?
+    // So the user e.g. won't click Reply and start typing, but then the page suddenly changes.
+    Server.loadPageJson(newUrlPath, response => {
+      if (response.problemCode) {
+        // SHOULD look at the code and do sth "smart" instead.
+        die(`${response.problemMessage} [${response.problemCode}]`);
+        return;
+      }
+
+      // This is the React store for showing the page at the new url path.
+      const newStore: Store = JSON.parse(response.reactStoreJsonString);
+      const pageId = newStore.currentPageId;
+      const page = newStore.pagesById[pageId];
+      const newUsers = _.values(newStore.usersByIdBrief);
+      const myPageData = response.me.myDataByPageId[pageId];
+
+      // Maybe the page has moved to a different url? The server would still find it, via the old url,
+      // but we should update the address bar to the new correct url.
+      const pagePath = page.pagePath.value;
+      const loc = this.props.location;
+      if (pagePath !== loc.pathname) {
+        this.props.history.replace(pagePath + loc.search + loc.hash);
+      }
+
+      // This'll trigger a this.onChange() event.
+      ReactActions.showNewPage(page, newUsers, myPageData);
+    });
   },
 
   render: function() {
@@ -92,7 +152,6 @@ const Page = createComponent({
   },
 
   render: function() {
-    const isEmbeddedComments: boolean = debiki.internal.isInEmbeddedCommentsIframe;
     const store: Store = this.props.store;
     const page: Page = store.currentPage;
     const content = page_isChatChannel(page.pageRole)
@@ -100,14 +159,10 @@ const Page = createComponent({
         : debiki2.page.TitleBodyComments({ store: store });
     const compactClass = this.state.useWideLayout ? '' : ' esPage-Compact';
     const pageTypeClass = ' s_PT-' + page.pageRole;
-    const topbar = debiki2.topbar.TopBar({});
     const isChat = page_isChatChannel(page.pageRole);
     return rFragment({},
-      isChat ? topbar : null,
       isChat ? r.div({ id: 'theChatVspace' }) : null,
       r.div({ className: 'esPage' + compactClass + pageTypeClass },
-        isChat ? null : topbar,
-        isEmbeddedComments ? null : debiki2.page.ScrollButtons(),
         r.div({ className: 'container' },
           r.article({},
             content))));

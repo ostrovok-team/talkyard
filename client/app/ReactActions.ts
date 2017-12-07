@@ -67,6 +67,7 @@ export var actionTypes = {
   UpdateOnlineUsersLists: 'UpdateOnlineUsersLists',
   UpdateUserPresence: 'UpdateUserPresence',
   PatchTheStore: 'PatchTheStore',
+  ShowNewPage: 'ShowNewPage',
 };
 
 
@@ -598,6 +599,16 @@ export function patchTheStore(storePatch: StorePatch) {
   ReactDispatcher.handleViewAction({
     actionType: actionTypes.PatchTheStore,
     storePatch: storePatch,
+  });
+}
+
+
+export function showNewPage(newPage: Page, newUsers: BriefUser[], myData: MyPageData) {
+  ReactDispatcher.handleViewAction({
+    actionType: actionTypes.ShowNewPage,
+    newPage,
+    newUsers,
+    myData,
   });
 }
 

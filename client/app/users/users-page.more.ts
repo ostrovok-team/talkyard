@@ -47,9 +47,8 @@ const UsersHomeComponent = createReactClass(<any> {
 
   render: function() {
     return (
-      r.div({},
-        topbar.TopBar({ customTitle: "About User",
-            backToSiteButtonTitle: "Back from user profile", extraMargin: true }),
+        //topbar.TopBar({ customTitle: "About User",
+        //    backToSiteButtonTitle: "Back from user profile", extraMargin: true }),
         Switch({},
           Route({ path: UsersRoot, component: BadUrlComponent, exact: true }),
           Route({ path: UsersRoot + ':usernameOrId', exact: true,
@@ -58,7 +57,7 @@ const UsersHomeComponent = createReactClass(<any> {
                   to: UsersRoot + match.params.usernameOrId + '/activity' + this.props.location.hash })
           }),
           Route({ path: UsersRoot + ':usernameOrId/:section?/:subsection?',
-              component: UserPageComponent }))));
+              component: UserPageComponent })));
   }
 });
 
