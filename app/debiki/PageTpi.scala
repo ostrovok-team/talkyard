@@ -121,6 +121,7 @@ class SiteTpi protected (
 
 
   def debikiHtmlTagClasses: String = {
+    // Sync with js [4JXW5I2].
     val chatClass = if (anyCurrentPageRole.exists(_.isChat)) "es-chat " else ""
     val forumClass = if (anyCurrentPageRole.contains(PageRole.Forum)) "es-forum " else ""
     val customClass = anyCurrentPageMeta.map(_.htmlTagCssClasses + " ") getOrElse ""
@@ -222,8 +223,9 @@ class SiteTpi protected (
 
   /** The initial data in the React-Flux model, a.k.a. store. */
   def reactStoreSafeJsonString: String =
-    json getOrElse ReactJson.makeSpecialPageJson(
-        debikiRequest, inclCategoriesJson = !isAdminArea).toString()
+    json getOrElse ReactJson.makeSpecialPageJson(debikiRequest,
+      // The admin app is its own single-page-app and doesn't need the categories. [6TKQ20]
+      inclCategoriesJson = !isAdminArea).toString()
 
 
   def assetUrl(fileName: String): String = assetUrlPrefix + fileName

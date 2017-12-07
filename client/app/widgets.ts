@@ -97,6 +97,16 @@ function makeWidget(what, spaceWidgetClasses: string, extraProps?) {
       delete newProps.primary;
     }
 
+    // Make link buttons navigate whithin the single-page-app, no page reloads. Even if they're
+    // in a different React root. But skip the admin app — it's its own SPA. [6TKQ20]
+    if (what === r.a && !newProps.onClick && newProps.href.search('/-/admin/') === -1) {
+      newProps.onClick = function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        debiki2.page['Hacks'].navigateTo(newProps.href);
+      }
+    }
+
     const anyHelpDiv =
         helpText && r.p({ className: 'help-block', key: newProps.key + '-help' }, helpText);
 

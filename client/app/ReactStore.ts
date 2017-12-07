@@ -1261,6 +1261,7 @@ function patchTheStore(storePatch: StorePatch) {
 
 
 function showNewPage(newPage: Page, newUsers: BriefUser[], myData: MyPageData) {
+  const oldPage: Page = store.currentPage;
   store.pagesById[newPage.pageId] = newPage;
   store.currentPage = newPage;
   store.currentPageId = newPage.pageId;
@@ -1269,6 +1270,31 @@ function showNewPage(newPage: Page, newUsers: BriefUser[], myData: MyPageData) {
   _.each(newUsers, (user: BriefUser) => {
     store.usersByIdBrief[user.id] = user;
   });
+
+  // Update <html> elem classes list, so pages with custom classes & CSS render properly.
+  const oldClassesStr = (oldPage.pageHtmlTagCssClasses || '') + magicClassFor(oldPage);
+  const newClassesStr = (newPage.pageHtmlTagCssClasses || '') + magicClassFor(newPage);
+  function magicClassFor(page: Page): string {
+    // Sync with Scala [4JXW5I2].
+    if (page_isChatChannel(page.pageRole)) return ' es-chat';
+    if (page.pageRole === PageRole.Forum) return ' es-forum';
+    return '';
+  }
+  if (oldClassesStr || newClassesStr) {
+    const regex = /[ ,]/;
+    const oldClasses = oldClassesStr.split(regex);
+    const newClasses = newClassesStr.split(regex);
+    addOrRemoveClasses(oldClasses, newClasses, $h.removeClasses);
+    addOrRemoveClasses(newClasses, oldClasses, $h.addClasses);
+    function addOrRemoveClasses(as, bs, fn) {
+      for (let i = 0; i < as.length; ++i) {
+        const a = as[i].trim();
+        if (a && bs.indexOf(a) === -1) {
+          fn(document.documentElement, a);
+        }
+      }
+    }
+  }
 }
 
 
