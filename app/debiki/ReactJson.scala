@@ -544,6 +544,7 @@ object ReactJson {
       // (WOULD move 'me' to the volatile json; suddenly having it here in the main json is
       // a bit surprising.) CLEAN_UP
       "me" -> userNoPageToJson(request),
+      "rootPostId" -> JsNumber(PageParts.BodyNr),
       "maxUploadSizeBytes" -> globals.maxUploadSizeBytes,
       "siteSections" -> makeSiteSectionsJson(dao),
       "usersByIdBrief" -> Json.obj(),

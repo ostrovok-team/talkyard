@@ -123,7 +123,7 @@ const UsersPosts = createFactory({
     let postElems = posts.map((post: PostWithPage) => {
       return (
         r.li({ key: post.uniqueId, className: 's_UP_Act_Ps_P' },
-          r.a({ href: linkToPostNr(post.pageId, post.nr),
+          Link({ to: linkToPostNr(post.pageId, post.nr),
               className: 's_UP_Act_Ps_P_Link ' + pageRole_iconClass(post.pageRole) },
             post.pageTitle),
           avatar.Avatar({ user: author }),

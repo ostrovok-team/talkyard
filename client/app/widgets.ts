@@ -143,9 +143,23 @@ export function MenuItem(props, ...children) {
 export function MenuItemLink(props, ...children) {
   // Don't do  r.a(props, children)  because that'd result in an """an array or iterator
   // should have a unique "key" prop""" React.js warning.
-  const linkFn = props.external ? r.a : Link;
-  const linkProps = { role: 'button', to: props.to, tabIndex: props.tabIndex || -1,
+
+  // If we're in the admin area, use <a href> because then the destinations are in another
+  // single-page-app. And if we're in the forum app, use Link, for instant within-the-SPA navigation.
+  const isInAdminArea = location.pathname.search('/-/admin/') === 0;
+  const isToAdminArea = props.to.search('/-/admin/') === 0;
+  const useSpaLink = isInAdminArea === isToAdminArea;
+
+  // useSpaLink —> create a Link({ to: ... }).
+  // Otherwise, create a r.a({ href: ... }).
+
+  const linkFn = useSpaLink ? Link : r.a;
+  const addrAttr = useSpaLink ? 'to' : 'href';
+
+  const linkProps = { role: 'button', tabIndex: props.tabIndex || -1,
     target: props.target, id: props.id };
+  linkProps[addrAttr] = props.to;
+
   return (
     r.li({ role: 'presentation', className: props.className, key: props.key },
       linkFn.apply(null, [linkProps].concat(children))));

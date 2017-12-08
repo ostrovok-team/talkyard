@@ -102,22 +102,10 @@ export function startMainReactRoot() {
     return;
   }
 
-  // /-/users/*
-  // <!-- users.scala.html -->
-  // @wrapper(tpi) {
-  // <div id="dw-react-user-page"></div>
-  const userPageElem = document.getElementById('dw-react-user-page');
-
-  // /-/search
-  // <!-- search.scala.html -->
-  // @wrapper(tpi) {
-  // <div id="t_SearchPage"></div>
-  const searchPageElem = document.getElementById('t_SearchPage');
+  // The rest below is for the main React app: the forum topic list, topic pages, user profile
+  // pages, the search page.
 
   const pageElem = document.getElementById('dwPosts');
-  const theElem = userPageElem || searchPageElem || pageElem;
-
-  dieIf(!theElem, 'EdE2LBRG3');
 
   const store: Store = ReactStore.allData();
   const forumRootSlash = store.forumPath;
@@ -149,7 +137,7 @@ export function startMainReactRoot() {
               Route({ path: forumRootSlash + RoutePathTop, component: forum.ForumComponent }),
               Route({ path: forumRootSlash + RoutePathCategories, component: forum.ForumComponent }),
               Route({ path: '/', component: PageWithStateComponent })))),
-      userPageElem || searchPageElem || pageElem);
+      pageElem);
   }
 }
 

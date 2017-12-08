@@ -52,20 +52,17 @@ export const MyMenuContent = createFactory({
 
       // ------- Staff link, notfs, help
 
-      // (The admin app is a separate single-page-app, so set external=true, so won't
-      // attempt to load those links in the current SPA.)
-
       var urgentReviewTasks = makeNotfIcon('reviewUrgent', me.numUrgentReviewTasks);
       var otherReviewTasks = makeNotfIcon('reviewOther', me.numOtherReviewTasks);
       var adminMenuItem = !isStaff(me) ? null :
-        MenuItemLink({ to: linkToAdminPage(me), className: 'esMyMenu_admin', external: true },
+        MenuItemLink({ to: linkToAdminPage(me), className: 'esMyMenu_admin' },
           r.span({ className: 'icon-settings' }, "Admin"));
       var reviewMenuItem = !urgentReviewTasks && !otherReviewTasks ? null :
-        MenuItemLink({ to: linkToReviewPage(), id: 'e2eMM_Review', external: true },
+        MenuItemLink({ to: linkToReviewPage(), id: 'e2eMM_Review' },
           "Needs review ", urgentReviewTasks, otherReviewTasks);
 
       var adminHelpLink = !isStaff(me) ? null :
-        MenuItemLink({ to: externalLinkToAdminHelp(), target: '_blank', external: true,
+        MenuItemLink({ to: externalLinkToAdminHelp(), target: '_blank',
             className: 'esMyMenu_adminHelp' },
           r.span({}, (me.isAdmin ? "Admin" : "Staff") + " help ",
             r.span({ className: 'icon-link-ext' })));
