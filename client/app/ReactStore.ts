@@ -64,12 +64,15 @@ store.user = store.me; // try to remove
 // Auto pages are e.g. admin or user profile pages, html generated automatically when needed.
 // No page id or user created data server side. Auto pages need this default empty stuff,
 // to avoid null errors.
-function makeAutoPage(): any {
+export function makeAutoPage(path?: string): any {
   return {
     dbgSrc: 'AP',
     ancestorsRootFirst: [],
     pageMemberIds: [],
     postsByNr: [],
+    pagePath: {
+      value: path,
+    },
   };
 }
 

@@ -54,6 +54,7 @@ declare const SiteStatusStrings: string[];
 
 declare const ApiUrlPathPrefix;
 declare const UsersRoot;
+declare const SearchRootPath;
 
 
 declare const RoutePathLatest;

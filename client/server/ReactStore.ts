@@ -5,7 +5,8 @@
    module debiki2 {
 //------------------------------------------------------------------------------
 
-export function makeNoPageData() { die('K42B5R'); }
+export function makeNoPageData() { die('K42B01'); }
+export function makeAutoPage(path?: string) { die('K42B02'); }
 
 //------------------------------------------------------------------------------
    }

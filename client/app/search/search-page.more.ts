@@ -23,7 +23,6 @@
 //------------------------------------------------------------------------------
 
 const r = ReactDOMFactories;
-const SearchRootPath = '/-/search';
 
 
 // COULD config the router to avoid % encoding in the URL inside tag names,

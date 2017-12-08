@@ -16,6 +16,7 @@
  */
 
 /// <reference path="../ReactStore.ts" />
+/// <reference path="../ReactActions.ts" />
 /// <reference path="../links.ts" />
 /// <reference path="../widgets.ts" />
 /// <reference path="../page-methods.ts" />
@@ -55,6 +56,11 @@ export const TopBar = createComponent({
 
   componentWillUnmount: function() {
     this.isGone = true;
+  },
+
+  componentWillMount: function() {
+    const path = this.props.location.pathname;
+    ReactActions.showNewPage(makeAutoPage(path), [], makeNoPageData(), this.props.history);
   },
 
   componentDidMount: function() {
@@ -290,23 +296,31 @@ export const TopBar = createComponent({
 
     // ------- Custom title & Back to site button
 
-    let customTitle;
-    if (this.props.customTitle) {
-      customTitle = r.h1({ className: 'esTopbar_custom_title' }, this.props.customTitle);
-    }
-
-    let backToSiteButton;
-    if (this.props.showBackToSite || this.props.backToSiteButtonTitle) {
-      backToSiteButton = r.a({ className: 'esTopbar_custom_backToSite btn icon-reply',
-          onClick: goBackToSite }, this.props.backToSiteButtonTitle || "Back from admin area");
-    }
+    // CLEAN_UP remove the props? Use if(path.search..) also for the admin area?
+    let extraMargin = this.props.extraMargin;
+    let customTitle = this.props.customTitle;
+    let backToSiteButton = this.props.backToSiteButtonTitle;
 
     if (this.props.location) {
-      if (this.props.location.pathname.search(UsersRoot) === 0) {
+      const path: string = this.props.location.pathname;
+      if (path.search(UsersRoot) === 0) {
         customTitle = "About User";
         backToSiteButton = "Back from user profile";
       }
-      // else if   /-/search  then  [<- Back]
+      else if (path.search(SearchRootPath) === 0) {
+        customTitle = "Search Page";
+        backToSiteButton = "Back";
+      }
+    }
+
+    if (customTitle) {
+      customTitle = r.h1({ className: 'esTopbar_custom_title' }, customTitle);
+    }
+
+    if (this.props.showBackToSite || backToSiteButton) {
+      backToSiteButton = r.a({ className: 'esTopbar_custom_backToSite btn icon-reply',
+          onClick: goBackToSite }, backToSiteButton || "Back from admin area");
+      extraMargin = true;
     }
 
     // ------- Open Contextbar button
@@ -376,7 +390,7 @@ export const TopBar = createComponent({
 
     // ------- The result
 
-    const extraMarginClass = this.props.extraMargin ? ' esTopbar-extraMargin' : '';
+    const extraMarginClass = extraMargin ? ' esTopbar-extraMargin' : '';
 
     const topbar =
       r.div({ className: 'esTopbar' + extraMarginClass },

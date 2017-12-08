@@ -699,7 +699,7 @@ export function loadAndShowNewPage(newUrlPath, history) {
 }
 
 
-function showNewPage(newPage: Page, newUsers: BriefUser[], myData: MyPageData, history: History) {
+export function showNewPage(newPage: Page, newUsers: BriefUser[], myData: MyPageData, history: History) {
   ReactDispatcher.handleViewAction({
     actionType: actionTypes.ShowNewPage,
     newPage,
