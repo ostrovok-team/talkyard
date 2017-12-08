@@ -1261,12 +1261,19 @@ function patchTheStore(storePatch: StorePatch) {
 
 
 function showNewPage(newPage: Page, newUsers: BriefUser[], myData: MyPageData) {
+
+  // Upload any current reading progress, before changing page id.
+  page.PostsReadTracker.sendAnyRemainingData(() => {}); // not as beacon
+
+  // Change page.
   const oldPage: Page = store.currentPage;
   store.pagesById[newPage.pageId] = newPage;
   store.currentPage = newPage;
   store.currentPageId = newPage.pageId;
   store.me.myDataByPageId[newPage.pageId] = myData;
   store.me.myCurrentPageData = myData;
+
+  // Add users on the new page, to the global users-by-id map.
   _.each(newUsers, (user: BriefUser) => {
     store.usersByIdBrief[user.id] = user;
   });
@@ -1295,6 +1302,15 @@ function showNewPage(newPage: Page, newUsers: BriefUser[], myData: MyPageData) {
       }
     }
   }
+
+  // Restart the reading progress tracker, now when on a new page.
+  page.PostsReadTracker.reset();
+
+  // Update any top header links so the hereaafter active one (if any) gets highlighted/underlineg.
+  debiki2.utils.highlightActiveLinkInHeader();
+
+  // When done rendering, replace date ISO strings with pretty dates.
+  setTimeout(debiki2.page.Hacks.processPosts);
 }
 
 

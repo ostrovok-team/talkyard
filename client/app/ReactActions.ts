@@ -631,9 +631,17 @@ export function maybeLoadAndShowNewPage(store: Store, newUrlPath: string) {
         // render 'page'. Don't try to show that page again here.
       }
       else {
+        // FOR NOW: since pushing of updates to [pages in the store other than the one
+        // currently shown], is so very untested, for now, reload the json data always,
+        // to be sure they're up-to-date. They are kept up-to-date automatically, if they're
+        // in the watchbar's recent-pages list. But I haven't tested this properly, also,
+        // the recent-pages-list might suffer from race conditions? and become out-of-date?
+        hasPageAlready = false; // [8YDVP2A]
+        /* Later:
         // If navigating back to EmptyPageId, maybe there'll be no myData; then create empty data.
         const myData = store.me.myDataByPageId[page.pageId] || makeNoPageData();
         showNewPage(page, [], myData);
+        */
       }
     }
   });
