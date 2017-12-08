@@ -101,9 +101,15 @@ function makeWidget(what, spaceWidgetClasses: string, extraProps?) {
     // in a different React root. But skip the admin app — it's its own SPA. [6TKQ20]
     if (what === r.a && !newProps.onClick && newProps.href.search('/-/admin/') === -1) {
       newProps.onClick = function(event) {
-        event.preventDefault();
-        event.stopPropagation();
+        event.preventDefault(); // avoids full page reload
         debiki2.page['Hacks'].navigateTo(newProps.href);
+        // Some ancestor components ignore events whose target is not their own divs & stuff.
+        // Not my code, cannot change that. I have in mind React-Bootstrap's Modal, which does this:
+        // `if (e.target !== e.currentTarget) return; this.props.onHide();` — so onHide() never
+        // gets called. But we can use afterClick: ...:
+        if (newProps.afterClick) {
+          newProps.afterClick();
+        }
       }
     }
 

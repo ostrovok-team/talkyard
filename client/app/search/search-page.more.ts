@@ -270,7 +270,7 @@ function AdvancedSearchPanel(props: {
       onTagsSelectionChange: any,
       onNotTagsSelectionChange: any,
       onCategoriesSelectionChange: any }) {
-  const store: Store = this.props.store;
+  const store: Store = props.store;
   return (
     r.div({},
       r.div({ className: 'form-group' },

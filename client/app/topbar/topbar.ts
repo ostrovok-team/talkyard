@@ -276,8 +276,8 @@ export const TopBar = createComponent({
 
     const searchButton =
        utils.ModalDropdownButton({ title: r.span({ className: 'icon-search' }),
-            className: 'esTB_SearchBtn', allowFullWidth: true, closeOnClick: false },
-         SearchForm({}));
+            className: 'esTB_SearchBtn', allowFullWidth: true, closeOnClick: false,
+          render: SearchForm });
 
     // ------- Forum title
 
@@ -460,13 +460,14 @@ const SearchForm = createComponent({
     let searchEndpoint    = '/-/search';
     let searchUrl         = '/-/search?q=' + urlEncodedQuery;
     let searchUrlAdvanced = '/-/search?advanced=true&q=' + urlEncodedQuery;
+    const afterClick = this.props.closeDropdown;
     return (
         r.form({ className: 'esTB_SearchD', ref: 'form',
             method: 'get', acceptCharset: 'UTF-8', action: searchEndpoint },
           (<any> r.input)({ type: 'text', tabIndex: '1', placeholder: "Text to search for",  // [TYPEERROR]
               ref: 'input', name: 'q',
               value: this.state.queryInputText, onChange: this.onQueryChange }),
-          PrimaryLinkButton({ href: searchUrl, className: 'e_SearchB' }, "Search"),
+          PrimaryLinkButton({ href: searchUrl, className: 'e_SearchB', afterClick }, "Search"),
           r.div({},
             r.a({ className: 'esTB_SearchD_AdvL', href: searchUrlAdvanced },
               "Advanced search"))));
