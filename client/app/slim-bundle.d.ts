@@ -8,6 +8,8 @@ declare const ReactCSSTransitionGroup: any;
 declare const ReactDOMFactories: any;
 declare const createReactClass: any;
 declare function reactCreateFactory(x);
+declare const rFragment: any;
+
 declare function doNextFrameOrNow(x);
 declare function getSetCookie(cookieName: string, value?: string, options?: any): string;
 declare const parseQueryString: (s: string) => any;
@@ -51,6 +53,7 @@ declare const SiteStatusStrings: string[];
 
 
 declare const ApiUrlPathPrefix;
+declare const UsersRoot;
 
 
 declare const RoutePathLatest;

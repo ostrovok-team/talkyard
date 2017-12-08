@@ -124,7 +124,7 @@ export function startMainReactRoot() {
     renderOrHydrate(
         Router({},
           rFragment({},
-            debiki2.topbar.TopBar({}),
+            Route({ render: debiki2.topbar.TopBar }),
             isEmbCmts ? null : debiki2.page.ScrollButtons(),
             isEmbCmts ? null : Route({ component: debiki2.page.Hacks.ExtReactRootNavComponent }),
             Switch({},

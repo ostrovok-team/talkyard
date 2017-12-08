@@ -102,9 +102,7 @@ export const ForumComponent = createReactClass(<any> {
   },
 
   componentWillMount: function() {
-    const store: Store = this.state.store;
-    const newUrlPath = this.props.location.pathname;
-    ReactActions.maybeLoadAndShowNewPage(store, newUrlPath);
+    ReactActions.maybeLoadAndShowNewPage(this.state.store, this.props.history, this.props.location);
   },
 
   componentDidMount: function() {

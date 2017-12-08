@@ -70,6 +70,7 @@ function isReviewPostTask(reviewTask: ReviewTask): boolean {
 
 
 const ApiUrlPathPrefix = '/-/';
+const UsersRoot = '/-/users/';
 
 
 const RoutePathLatest = 'latest';

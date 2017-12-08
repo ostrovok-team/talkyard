@@ -338,7 +338,7 @@ ReactDispatcher.register(function(payload) {
       break;
 
     case ReactActions.actionTypes.ShowNewPage:
-      showNewPage(action.newPage, action.newUsers, action.myData);
+      showNewPage(action.newPage, action.newUsers, action.myData, action.history);
     break;
 
     case ReactActions.actionTypes.UpdateUserPresence:
@@ -1260,7 +1260,7 @@ function patchTheStore(storePatch: StorePatch) {
 }
 
 
-function showNewPage(newPage: Page, newUsers: BriefUser[], myData: MyPageData) {
+function showNewPage(newPage: Page, newUsers: BriefUser[], myData: MyPageData, history) {
 
   // Upload any current reading progress, before changing page id.
   page.PostsReadTracker.sendAnyRemainingData(() => {}); // not as beacon
@@ -1301,6 +1301,17 @@ function showNewPage(newPage: Page, newUsers: BriefUser[], myData: MyPageData) {
         }
       }
     }
+  }
+
+  // Maybe a /-pageid path to the page was specified. But that won't work for forum pages,
+  // whose routes have been mounted only on path like /forum/. So, if the path is
+  // incorrect, then correct it: update the address bar to the correct page path.
+  // This is best done here? Before emitting the change event, so won't trigger changes twice?
+  // COULD_OPTIMIZE AVOID_RERENDER But history.replace triggers a re-render immediately :-(
+  // no way to avoid that? And instead merge with the emit(ChangeEvent) above?
+  const pagePath = newPage.pagePath.value;
+  if (pagePath !== location.pathname) {
+    history.replace(pagePath + location.search + location.hash);
   }
 
   // Restart the reading progress tracker, now when on a new page.

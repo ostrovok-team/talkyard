@@ -81,8 +81,7 @@ var SearchPageComponent = createReactClass(<any> {
   displayName: 'SearchPageComponent',
 
   render: function() {
-    return (
-        //topbar.TopBar({ backToSiteButtonTitle: "Back" }),
+    return rFragment({},
         r.div({ className: 'esLegal_home container', style: { marginTop: '20px' } },
           // href="/" will be wrong if coming from the forum and it's base path isn't /, but e.g.
           // /forum/. Ignore this minor problem, for now. [7KUFS25]

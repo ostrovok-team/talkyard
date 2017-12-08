@@ -99,6 +99,8 @@ function makeWidget(what, spaceWidgetClasses: string, extraProps?) {
 
     // Make link buttons navigate whithin the single-page-app, no page reloads. Even if they're
     // in a different React root. But skip the admin app — it's its own SPA. [6TKQ20]
+    const afterClick = newProps.afterClick;
+    delete newProps.afterClick;
     if (what === r.a && !newProps.onClick && newProps.href.search('/-/admin/') === -1) {
       newProps.onClick = function(event) {
         event.preventDefault(); // avoids full page reload
@@ -107,8 +109,8 @@ function makeWidget(what, spaceWidgetClasses: string, extraProps?) {
         // Not my code, cannot change that. I have in mind React-Bootstrap's Modal, which does this:
         // `if (e.target !== e.currentTarget) return; this.props.onHide();` — so onHide() never
         // gets called. But we can use afterClick: ...:
-        if (newProps.afterClick) {
-          newProps.afterClick();
+        if (afterClick) {
+          afterClick();
         }
       }
     }

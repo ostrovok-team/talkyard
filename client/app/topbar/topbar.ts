@@ -197,7 +197,7 @@ export const TopBar = createComponent({
       ancestorCategories =
         r.ol({ className: 'esTopbar_ancestors' },
           r.li({},
-            r.a({ className: 'esTopbar_ancestors_link btn', href: homePath }, "Home")));
+            Link({ className: 'esTopbar_ancestors_link btn', to: homePath }, "Home")));
     }
     else {
       // This isn't a private-message topic, and still it isn't placed in any section,
@@ -299,6 +299,14 @@ export const TopBar = createComponent({
     if (this.props.showBackToSite || this.props.backToSiteButtonTitle) {
       backToSiteButton = r.a({ className: 'esTopbar_custom_backToSite btn icon-reply',
           onClick: goBackToSite }, this.props.backToSiteButtonTitle || "Back from admin area");
+    }
+
+    if (this.props.location) {
+      if (this.props.location.pathname.search(UsersRoot) === 0) {
+        customTitle = "About User";
+        backToSiteButton = "Back from user profile";
+      }
+      // else if   /-/search  then  [<- Back]
     }
 
     // ------- Open Contextbar button

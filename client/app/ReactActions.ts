@@ -603,27 +603,51 @@ export function patchTheStore(storePatch: StorePatch) {
 }
 
 
-export function maybeLoadAndShowNewPage(store: Store, newUrlPath: string) {
-  // The page can be in the store already, either because it's included in html from the
-  // server, or because we were on the page, navigated away, and went back.
+export function maybeLoadAndShowNewPage(store: Store,
+        history: History, location: Location, newUrlPath?: string) {
+
+  // If navigating within a mounted component.
+  if (location.pathname === newUrlPath)
+    return;
+
+  // If the component just got mounted.
+  if (!newUrlPath)
+    newUrlPath = location.pathname;
+
+  // The page can be in the store already, either 1) because it's included in html from the
+  // server, or 2) because we were on the page, navigated away, and went back.
+  // Or 3) because we just loaded it via '/-pageid', and now we're updating the url to
+  // the correct page path, say '/forum/'. (4WKBT80)
+
   let hasPageAlready = false;
+
   _.each(store.pagesById, (page: Page) => {
-    const pagePath = page.pagePath.value;
-    let isThisPage = pagePath === newUrlPath;
-    // But in a forum, there's sth like '/latest/ideas' after the forum page path. So,
-    // special check for forum pages: a prefix match is enough.
-    const thisIsForumPage = pagePath === store.forumPath;
-    if (!isThisPage && thisIsForumPage) {
-      // We've already tested for an exact path match — so only look for /active | /new etc routes now.
-      const slash = pagePath[pagePath.length - 1] === '/' ? '' : '/';
+    const storePagePath = page.pagePath.value;
+
+    // Is this page in the store the one we're navigating to?
+    let isThisPage = storePagePath === newUrlPath;
+
+    // Maybe the url path is wrong? Case 3 above (4WKBT80): test '/-pageid' urls.
+    if (!isThisPage) {
+      const idPathRegex = new RegExp(`.*/-${page.pageId}(/.*)?`);  // [2WBG49]
+      isThisPage =  idPathRegex.test(newUrlPath);
+    }
+
+    // In a forum, there's sth like '/latest/ideas' after the forum page path. So,
+    // special check for forum pages; just a prefix match is enough.
+    const storePageIsTheForum = storePagePath === store.forumPath;
+    if (!isThisPage && storePageIsTheForum) {
+      // We've already tested for an exact path match — so only look for /active|/new|etc routes now.
+      const slash = storePagePath[storePagePath.length - 1] === '/' ? '' : '/';
       const latest = RoutePathLatest;
       const neew = RoutePathNew;
       const top = RoutePathTop;
       const cats = RoutePathCategories;
-      const isForumRegex = new RegExp(
-          `^${pagePath}${slash}(${latest}|${neew}|${top}|${cats})(/.*)?$`);
-      isThisPage = isForumRegex.test(newUrlPath);
+      const newPathIsToForumRegex = new RegExp(
+          `^${store.forumPath}${slash}(${latest}|${neew}|${top}|${cats})(/.*)?$`);
+      isThisPage = newPathIsToForumRegex.test(newUrlPath);
     }
+
     if (isThisPage) {
       hasPageAlready = true;
       if (page.pageId === store.currentPageId) {
@@ -645,13 +669,14 @@ export function maybeLoadAndShowNewPage(store: Store, newUrlPath: string) {
       }
     }
   });
+
   if (!hasPageAlready) {
-    loadAndShowNewPage(newUrlPath);
+    loadAndShowNewPage(newUrlPath, history);
   }
 }
 
 
-export function loadAndShowNewPage(newUrlPath) {
+export function loadAndShowNewPage(newUrlPath, history) {
   // UX maybe dim & overlay-cover the current page, to prevent interactions, until request completes?
   // So the user e.g. won't click Reply and start typing, but then the page suddenly changes.
   Server.loadPageJson(newUrlPath, response => {
@@ -668,27 +693,19 @@ export function loadAndShowNewPage(newUrlPath) {
     const newUsers = _.values(newStore.usersByIdBrief);
     const myPageData = response.me.myDataByPageId[pageId];
 
-    /* REMOVE barely matters? Just compl to test?
-    // Maybe the page has moved to a different url? The server would still find it, via the old url,
-    // but we should update the address bar to the new correct url.
-    const pagePath = page.pagePath.value;
-    const loc = this.props.location;
-    if (pagePath !== loc.pathname) {
-      this.props.history.replace(pagePath + loc.search + loc.hash);
-    } */
-
     // This'll trigger a this.onChange() event.
-    showNewPage(page, newUsers, myPageData);
+    showNewPage(page, newUsers, myPageData, history);
   });
 }
 
 
-function showNewPage(newPage: Page, newUsers: BriefUser[], myData: MyPageData) {
+function showNewPage(newPage: Page, newUsers: BriefUser[], myData: MyPageData, history: History) {
   ReactDispatcher.handleViewAction({
     actionType: actionTypes.ShowNewPage,
     newPage,
     newUsers,
     myData,
+    history,
   });
 }
 

@@ -49,17 +49,12 @@ export const PageWithStateComponent = createReactClass(<any> {
   },
 
   componentWillMount: function() {
-    const store: Store = this.state.store;
-    const newUrlPath = this.props.location.pathname;
-    ReactActions.maybeLoadAndShowNewPage(store, newUrlPath);
+    ReactActions.maybeLoadAndShowNewPage(this.state.store, this.props.history, this.props.location);
   },
 
   componentWillReceiveProps: function(nextProps) {
-    const newUrlPath = nextProps.location.pathname;
-    const isNewPath = this.props.location.pathname !== newUrlPath;
-    if (isNewPath) {
-      ReactActions.loadAndShowNewPage(newUrlPath);
-    }
+    ReactActions.maybeLoadAndShowNewPage(this.state.store, this.props.history, this.props.location,
+        nextProps.location.pathname);
   },
 
   render: function() {
