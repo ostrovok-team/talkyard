@@ -606,6 +606,10 @@ export function patchTheStore(storePatch: StorePatch) {
 export function maybeLoadAndShowNewPage(store: Store,
         history: History, location: Location, newUrlPath?: string) {
 
+  // No router, so no history or location, if in embedded discussion.
+  if (store.isInEmbeddedCommentsIframe)
+    return;
+
   // If navigating within a mounted component.
   if (location.pathname === newUrlPath)
     return;
@@ -691,10 +695,11 @@ export function loadAndShowNewPage(newUrlPath, history) {
     const pageId = newStore.currentPageId;
     const page = newStore.pagesById[pageId];
     const newUsers = _.values(newStore.usersByIdBrief);
-    const myPageData = response.me.myDataByPageId[pageId];
+    const me: Myself = response.me;
+    const anyMyPageData = me ? me.myDataByPageId[pageId] : null;
 
     // This'll trigger a this.onChange() event.
-    showNewPage(page, newUsers, myPageData, history);
+    showNewPage(page, newUsers, anyMyPageData, history);
   });
 }
 

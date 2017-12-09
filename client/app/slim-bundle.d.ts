@@ -37,6 +37,8 @@ declare const LowestAuthenticatedUserId;
 declare const MaxGuestId;
 declare const UnknownUserId;
 
+declare function makeNoPageData(): MyPageData;
+declare function makeAutoPage(): any;
 
 declare const ManualReadMark;
 declare const YellowStarMark;

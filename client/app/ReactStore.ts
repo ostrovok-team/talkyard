@@ -64,15 +64,13 @@ store.user = store.me; // try to remove
 // Auto pages are e.g. admin or user profile pages, html generated automatically when needed.
 // No page id or user created data server side. Auto pages need this default empty stuff,
 // to avoid null errors.
-export function makeAutoPage(path?: string): any {
+export function makeAutoPage(): any {
   return {
     dbgSrc: 'AP',
     ancestorsRootFirst: [],
     pageMemberIds: [],
     postsByNr: [],
-    pagePath: {
-      value: path,
-    },
+    pagePath: {},
   };
 }
 
@@ -97,6 +95,8 @@ export function makeNoPageData(): MyPageData {
 ReactDispatcher.register(function(payload) {
   const action = payload.action;
   const currentPage = store.currentPage;
+  // SHOULD clone the store here? [8GKB3QA] but might introduce so many bugs, so wait a bit.
+  // So becomes (more) immutable.
   switch (action.actionType) {
 
     case ReactActions.actionTypes.NewMyself:
@@ -1263,7 +1263,7 @@ function patchTheStore(storePatch: StorePatch) {
 }
 
 
-function showNewPage(newPage: Page, newUsers: BriefUser[], myData: MyPageData, history) {
+function showNewPage(newPage: Page, newUsers: BriefUser[], myData: MyPageData | null, history) {
 
   // Upload any current reading progress, before changing page id.
   page.PostsReadTracker.sendAnyRemainingData(() => {}); // not as beacon
@@ -1273,8 +1273,10 @@ function showNewPage(newPage: Page, newUsers: BriefUser[], myData: MyPageData, h
   store.pagesById[newPage.pageId] = newPage;
   store.currentPage = newPage;
   store.currentPageId = newPage.pageId;
-  store.me.myDataByPageId[newPage.pageId] = myData;
-  store.me.myCurrentPageData = myData;
+  if (myData) {
+    store.me.myDataByPageId[newPage.pageId] = myData;
+  }
+  store.me.myCurrentPageData = myData || makeNoPageData();
 
   // Add users on the new page, to the global users-by-id map.
   _.each(newUsers, (user: BriefUser) => {
@@ -1313,7 +1315,7 @@ function showNewPage(newPage: Page, newUsers: BriefUser[], myData: MyPageData, h
   // COULD_OPTIMIZE AVOID_RERENDER But history.replace triggers a re-render immediately :-(
   // no way to avoid that? And instead merge with the emit(ChangeEvent) above?
   const pagePath = newPage.pagePath.value;
-  if (pagePath !== location.pathname) {
+  if (pagePath && pagePath !== location.pathname) {
     history.replace(pagePath + location.search + location.hash);
   }
 

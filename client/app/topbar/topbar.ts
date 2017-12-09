@@ -58,11 +58,6 @@ export const TopBar = createComponent({
     this.isGone = true;
   },
 
-  componentWillMount: function() {
-    const path = this.props.location.pathname;
-    ReactActions.showNewPage(makeAutoPage(path), [], makeNoPageData(), this.props.history);
-  },
-
   componentDidMount: function() {
     doNextFrameOrNow(() => {
       // This unfortunately still triggers a FORCED_REFLOW before the first paint. Is there any
