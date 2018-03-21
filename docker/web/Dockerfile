@@ -259,10 +259,21 @@ ENV \
     ED_NGX_LIMIT_REQ_PER_SERVER=200 \
     ED_NGX_LIMIT_REQ_PER_SERVER_BURST=2000 \
     ED_NGX_LIMIT_RATE=50k \
-    ED_NGX_LIMIT_RATE_AFTER=5m
+    ED_NGX_LIMIT_RATE_AFTER=5m \
+    # Keycdn wants these max-age settings, otherwise it won't cache:
+    # 31536000 = 1 year.
+    TY_NGX_ASSETS_CACHE='add_header Cache-Control "max-age=31536000, s-maxage=31536000, public";' \
+    # Embedded comments not be cached for too long, because assets versioning not used here
+    # (not possible since the script url is hardcoded in everyone's html). [2WBKP46]
+    # 86400 = 1 day.
+    TY_NGX_EMBEDDED_COMMENTS_CACHE='add_header Cache-Control "max-age=86400, s-maxage=86400, public";'
 
 # Frequently edited, so do last.
 COPY ed-lua /opt/talkyard/lua/
+
+# In dev images, this is just a dummy directory and instead the public/ dir will be mounted here.
+# In prod images, will be a copy of generated files and static images etc, see docker/build-web-prod.sh.
+COPY assets /opt/talkyard/assets/
 
 
 # Don't expose port 81 (the publish-websocket-messages port) — it should be accessible from

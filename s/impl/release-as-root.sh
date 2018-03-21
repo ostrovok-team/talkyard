@@ -59,7 +59,15 @@ fi
 # Build Docker images
 # ----------------------
 
-s/d build
+# Build everything except for Web: (will be built later (5BEFQ21))
+#/d build web — skip
+s/d build app
+s/d build cache
+s/d build search
+s/d build rdb
+s/d build test
+s/d build gulp
+s/d build certgen
 
 # Optimize assets, run unit & integration tests and build the Play Framework image
 # (We'll run e2e tests later, against the modules/ed-prod-one-tests containers.)
@@ -79,6 +87,9 @@ s/d down
 
 # Build app image that uses the production version of the app, built with 'dist' above:
 docker/build-app-prod.sh
+
+# Builds web image that includes the scripts and styles, generated with gulp above:
+docker/build-web-prod.sh  # (5BEFQ21)
 
 
 

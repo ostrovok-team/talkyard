@@ -48,6 +48,14 @@ var currentDirectorySlash = __dirname + '/';
 var versionFilePath = 'version.txt';
 
 
+// Won't change until a new version of the app gets released, and then everything should
+// be restarted anyway.
+var destBaseDir = 'public/res/' + getAssetsVersionNr() + '/';
+
+function getAssetsVersionNr() {
+  return 245;
+}
+
 function getVersionTag() {
   var version = fs.readFileSync(versionFilePath, { encoding: 'utf8' }).trim();
   var gitHash = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
@@ -252,7 +260,7 @@ function compileServerTypescript() {
 
   return es.merge(typescriptStream, javascriptStream)
       .pipe(concat('server-bundle.js'))
-      .pipe(gulp.dest('public/res/'));
+      .pipe(gulp.dest('public/res/'));  // not destBaseDir, no assets versioning here.
 }
 
 
@@ -401,14 +409,14 @@ function makeConcatAllScriptsStream() {
   function makeConcatStream(outputFileName, filesToConcat, checkIfNewer) {
     var stream = gulp.src(filesToConcat);
     if (checkIfNewer) {
-      stream = stream.pipe(newer('public/res/' + outputFileName));
+      stream = stream.pipe(newer(destBaseDir + outputFileName));
     }
     return stream
         .pipe(wrap(nextFileTemplate))
         .pipe(concat(outputFileName))
         .pipe(header(thisIsAConcatenationMessage))
         .pipe(header(makeCopyrightAndLicenseBanner()))
-        .pipe(gulp.dest('public/res/'));
+        .pipe(gulp.dest(destBaseDir));
   }
 
   return es.merge(
@@ -419,7 +427,7 @@ function makeConcatAllScriptsStream() {
       makeConcatStream('editor-bundle.js', editorJsFiles, 'DoCheckNewer'),
       makeConcatStream('jquery-bundle.js', jqueryJsFiles),
       makeConcatStream('ed-comments.js', embeddedJsFiles),
-      gulp.src('node_modules/zxcvbn/dist/zxcvbn.js').pipe(gulp.dest('public/res/')));
+      gulp.src('node_modules/zxcvbn/dist/zxcvbn.js').pipe(gulp.dest(destBaseDir)));
 }
 
 
@@ -443,16 +451,16 @@ gulp.task('enable-prod-stuff', function() {
 
 // Similar to 'minifyScripts', but a different copyright header.
 gulp.task('minifyTranslations', ['buildTranslations'], function() {
-  return gulp.src(['public/res/translations/**/*.js'])
+  return gulp.src([destBaseDir + 'translations/**/*.js'])
       .pipe(uglify().on('error', function(err) {
         gulpUtil.log(gulpUtil.colors.red("*** Error ***"), err.toString());
         this.emit('end');
       }))
       .pipe(rename({ extname: '.min.js' }))
       .pipe(header(makeTranslationsCopyrightAndLicenseBanner()))
-      .pipe(gulp.dest('public/res/translations/'))
+      .pipe(gulp.dest(destBaseDir + 'translations/'))
       .pipe(gzip())
-      .pipe(gulp.dest('public/res/translations/'));
+      .pipe(gulp.dest(destBaseDir + 'translations/'));
 });
 
 
@@ -461,7 +469,7 @@ gulp.task('minifyScripts', ['compileConcatAllScripts', 'minifyTranslations'], fu
   // on the very last line in a {} block, because it would get removed, by... by what? the
   // Typescript compiler? This results in an impossible-to-understand "Unbalanced delimiter
   // found in string" error with a meaningless stacktrace, in preprocess().
-  return gulp.src(['public/res/*.js', '!public/res/*.min.js'])
+  return gulp.src([destBaseDir + '*.js', '!' + destBaseDir + '*.min.js'])
       .pipe(preprocess({ context: {} })) // see comment above
       .pipe(uglify().on('error', function(err) {
         gulpUtil.log(gulpUtil.colors.red("*** Error ***"), err.toString());
@@ -469,9 +477,9 @@ gulp.task('minifyScripts', ['compileConcatAllScripts', 'minifyTranslations'], fu
       }))
       .pipe(rename({ extname: '.min.js' }))
       .pipe(header(makeCopyrightAndLicenseBanner()))
-      .pipe(gulp.dest('public/res/'))
+      .pipe(gulp.dest(destBaseDir))
       .pipe(gzip())
-      .pipe(gulp.dest('public/res/'));
+      .pipe(gulp.dest(destBaseDir));
 });
 
 
@@ -507,7 +515,7 @@ gulp.task('compile-stylus', function () {
   }
 
   return es.merge(
-    makeStyleStream('public/res/', 'styles-bundle.css', [
+    makeStyleStream(destBaseDir, 'styles-bundle.css', [
         'node_modules/bootstrap/dist/css/bootstrap.css',
         'node_modules/@webscopeio/react-textarea-autocomplete/style.css',
         'node_modules/react-select/dist/react-select.css',
@@ -600,11 +608,11 @@ gulp.task('build-e2e', ['clean-e2e', 'compile-e2e-scripts'], function() {
 
 gulp.task('cleanTranslations', function () {
   return del([
-    'public/res/translations/**/*']);
+    destBaseDir + 'translations/**/*']);
 });
 
 // Transpiles translations/(language-code)/i18n.ts to one-js-file-per-source-file
-// in public/res/translations/... .
+// in public/res/NNN/translations/... .
 gulp.task('compileTranslations', function() {
   var stream = gulp.src([
     'translations/**/*.ts'])
@@ -620,7 +628,7 @@ gulp.task('compileTranslations', function() {
     });
   }
   return stream.js
-    .pipe(gulp.dest('public/res/translations'));
+    .pipe(gulp.dest(destBaseDir + 'translations'));
 });
 
 

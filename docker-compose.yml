@@ -2,13 +2,16 @@ version: '3.1'
 services:
   web:
     build: docker/web/
-    image: debiki/talkyard-web
+    image: debiki/talkyard-web-dev
     volumes:
       - ./docker/data/uploads/:/opt/talkyard/uploads/:ro
       - ./docker/data/letsencrypt/:/etc/letsencrypt/:ro
       # Mount the Lua scripts, rather than relying on Docker's COPY, so Nginx can
       # auto reload them after edits. (We COPY them too, so will work in Prod.)
       - ./docker/web/ed-lua/:/opt/talkyard/lua/:ro
+      # This is for Dev only. In Prod, docker/build-web-prod.sh instead copies the public/ dir
+      # to inside the image.
+      - ./public/:/opt/talkyard/assets/:ro
     ports:
       # Don't expose port 81 (for publishing WebSocket events)  — it should be reachable only
       # from inside the Docker network.
@@ -18,6 +21,9 @@ services:
       - app
     environment:
       CDN_PULL_KEY: "public"
+      # Don't set any max-age in dev mode: (otherwise max-age 1 year added by default in Dockerfile)
+      TY_NGX_ASSETS_CACHE: 'add_header Cache-Control "no-cache";'
+      TY_NGX_EMBEDDED_COMMENTS_CACHE: 'add_header Cache-Control "no-cache";'
 
   app:
     build: docker/app-dev/

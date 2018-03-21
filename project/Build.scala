@@ -17,6 +17,7 @@
 
 import sbt._
 import Keys._
+import play.sbt.PlayImport.PlayKeys
 import sbtbuildinfo._
 
 // COULD port to .sbt file instead. Build.scala = deprecated. Migration docs here:
@@ -160,6 +161,20 @@ object ApplicationBuild extends Build {
       BuildInfoKey.action("gitStatus") {
         "git status".!!.trim
       }),
+
+    // Prevent Play from recompiling and restarting, whenever anything changes inside public/:
+    // (Those files are served directly by Nginx, so Play can ignore them. I didn't find
+    // any way to configure Play to both serve those files, and also avoid recompiling
+    // all Scala files whenever any of them changes — that's why they're served by Nginx instead.
+    // See:
+    // - https://github.com/playframework/playframework/issues/7799
+    // - https://github.com/playframework/playframework/issues/2905 )
+    //
+    // Not needed:
+    // watchSources := (watchSources.value --- baseDirectory.value / "public" ** "*").get,
+    //
+    PlayKeys.playMonitoredFiles := (PlayKeys.playMonitoredFiles.value
+      --- baseDirectory.value / "public" ** "*").get,
 
     // Disable ScalaDoc generation, it breaks seemingly because I'm compiling some Javascript
     // files to Java, and ScalaDoc complains the generated classes don't exist and breaks

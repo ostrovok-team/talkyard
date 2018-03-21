@@ -4,6 +4,7 @@
 # with OS environment variable values.
 # Don't forget to add default values in the Dockerfile. [0KW2UY3]
 
+# CLEAN_UP RENAME ED_NGX... to TY_NGX... (for Talkyard)
 vars='
   \${ED_NGX_LIMIT_CONN_PER_IP}
   \${ED_NGX_LIMIT_CONN_PER_SERVER}
@@ -12,7 +13,9 @@ vars='
   \${ED_NGX_LIMIT_REQ_PER_SERVER}
   \${ED_NGX_LIMIT_REQ_PER_SERVER_BURST}
   \${ED_NGX_LIMIT_RATE}
-  \${ED_NGX_LIMIT_RATE_AFTER}'
+  \${ED_NGX_LIMIT_RATE_AFTER}
+  \${TY_NGX_ASSETS_CACHE}
+  \${TY_NGX_EMBEDDED_COMMENTS_CACHE}'
 
 envsubst "$vars" < /etc/nginx/nginx.conf.template             > /etc/nginx/nginx.conf
 envsubst "$vars" < /etc/nginx/http-limits.conf.template       > /etc/nginx/http-limits.conf
