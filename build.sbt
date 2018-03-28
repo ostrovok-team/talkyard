@@ -116,11 +116,12 @@ val main = (project in file("."))
     edCore)
 
 
+
 def mainSettings = List(
   name := appName,
   version := appVersion,
   libraryDependencies ++= appDependencies,
-  scalaVersion := "2.12.3",
+  scalaVersion := "2.12.4",
 
   // Place tests in ./tests/app/ instead of ./test/, because there're other tests in
   // ./tests/, namely security/ and e2e/, and having both ./test/ and ./tests/ seems confusing.
@@ -135,6 +136,9 @@ def mainSettings = List(
   // namely to add the Atlassian repo before the Typesafe repo:
   resolvers :=
     ("Atlassian Releases" at "https://maven.atlassian.com/public/") +:
+      Resolver.sonatypeRepo("snapshots") +:
+      Resolver.url("Typesafe Ivy releases",
+        url("https://repo.typesafe.com/typesafe/ivy-releases"))(Resolver.ivyStylePatterns) +:
       Keys.resolvers.value,
 
   // This is the default. But keep anyway, because if needed later, then won't have to try to

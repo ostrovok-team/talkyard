@@ -1,12 +1,9 @@
-// scalaVersion := "2.10.1"               // --> "play#sbt-plugin;2.1.0: not found"  no matter what version I specify
-// scalaVersion in ThisBuild := "2.10.1"  // --> "play#sbt-plugin;2.1.0: not found"  no matter what version I specify
-// But when I added 2.10.1 to Build.scala instead, everything (?) works fine.
-
 // Comment to get more information during initialization
 logLevel := Level.Warn
 
 // The Typesafe repository
-resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/"
+//resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/"
+// resolvers += "Typesafe repository" at "http://dl.bintray.com/typesafe/maven-releases/"
 
 // Not needed when using Play — but needed when using SBT.
 //resolvers += Resolver.file("Local Repository", file("/mnt/data/dev/play/github2/repository/local"))(Resolver.ivyStylePatterns)
@@ -19,7 +16,11 @@ resolvers ++= Seq("snapshots" at "http://oss.sonatype.org/content/repositories/s
                     "releases"  at "http://oss.sonatype.org/content/repositories/releases")
 
 // Use the Play sbt plugin for Play projects
+//addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.6.12")
 addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.6.9")
+
+
+// addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.3.3")
 
 
 // The SBT-Idea plugin, https://github.com/mpeltonen/sbt-idea
