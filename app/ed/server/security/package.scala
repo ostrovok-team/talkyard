@@ -64,7 +64,7 @@ case class SidOk(
   * @param isNew The cookie was just set, this very HTTP request, which means
   *              it's possible that the browser has disabled cookies?
   */
-case class BrowserId(cookieValue: String, isNew: Boolean)
+case class BrowserId(cookieValue: CookieValue, isNew: Boolean)
 
 
 object EdSecurity {
@@ -137,7 +137,7 @@ class EdSecurity(globals: Globals) {
             (XsrfOk(""), Nil)
           }
           else {
-            val newXsrfOk = createXsrfToken()
+            val newXsrfOk = createXsrfToken()  // what does Privacy Badger think?
             val cookie = urlEncodeCookie(XsrfCookieName, newXsrfOk.value)
             (newXsrfOk, List(cookie))
           }
@@ -389,12 +389,18 @@ class EdSecurity(globals: Globals) {
   /** Extracts the browser id cookie from the request, or creates it if absent.
     */
   def getBrowserIdCreateIfNeeded(request: Request[_]): (BrowserId, List[Cookie]) = {
-    val anyBrowserIdCookieValue = request.cookies.get(BrowserIdCookieName).map(_.value)
+    val anyBrowserIdCookieValue = getAnyBrowserIdCookieValue(request)
     if (anyBrowserIdCookieValue.isDefined)
       (BrowserId(anyBrowserIdCookieValue.get, isNew = false), Nil)
     else
       createBrowserIdCookie()
   }
+
+  def getBrowserIdCreateIfNeeded(request: DebikiRequest[_]): (BrowserId, List[Cookie]) =
+    getBrowserIdCreateIfNeeded(request.underlying)
+
+  def getAnyBrowserIdCookieValue(request: Request[_]): Option[String] =
+    request.cookies.get(BrowserIdCookieName).map(_.value)
 
 
   private def createBrowserIdCookie(): (BrowserId, List[Cookie]) = {
@@ -409,7 +415,7 @@ class EdSecurity(globals: Globals) {
 
     val newCookie = SecureCookie(
       name = BrowserIdCookieName,
-      value = cookieValue,
+      value = cookieValue,  // Privacy Badger doesn't like?
       maxAgeSeconds = Some(3600 * 24 * 365 * 20),
       httpOnly = true)
 

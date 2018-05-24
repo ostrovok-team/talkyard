@@ -105,7 +105,8 @@ class PlainApiActions(
         if (actualSidStatus.isOk) (actualSidStatus, false)
         else (SidAbsent, true)
 
-      val (browserId, moreNewCookies) = security.getBrowserIdCreateIfNeeded(request)
+      //val (browserId, moreNewCookies) = security.getBrowserIdCreateIfNeeded(request) // create only if needed
+      val browserId = security.getAnyBrowserIdCookieValue(request)
 
       // Parts of `block` might be executed asynchronously. However any LoginNotFoundException
       // should happen before the async parts, because access control should be done
@@ -129,13 +130,13 @@ class PlainApiActions(
         }
 
       val resultOkSid =
-        if (newCookies.isEmpty && moreNewCookies.isEmpty && !deleteSidCookie) {
+        if (newCookies.isEmpty && !deleteSidCookie) {
           resultOldCookies
         }
         else {
           resultOldCookies map { result =>
             var resultWithCookies = result
-              .withCookies(newCookies ::: moreNewCookies: _*)
+              .withCookies(newCookies: _*)
               .withHeaders(safeActions.MakeInternetExplorerSaveIframeCookiesHeader)
             if (deleteSidCookie) {
               resultWithCookies =
@@ -150,11 +151,11 @@ class PlainApiActions(
 
 
     def runBlockIfAuthOk[A](request: Request[A], site: SiteBrief, sidStatus: SidStatus,
-          xsrfOk: XsrfOk, browserId: BrowserId, block: ApiRequest[A] => Future[Result])
+          xsrfOk: XsrfOk, browserId: Option[CookieValue], block: ApiRequest[A] => Future[Result])
           : Future[Result] = {
 
       val dao = globals.siteDao(site.id)
-      dao.perhapsBlockGuest(request, sidStatus, browserId)
+      dao.perhapsBlockRequest(request, sidStatus, browserId)
 
       var anyUser = dao.getUserBySessionId(sidStatus)
       var logoutBecauseSuspended = false

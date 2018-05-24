@@ -56,12 +56,14 @@ class LoginAsGuestController @Inject()(cc: ControllerComponents, edContext: EdCo
         isSpamReason =>
       SpamChecker.throwForbiddenIfSpam(isSpamReason, "EdE5KJU3_")
 
+      val (browserId, newBrowserIdCookie) = context.security.getBrowserIdCreateIfNeeded(request)
+
       val loginAttempt = GuestLoginAttempt(
         ip = request.ip,
         date = globals.now().toJavaDate,
         name = name,
         email = email,
-        guestCookie = request.theBrowserIdData.idCookie)
+        guestCookie = browserId.cookieValue)
 
       val guestUser = request.dao.loginAsGuest(loginAttempt)
 
@@ -69,7 +71,7 @@ class LoginAsGuestController @Inject()(cc: ControllerComponents, edContext: EdCo
 
       OkSafeJson(Json.obj(
         "userCreatedAndLoggedIn" -> JsTrue,
-        "emailVerifiedAndLoggedIn" -> JsFalse)).withCookies(sidAndXsrfCookies: _*)
+        "emailVerifiedAndLoggedIn" -> JsFalse)).withCookies(newBrowserIdCookie ::: sidAndXsrfCookies: _*)
     }
   }
 

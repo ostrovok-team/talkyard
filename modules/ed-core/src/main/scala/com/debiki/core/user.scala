@@ -1161,9 +1161,9 @@ class BlockedTillMap(
 
 
 
-case class BrowserIdData(ip: String, idCookie: String, fingerprint: Int) {
-  require(ip.nonEmpty, "DwE6G9F0")
-  require(idCookie.nonEmpty, "DwE3GJ79")
+case class BrowserIdData(ip: String, idCookie: Option[String], fingerprint: Int) {
+  require(ip.nonEmpty, "TyE6G9F0")
+  require(!idCookie.exists(_.isEmpty), "TyE3GJ79")
 
   def inetAddress: InetAddress = guava.net.InetAddresses.forString(ip)
 
@@ -1171,7 +1171,7 @@ case class BrowserIdData(ip: String, idCookie: String, fingerprint: Int) {
 
 object BrowserIdData {
   val NoFingerprint = 0
-  val System = BrowserIdData("127.0.0.1", "_system_", NoFingerprint)
+  val System = BrowserIdData("127.0.0.1", None, NoFingerprint)
 }
 
 
