@@ -81,6 +81,8 @@ package object core {
 
   type IpAddress = String
 
+  type CookieValue = String
+
   type EmailId = String
 
   type AuditLogEntryId = Int
@@ -211,7 +213,7 @@ package object core {
 
   case class Who(id: UserId, browserIdData: BrowserIdData) {
     def ip: String = browserIdData.ip
-    def idCookie: String = browserIdData.idCookie
+    def idCookie: Option[String] = browserIdData.idCookie
     def browserFingerprint: Int = browserIdData.fingerprint
     def isGuest: Boolean = User.isGuestId(id)
   }
