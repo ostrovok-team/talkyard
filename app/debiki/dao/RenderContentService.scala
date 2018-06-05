@@ -89,7 +89,7 @@ class RenderContentActor(
           p.Logger.debug("Tests done, server gone. Stopping background rendering pages. [EsM5KG3]")
         }
         else {
-          context.system.scheduler.scheduleOnce(333 millis, self, RegenerateStaleHtml)(execCtx)
+          context.system.scheduler.scheduleOnce(100 millis, self, RegenerateStaleHtml)(execCtx)
         }
       }
   }

@@ -361,7 +361,8 @@ class JsonMaker(dao: SiteDao) {
       pageVersion = page.version,
       appVersion = globals.applicationVersion,
       renderParams = renderParams,
-      reactStoreJsonHash = hashSha1Base64UrlSafe(jsonString))
+      reactStoreJsonHash = hashSha1Base64UrlSafe(jsonString),
+      reactStoreJson = jsonString)
 
     val unapprovedPosts = posts.filter(!_.isSomeVersionApproved)
     val unapprovedPostAuthorIds = unapprovedPosts.map(_.createdById).toSet
