@@ -56,11 +56,11 @@ class RenderContentActor(
   def execCtx: ExecutionContext = globals.executionContext
 
   override def receive: Receive = {
-    case sitePageId: SitePageId =>
+    case (sitePageId: SitePageId, renderParams: PageRenderParams) =>
       // The page has been modified, or accessed and was out-of-date. [4KGJW2]
       // There might be many threads and servers that re-render this page.
       try {
-        if (isStillOutOfDate(sitePageId)) {
+        if (isStillOutOfDate(sitePageId, renderParams)) {
           rerenderContentHtmlUpdateCache(sitePageId)
         }
         else {
@@ -95,9 +95,9 @@ class RenderContentActor(
   }
 
 
-  private def isStillOutOfDate(sitePageId: SitePageId): Boolean = {
+  private def isStillOutOfDate(sitePageId: SitePageId, renderParams: PageRenderParams): Boolean = {
     val (cachedHtmlVersion, currentPageVersion) =
-      globals.systemDao.loadCachedPageVersion(sitePageId) getOrElse {
+      globals.systemDao.loadCachedPageVersion(sitePageId, renderParams) getOrElse {
         return true
       }
     // We don't have any hash of any up-to-date data for this page, so we cannot use
@@ -130,6 +130,8 @@ class RenderContentActor(
     // ----- Render for tiny width
 
     // A bit dupl code. [2FKBJAL3]
+    // These render params must match the load-pages-to-rerender query [RERENDERQ], otherwise
+    // the query will continue saying the page should be rerendered, forever.
     var renderParams = PageRenderParams(
       widthLayout = WidthLayout.Tiny,
       isEmbedded = isEmbedded,
@@ -141,13 +143,14 @@ class RenderContentActor(
       anyPageQuery = None)
 
     var toJsonResult = dao.jsonMaker.pageToJson(sitePageId.pageId, renderParams)
-    var newHtml = nashorn.renderPage(toJsonResult.jsonString) getOrElse {
+    var newHtml = nashorn.renderPage(toJsonResult.reactStoreJsonString) getOrElse {
       p.Logger.error(s"Error rendering ${sitePageId.toPrettyString} [DwE5KJG2]")
       return
     }
 
     dao.readWriteTransaction { tx =>
-      tx.upsertCachedPageContentHtml(sitePageId.pageId, toJsonResult.version, newHtml)
+      tx.upsertCachedPageContentHtml(
+          sitePageId.pageId, toJsonResult.version, toJsonResult.reactStoreJsonString, newHtml)
     }
 
     p.Logger.debug(s"Done background rendering ${sitePageId.toPrettyString}, tiny width. [TyMBGRTINY]")
@@ -156,13 +159,14 @@ class RenderContentActor(
 
     renderParams = renderParams.copy(widthLayout = WidthLayout.Medium)
     toJsonResult = dao.jsonMaker.pageToJson(sitePageId.pageId, renderParams)
-    newHtml = nashorn.renderPage(toJsonResult.jsonString) getOrElse {
+    newHtml = nashorn.renderPage(toJsonResult.reactStoreJsonString) getOrElse {
       p.Logger.error(s"Error rendering ${sitePageId.toPrettyString} [DwE5KJG2]")
       return
     }
 
     dao.readWriteTransaction { tx =>
-      tx.upsertCachedPageContentHtml(sitePageId.pageId, toJsonResult.version, newHtml)
+      tx.upsertCachedPageContentHtml(
+          sitePageId.pageId, toJsonResult.version, toJsonResult.reactStoreJsonString, newHtml)
     }
 
     p.Logger.debug(s"Done background rendering ${sitePageId.toPrettyString}, medium width. [TyMBGRMEDM]")
