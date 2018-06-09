@@ -170,7 +170,7 @@ trait RenderedPageHtmlDao {
                sending rerender-in-background message [DwE5KGF2]""")
           // COULD wait 150 ms for the background thread to finish rendering the page?
           // Then timeout and return the old cached page.
-          globals.renderPageContentInBackground(SitePageId(siteId, pageId), renderParams)
+          globals.renderPageContentInBackground(SitePageId(siteId, pageId), Some(renderParams))
         }
         return (cachedHtml, cachedHtmlVersion)
       }
@@ -236,7 +236,7 @@ trait RenderedPageHtmlDao {
     // So don't:
     //    removeFromCache(contentKey(sitePageId))
     // Instead:
-    globals.renderPageContentInBackground(sitePageId)
+    globals.renderPageContentInBackground(sitePageId, customParams = None)
 
     // BUG race condition: What if anotoher thread started rendering a page
     // just before the invokation of this function, and is finished

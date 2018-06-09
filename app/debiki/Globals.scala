@@ -240,9 +240,9 @@ class Globals(
 
   def endToEndTestMailer: ActorRef = state.mailerActorRef
 
-  def renderPageContentInBackground(sitePageId: SitePageId, renderParams: PageRenderParams) {
+  def renderPageContentInBackground(sitePageId: SitePageId, customParams: Option[PageRenderParams]) {
     if (!isTestDisableBackgroundJobs) {
-      state.renderContentActorRef ! (sitePageId, renderParams)
+      state.renderContentActorRef ! (sitePageId, customParams)
     }
   }
 
