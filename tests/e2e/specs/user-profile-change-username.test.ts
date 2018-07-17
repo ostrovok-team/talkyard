@@ -165,7 +165,7 @@ describe("user profile access:", () => {
 
   it("She visits a topic of hers, her username has been updated", () => {
     mariasBrowser.go('/' + forum.topics.byMariaCategoryA.slug);
-    mariasBrowser.topbar.assertMyUsernameMatches(mariasUsername2b);
+    mariasBrowser.topbar.assertMyUsernameMatches(mariasUsername2);
     assert(mariasBrowser.topic.getTopicAuthorUsernameInclAt() === '@' + mariasUsername2);
   });
 
