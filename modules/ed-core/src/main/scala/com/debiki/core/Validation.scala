@@ -66,7 +66,8 @@ object Validation {
   val TooLongErrorMessage = "The username is too long; it must be at most 20 characters"
   // Because of [UNPUNCT], currently cannot change *to* a username with [.-], only '_' allowed.
   // However some usernames already contain '.' (that's fine).
-  val BadCharsErrorMessage = "The username must use characters a-z, A-Z, 0-9 and _ only"
+  def badCharsErrorMessage(char: String) =
+    s"The username must use characters a-z, A-Z, 0-9 and _ only, this char not allowed: $char"
   val TwoSpecialCharsErrorMessage = "The username has two special chars in a row"
   val BadFirstCharErrorMessage = "The username's first character must be one of a-z, A-Z, 0-9 _"
   val BadLastCharErrorMessage = "The username's last character must be one of a-z, A-Z, 0-9"
@@ -97,8 +98,10 @@ object Validation {
     if (!charIsAzOrNum(username.last))
       return Bad(BadLastCharErrorMessage)
 
-    if (UsernameBadCharsRegex.matches(username))
-      return Bad(BadCharsErrorMessage)
+    val anyBadChar = UsernameBadCharsRegex.findFirstIn(username)
+    anyBadChar foreach { badChar =>
+      return Bad(badCharsErrorMessage(badChar))
+    }
 
     if (TwoSpecialCharsRegex.matches(username))
       return Bad(TwoSpecialCharsErrorMessage)

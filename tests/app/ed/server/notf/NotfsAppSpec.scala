@@ -22,7 +22,7 @@ import debiki.dao._
 import java.{util => ju}
 
 
-class NotfsAppSpec extends DaoAppSuite() {
+class NotfsAppSpec extends DaoAppSuite(disableScripts = false) {
   var dao: SiteDao = _
 
   var createForumResult: CreateForumResult = _
@@ -59,6 +59,17 @@ class NotfsAppSpec extends DaoAppSuite() {
   def listUsersNotifiedAbout(postId: PostId): Set[UserId] = {
     dao.readOnlyTransaction(_.listUsersNotifiedAboutPost(postId))
   }
+
+
+  def edit(post: Post, editorId: UserId, newText: String)(dao: SiteDao) : Unit =
+    super.edit(post, editorId, newText, skipNashorn = false)(dao)
+
+  def chat(memberId: UserId, pageId: PageId, text: String)(dao: SiteDao): Post =
+    super.chat(memberId, pageId, text, skipNashorn = false)(dao)
+
+  def reply(memberId: UserId, pageId: PageId, text: String, parentNr: Option[PostNr])(
+        dao: SiteDao): Post =
+    super.reply(memberId, pageId, text, parentNr = parentNr, skipNashorn = false)(dao)
 
 
   "NotificationGenerator can create and remove notifications" - {
@@ -98,7 +109,7 @@ class NotfsAppSpec extends DaoAppSuite() {
         textAndHtmlMaker.testTitle("withRepliesTopicId"),
         textAndHtmlMaker.testBody("withRepliesTopicId bd"),
         owner.id, browserIdData, dao, Some(categoryId))
-      reply(moderator.id, withRepliesTopicId, s"Reply 1 (post nr 2) by mod")(dao)
+      reply(moderator.id, withRepliesTopicId, s"Reply 1 (post nr 2) by mod", parentNr = None)(dao)
       expectedTotalNumNotfs += 1
 
       // The rest of the tests don't expect Owner to be notified about everything.
@@ -212,9 +223,9 @@ class NotfsAppSpec extends DaoAppSuite() {
         countTotalNumNotfs() mustBe expectedTotalNumNotfs
         listUsersNotifiedAbout(chatPost.id) mustBe Set(member5NotInAnyChat.id)
 
-        info("append to message & mention someone else")
+        info("append to message, mention same person again, plus someone else")
         val samePost = chat(member1.id, chatTopicManyJoinedId,
-            s"Hi @${member5NotInAnyChat.theUsername} @${member6NotInAnyChat.theUsername}")(dao)
+            s"Hi again @${member5NotInAnyChat.theUsername}, + @${member6NotInAnyChat.theUsername}")(dao)
         samePost.id mustBe chatPost.id
         expectedTotalNumNotfs += 1
         countTotalNumNotfs() mustBe expectedTotalNumNotfs

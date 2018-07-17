@@ -546,12 +546,13 @@ trait PostsDao {
 
     val theApprovedSource = lastPost.approvedSource.getOrDie("EsE5GYKF2")
     val theApprovedHtmlSanitized = lastPost.approvedHtmlSanitized.getOrDie("EsE2PU8")
-    val newText = textEndingWithNumNewlines(theApprovedSource, 2) + textAndHtml.text
-    val newHtml = textEndingWithNumNewlines(theApprovedHtmlSanitized, 2) + textAndHtml.safeHtml
+    val newCombinedText = textEndingWithNumNewlines(theApprovedSource, 2) + textAndHtml.text
+
+    val combinedTextAndHtml = textAndHtmlMaker.forBodyOrComment(newCombinedText, followLinks = false)
 
     val editedPost = lastPost.copy(
-      approvedSource = Some(newText),
-      approvedHtmlSanitized = Some(newHtml),
+      approvedSource = Some(newCombinedText),
+      approvedHtmlSanitized = Some(combinedTextAndHtml.safeHtml),
       approvedAt = Some(tx.now.toJavaDate),
       // Leave approvedById = SystemUserId and approvedRevisionNr = FirstRevisionNr unchanged.
       currentRevLastEditedAt = Some(tx.now.toJavaDate),
@@ -570,7 +571,7 @@ trait PostsDao {
     // COULD create audit log entry that shows that this ip appended to the chat message.
 
     val notfs = NotificationGenerator(tx, nashorn).generateForEdits(
-      lastPost, editedPost, Some(textAndHtml))
+      lastPost, editedPost, Some(combinedTextAndHtml))
     tx.saveDeleteNotifications(notfs)
 
     (editedPost, notfs)
@@ -641,7 +642,7 @@ trait PostsDao {
         !anyNewComment && !anyNewFlag
       }
 
-      // Define new field values as if we'll approve the post, but change them below (5AKW02)
+      // Define new field values as if we'll approve the post, but change them below [5AKW02]
       // if in fact we won't approve it.
       var editsApproved = true
       var newCurrentSourcePatch: Option[String] = None
@@ -661,14 +662,14 @@ trait PostsDao {
         }
         else {
           // For now, let people continue editing a post that has been approved already.
-          // Later, could avoid approving, if user threat level >= mild threat,
+          SECURITY // Later, could avoid approving, if user threat level >= mild threat,
           // or if some not-yet-created site config settings are strict?
           // Would then need to create a new revision.
           if (postToEdit.isCurrentVersionApproved) {
             Some(SystemUserId)
           }
           else {
-            // Don't auto-approve these edits. (5AKW02)
+            // Don't auto-approve these edits. [5AKW02]
             editsApproved = false
             newCurrentSourcePatch = Some(makePatch(
               from = postToEdit.approvedSource.getOrElse(""), to = newTextAndHtml.text))

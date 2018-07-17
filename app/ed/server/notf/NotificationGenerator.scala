@@ -46,14 +46,17 @@ case class NotificationGenerator(transaction: SiteTransaction, nashorn: Nashorn)
         skipMentions: Boolean = false): Notifications = {
 
     require(page.id == newPost.pageId, "TyE74KEW9")
-    anyNewTextAndHtml foreach { textAndHtml =>
-      require(newPost.approvedSource is textAndHtml.text, "TyE5GJBFKB201")
-      require(newPost.approvedHtmlSanitized is textAndHtml.safeHtml, "TyE5GJBFKB202")
-    }
 
     val approverId = newPost.approvedById getOrElse {
       // Don't generate notifications until later when the post gets approved and becomes visible.
       return Notifications.None
+    }
+
+    anyNewTextAndHtml foreach { textAndHtml =>
+      require(newPost.approvedSource is textAndHtml.text,
+        s"approvedSource: ${newPost.approvedSource}, textAndHtml.text: ${textAndHtml.text} [TyE3WASC2]")
+      require(newPost.approvedHtmlSanitized is textAndHtml.safeHtml,
+        s"appr.HtmlSan.: ${newPost.approvedHtmlSanitized}, safeHtml: ${textAndHtml.safeHtml} [TyE9FJB0]")
     }
 
     // Direct reply notification.
@@ -180,9 +183,18 @@ case class NotificationGenerator(transaction: SiteTransaction, nashorn: Nashorn)
         : Notifications = {
 
     require(oldPost.pagePostNr == newPost.pagePostNr, "TyE2WKA5LG")
+
+    if (!newPost.isCurrentVersionApproved) {
+      // Wait until the edits get approved and become visible.
+      UNTESTED // [5AKW02]
+      return Notifications.None
+    }
+
     anyNewTextAndHtml foreach { textAndHtml =>
-      require(newPost.approvedSource is textAndHtml.text, "TyE5FKB201")
-      require(newPost.approvedHtmlSanitized is textAndHtml.safeHtml, "TyE5FKB202")
+      require(newPost.approvedSource is textAndHtml.text,
+        s"approvedSource: ${newPost.approvedSource}, textAndHtml.text: ${textAndHtml.text} [TyE4WKB7Z]")
+      require(newPost.approvedHtmlSanitized is textAndHtml.safeHtml,
+        s"appr.HtmlSan.: ${newPost.approvedHtmlSanitized}, safeHtml: ${textAndHtml.safeHtml} [TyE4WB78]")
     }
 
     val oldMentions: Set[String] = findMentions(oldPost.approvedSource getOrDie "TyE0YKW3", nashorn)
@@ -284,7 +296,15 @@ object NotificationGenerator {
     member.isStaffOrMinTrustNotThreat(TrustLevel.FullMember)
   }
 
-  private val MaybeMentionsRegex: Regex = ".?@[a-zA-Z0-9_][a-zA-Z0-9_.-]*[a-zA-Z0-9]".r  // [UNPUNCT]
+  // Keep this regex in sync with mentions-markdown-it-plugin.js, the mentionsRegex [4LKBG782].
+  // COULD replace [^a-zA-Z0-9_] with some Unicode regex for Unicode whitespace,
+  // however apparently Java whitespace regex doesn't work:
+  // https://stackoverflow.com/a/4731164/694469
+  // — cannot deal with all Unicode whitespace. So just do [^a-z...] for now, so we for sure
+  // allow *more* than the Js code. At least this should exclude email addresses.
+  // (?s) makes '.' match newlines.
+  private val MaybeMentionsRegex: Regex =
+    "(?s)(.*[^a-zA-Z0-9_])?@[a-zA-Z0-9_][a-zA-Z0-9_.-]*[a-zA-Z0-9].*".r  // [UNPUNCT]
 
 
   def findMentions(text: String, nashorn: Nashorn): Set[String] = {

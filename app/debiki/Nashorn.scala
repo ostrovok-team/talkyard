@@ -543,7 +543,7 @@ class Nashorn(globals: Globals) {
     val javascriptStream = getClass.getResourceAsStream(path)
     if (javascriptStream eq null) {
       if (isTranslation) {
-        val message = s"Language file not found: $path, 'gulp buildTranslations' not run or isn't done?"
+        val message = s"Language file not found: $path, 'gulp minifyTranslations' not run or isn't done?"
         logger.error(message + " [TyE47UKDW2]")
         throw new DebikiException("TyE47UKDW3", message)
       }
