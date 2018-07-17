@@ -19,16 +19,17 @@ package ed.server.notf
 
 import com.debiki.core.Prelude._
 import com.debiki.core._
+import debiki.{Nashorn, TextAndHtml}
 import ed.server.notf.NotificationGenerator._
-import java.{util => ju}
 import scala.collection.{immutable, mutable}
+import scala.util.matching.Regex
 
 
 /** Finds out what notifications to send when e.g. a new post is created.
   * Also finds out what not-yet-sent notifications to delete if a post is deleted, or if
   * the post is edited and a @mention removed.
   */
-case class NotificationGenerator(transaction: SiteTransaction) {
+case class NotificationGenerator(transaction: SiteTransaction, nashorn: Nashorn) {
 
   private var notfsToCreate = mutable.ArrayBuffer[Notification]()
   private var notfsToDelete = mutable.ArrayBuffer[NotificationToDelete]()
@@ -41,9 +42,14 @@ case class NotificationGenerator(transaction: SiteTransaction) {
       toDelete = notfsToDelete.toSeq)
 
 
-  def generateForNewPost(page: Page, newPost: Post, skipMentions: Boolean = false)
-        : Notifications = {
-    require(page.id == newPost.pageId, "DwE4KEW9")
+  def generateForNewPost(page: Page, newPost: Post, anyNewTextAndHtml: Option[TextAndHtml],
+        skipMentions: Boolean = false): Notifications = {
+
+    require(page.id == newPost.pageId, "TyE74KEW9")
+    anyNewTextAndHtml foreach { textAndHtml =>
+      require(newPost.approvedSource is textAndHtml.text, "TyE5GJBFKB201")
+      require(newPost.approvedHtmlSanitized is textAndHtml.safeHtml, "TyE5GJBFKB202")
+    }
 
     val approverId = newPost.approvedById getOrElse {
       // Don't generate notifications until later when the post gets approved and becomes visible.
@@ -67,8 +73,11 @@ case class NotificationGenerator(transaction: SiteTransaction) {
 
     // Mentions
     if (!skipMentions) {
-      val mentionedUsernames = findMentions(newPost.approvedSource getOrDie "DwE82FK4").toSet
+      val mentionedUsernames = anyNewTextAndHtml.map(_.usernameMentions) getOrElse findMentions(
+        newPost.approvedSource getOrDie "DwE82FK4", nashorn)
+
       var mentionedUsers = mentionedUsernames.flatMap(transaction.loadMemberByPrimaryEmailOrUsername)
+
       val allMentioned = mentionsAllInChannel(mentionedUsernames)
       if (allMentioned) {
         val author = transaction.loadTheMember(newPost.createdById)
@@ -167,11 +176,18 @@ case class NotificationGenerator(transaction: SiteTransaction) {
 
   /** Creates and deletes mentions, if '@username's are added/removed by this edit.
     */
-  def generateForEdits(oldPost: Post, newPost: Post): Notifications = {
-    require(oldPost.pagePostNr == newPost.pagePostNr)
+  def generateForEdits(oldPost: Post, newPost: Post, anyNewTextAndHtml: Option[TextAndHtml])
+        : Notifications = {
 
-    val oldMentions: Set[String] = findMentions(oldPost.approvedSource getOrDie "DwE0YKW3").toSet
-    val newMentions: Set[String] = findMentions(newPost.approvedSource getOrDie "DwE2BF81").toSet
+    require(oldPost.pagePostNr == newPost.pagePostNr, "TyE2WKA5LG")
+    anyNewTextAndHtml foreach { textAndHtml =>
+      require(newPost.approvedSource is textAndHtml.text, "TyE5FKB201")
+      require(newPost.approvedHtmlSanitized is textAndHtml.safeHtml, "TyE5FKB202")
+    }
+
+    val oldMentions: Set[String] = findMentions(oldPost.approvedSource getOrDie "TyE0YKW3", nashorn)
+    val newMentions: Set[String] = anyNewTextAndHtml.map(_.usernameMentions) getOrElse findMentions(
+        newPost.approvedSource getOrDie "DwE2BF81", nashorn)
 
     val deletedMentions = oldMentions -- newMentions
     val createdMentions = newMentions -- oldMentions
@@ -265,24 +281,21 @@ object NotificationGenerator {
 
 
   def mayMentionAll(member: Member): Boolean = {
-    member.trustLevel.toInt >= TrustLevel.FullMember.toInt || member.isStaff  //THTLVL
+    member.isStaffOrMinTrustNotThreat(TrustLevel.FullMember)
   }
 
+  private val MaybeMentionsRegex: Regex = ".?@[a-zA-Z0-9_][a-zA-Z0-9_.-]*[a-zA-Z0-9]".r  // [UNPUNCT]
 
-  def findMentions(text: String): Seq[String] = {
-    // For now, ignore CommonMark and HTML markup.
-    val mentions = mutable.ArrayBuffer[String]()
-    for (perhapsMention <- ".?@[a-zA-Z0-9_]+".r.findAllIn(text)) {
-      perhapsMention(0) match {
-        case '@' =>
-          mentions += perhapsMention.drop(1)
-        case ' ' =>
-          mentions += perhapsMention.drop(2)
-        case _ =>
-          // skip, could be e.g. an email address
-      }
-    }
-    mentions.to[immutable.Seq]
+
+  def findMentions(text: String, nashorn: Nashorn): Set[String] = {
+    // Try to avoid rendering Commonmark source via Nashorn, if cannot possibly be any mentions:
+    if (!MaybeMentionsRegex.matches(text))
+      return Set.empty
+
+    val result = nashorn.renderAndSanitizeCommonMark(
+      text, pubSiteId = "dummy", allowClassIdDataAttrs = false, followLinks = false)
+
+    result.mentions
   }
 
 }

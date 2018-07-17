@@ -564,6 +564,10 @@ case class Member(
 
   override def isApprovedOrStaff: Boolean = isApproved.contains(true) || isStaff
 
+  def isStaffOrMinTrustNotThreat(trustLevel: TrustLevel): Boolean =  // dupl code [5WKABY0]
+    isStaff || (
+      effectiveTrustLevel.toInt >= trustLevel.toInt && !effectiveThreatLevel.isThreat)
+
   override def canPromoteToBasicMember: Boolean =
     // If trust level locked, promoting the this.trustLevel has no effect — but we'll still
     // do it, so we know what it would have been, had it not been locked.
@@ -691,9 +695,9 @@ case class MemberInclDetails(
   def effectiveTrustLevel: TrustLevel = lockedTrustLevel getOrElse trustLevel
   def effectiveThreatLevel: ThreatLevel = lockedThreatLevel getOrElse threatLevel
 
-  def isTrustedNotThreat: Boolean  =
-    effectiveTrustLevel.toInt >= TrustLevel.TrustedMember.toInt &&
-    effectiveThreatLevel.toInt <= ThreatLevel.HopefullySafe.toInt  // [5WKABY0]
+  def isStaffOrMinTrustNotThreat(trustLevel: TrustLevel): Boolean =  // dupl code [5WKABY0]
+    isStaff || (
+      effectiveTrustLevel.toInt >= trustLevel.toInt && !effectiveThreatLevel.isThreat)
 
   def usernameLowercase: String = username.toLowerCase
   //def canonicalUsername: String = User.makeUsernameCanonical(username)  // [CANONUN]

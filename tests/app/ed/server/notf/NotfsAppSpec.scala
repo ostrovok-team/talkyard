@@ -38,6 +38,8 @@ class NotfsAppSpec extends DaoAppSuite() {
   var member5NotInAnyChat: Member = _
   var member6NotInAnyChat: Member = _
   var member7NotInAnyChat: Member = _
+  var member8Dot: Member = _
+  var member9Dash: Member = _
   var memberNeverMentioned: Member = _
 
   var withRepliesTopicId: PageId = _
@@ -78,6 +80,8 @@ class NotfsAppSpec extends DaoAppSuite() {
       member5NotInAnyChat = createPasswordUser("ntf_0cht5", dao)
       member6NotInAnyChat = createPasswordUser("ntf_0cht6", dao)
       member7NotInAnyChat = createPasswordUser("ntf_0cht7", dao)
+      member8Dot = createPasswordUser("ntf.mem8", dao)
+      member9Dash = createPasswordUser("ntf-mem9", dao)
       memberNeverMentioned = createPasswordUser("ntf_wrng", dao)
 
       // Disable notfs about everything to the owner, other notfs counts will be wrong.
@@ -358,9 +362,24 @@ class NotfsAppSpec extends DaoAppSuite() {
             member1.id, member2.id, member3.id, owner.id)  // not member4
       }
 
-      "in a non-chat discussion" in {
-        // then what?
+      "mention with dot in username, in a discourse topic" in {
+        val replyToDotName: Post = reply(
+            owner.id, withRepliesTopicId, s"Hmm @${member8Dot.theUsername} hi!",
+            parentNr = Some(PageParts.BodyNr))(dao)
+        expectedTotalNumNotfs += 1
+        countTotalNumNotfs() mustBe expectedTotalNumNotfs
+        listUsersNotifiedAbout(replyToDotName.id) mustBe Set(member8Dot.id)
       }
+
+      "mention with dash in username, in a discourse topic" in {
+        val replyToDashName: Post = reply(
+          owner.id, withRepliesTopicId, s"Hi @${member9Dash.theUsername} wow!",
+          parentNr = Some(PageParts.BodyNr))(dao)
+        expectedTotalNumNotfs += 1
+        countTotalNumNotfs() mustBe expectedTotalNumNotfs
+        listUsersNotifiedAbout(replyToDashName.id) mustBe Set(member9Dash.id)
+      }
+
     }
   }
 }

@@ -93,6 +93,12 @@ MentionsMarkdownItPlugin.prototype.render = function(tokens, id, options, env) {
   // The username is [a-zA-Z_0-9] so we don't need to escape it. And besides we sanitize
   // everything later on anyway.
   var username = tokens[id].username;
+
+  // Make @mentions found available server side.
+  if (debiki.mentionsServerHelp) {
+    debiki.mentionsServerHelp.push(username);
+  }
+
   // In embedded comments discussions, the /-/users/ local links would resolve to
   // https://the.EMBEDDING.site/-/users/ — so in hack.ts [6JKD2A] they're changed
   // to point to the Talkyard server instead. (Also see: [EMBCMTSORIG])
