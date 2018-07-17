@@ -95,7 +95,9 @@ trait UserDao {
       val emailAddrBeforeAt = invite.emailAddress.split("@").headOption.getOrDie(
         "TyE500IIEA5", "Invalid invite email address")
 
-      val username = User.makeOkayUsername(emailAddrBeforeAt, tx.isUsernameInUse) getOrElse {
+      // Wait with allowing [.-] until canonical usernames implemented. [CANONUN]
+      val username = User.makeOkayUsername(
+          emailAddrBeforeAt, allowDotDash = false, tx.isUsernameInUse) getOrElse {
         // This means couldn't generate a username. That'd be impossibly bad luck, since we
         // try with random numbers of size up to 10^19 many times.
         throwBadRequest("TyEBADLUCK", o"""Couldn't generate a unique username. Reload the page

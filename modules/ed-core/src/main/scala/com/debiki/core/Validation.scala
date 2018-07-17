@@ -26,13 +26,11 @@ object Validation {
 
   private val EmailOkCharsRegex = """\S+@\S+\.\S+$""".r
 
-  // Later, also allow [.-] — not now though [UNPUNCT], first implement canonical usernames?[CANONUN]
-  // Not allowing [.-] here means people cannot change *to* such usernames, but existing
-  // ones = fine.
-  private val UsernameOkCharsRegex = "[A-Za-z0-9_]*".r
+  // Right now, [.-] in usernames only allowed server side, because there're such
+  // usernames already (by accident). Wait with enabling client side, until has impl
+  // canonical usernames. [CANONUN]
+  val UsernameBadCharsRegex: Regex = s"[^a-zA-Z0-9_.-]".r  // [UNPUNCT]
 
-  // Right now only '_' is allowed, but include '.' and '-' too in case later on Talkyard will,
-  // just like Discourse, allow those chars too.
   private val TwoSpecialCharsRegex = ".*[_.-]{2}.*".r
 
 
@@ -72,7 +70,10 @@ object Validation {
   val TwoSpecialCharsErrorMessage = "The username has two special chars in a row"
   val BadFirstCharErrorMessage = "The username's first character must be one of a-z, A-Z, 0-9 _"
   val BadLastCharErrorMessage = "The username's last character must be one of a-z, A-Z, 0-9"
-  def justWeird(username: String) = s"The username is weird: '$username' [TyE2LKB57A]"
+  def justWeird(username: String, okayUsername: Option[String]): String = {
+    val tryInsteadWith = okayUsername.map(n => s"try instead with '$n'") getOrElse ""
+    s"The username is weird: '$username', $tryInsteadWith [TyE2LKB57A]"
+  }
 
   /** Allows only usernames like '123_some_username', 3 - 20 chars.
     */
@@ -96,15 +97,16 @@ object Validation {
     if (!charIsAzOrNum(username.last))
       return Bad(BadLastCharErrorMessage)
 
-    if (UsernameOkCharsRegex.unapplySeq(username).isEmpty)
+    if (UsernameBadCharsRegex.matches(username))
       return Bad(BadCharsErrorMessage)
 
     if (TwoSpecialCharsRegex.matches(username))
       return Bad(TwoSpecialCharsErrorMessage)
 
     // If the username needs to be changed somehow, to become okay — then reject it.
-    if (User.makeOkayUsername(username, _ => false) isNot username)
-      return Bad(justWeird(username))
+    val okayUsername = User.makeOkayUsername(username, allowDotDash = true, _ => false)
+    if (okayUsername isNot username)
+      return Bad(justWeird(username, okayUsername))
 
     Good(username)
   }
