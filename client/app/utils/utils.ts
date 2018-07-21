@@ -20,8 +20,8 @@
    namespace debiki2 {
 //------------------------------------------------------------------------------
 
-var stupidLocalStorage = {};
-var stupidSessionStorage = {};
+const stupidLocalStorage = {};
+const stupidSessionStorage = {};
 
 
 export function putInLocalStorage(key, value) {
@@ -49,20 +49,25 @@ export function putInSessionStorage(key, value) {
 
 
 export function getFromLocalStorage(key) {
-  return getFromStorage(localStorage, stupidLocalStorage, key);
+  return getFromStorage(true, stupidLocalStorage, key);
 }
 
 
 export function getFromSessionStorage(key) {
-  return getFromStorage(sessionStorage, stupidSessionStorage, key);
+  return getFromStorage(false, stupidSessionStorage, key);
 }
 
 
-function getFromStorage(realStorage, stupidStorage, key) {
+function getFromStorage(useLocal: boolean, stupidStorage, key) {
   // In FF, if third party cookies have been disabled, localStorage.getItem throws a security
   // error, if this code runs in an iframe. More details: [7IWD20ZQ1]
   let value = null;
   try {
+    // Access localStorage only here inside try { .. } because apparently iOS can otherwise
+    // throw a security error:
+    //   "Failed to read the 'localStorage' property from 'Window': Access is denied for this document"
+    // https://www.chromium.org/for-testers/bug-reporting-guidelines/uncaught-securityerror-failed-to-read-the-localstorage-property-from-window-access-is-denied-for-this-document
+    const realStorage = useLocal ? localStorage : sessionStorage;
     value = realStorage.getItem(key);
     value = value && JSON.parse(value);
   }
@@ -90,7 +95,7 @@ export function removeFromLocalStorage(key) {
 //   http://werxltd.com/wp/2010/05/13/javascript-implementation-of-javas-string-hashcode-method/
 // License: MIT apparently, see COPYING.txt.
 export function hashStringToNumber(string: string): number {  // [4KFBW2]
-  var hash = 0, i, chr, len;
+  let hash = 0, i, chr, len;
   if (string.length == 0) return hash;
   for (i = 0, len = string.length; i < len; i++) {
     chr   = string.charCodeAt(i);
