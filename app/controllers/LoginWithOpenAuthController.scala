@@ -101,7 +101,7 @@ class LoginWithOpenAuthController @Inject()(cc: ControllerComponents, edContext:
           SecureCookie(name = ReturnToUrlCookieName, value = returnToUrl, httpOnly = false))
       }
     }
-    if (request.rawQueryString.contains("isInLoginPopup")) {
+    if (request.rawQueryString.contains("isInLoginPopup")) {  // ??
       futureResult = futureResult map { result =>
         result.withCookies(
           SecureCookie(name = IsInLoginPopupCookieName, value = "true", httpOnly = false))
@@ -367,8 +367,10 @@ class LoginWithOpenAuthController @Inject()(cc: ControllerComponents, edContext:
           "emailVerifiedAndLoggedIn" -> JsBoolean(member.emailVerifiedAt.isDefined)))
       }
       else {
-        val isInLoginPopup = request.cookies.get(IsInLoginPopupCookieName).nonEmpty
-        def loginPopupCallback =
+        // ?? use header instead?  check window opener? + maybe return-to-url can incl
+        // &is-login-popup query param = true?
+        val isInLoginPopup = request.cookies.get(IsInLoginPopupCookieName).nonEmpty  // ??
+        def loginPopupCallback: Result =
           Ok(views.html.login.loginPopupCallback().body) as HTML
 
         request.cookies.get(ReturnToUrlCookieName) match {
@@ -379,7 +381,7 @@ class LoginWithOpenAuthController @Inject()(cc: ControllerComponents, edContext:
               // emails, not from here.
               loginPopupCallback
             }
-            else if (isInLoginPopup) {
+            else if (isInLoginPopup) {  // ??
               loginPopupCallback
             }
             else {

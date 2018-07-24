@@ -15,9 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *@
 
-@(tpi: debiki.SiteTpi, mode: String, serverAddress: String, returnToUrl: String, debugMessage: String = "")
+@(tpi: debiki.SiteTpi, mode: String, serverAddress: String, returnToUrl: String,
+  noCookiesXsrfToken: Option[String] = None, debugMessage: String = "")
 
-@popupMain(tpi, serverAddress) {
+@popupMain(tpi, serverAddress, noCookiesXsrfToken = noCookiesXsrfToken) {
   <!-- views/login/loginPopup.scala.html -->
   @if(debugMessage.nonEmpty) {
   <pre style="font-size: 14px; margin: 5px; display: inline-block; z-index: 9999; position: relative;">@debugMessage</pre>

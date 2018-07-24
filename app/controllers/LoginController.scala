@@ -27,6 +27,7 @@ import play.api._
 import play.api.libs.json.{JsNull, JsString, Json}
 import play.api.mvc._
 import LoginController._
+import ed.server.security.EdSecurity
 
 
 /** Logs in and out.
@@ -91,6 +92,7 @@ class LoginController @Inject()(cc: ControllerComponents, edContext: EdContext)
     * the rest of the page.
     */
   def showLoginPopup(mode: String, returnToUrl: String): Action[Unit] = GetActionAllowAnyone { request =>
+    val anyXsrfToken = request.headers.get(EdSecurity.XsrfTokenHeaderName)  // ??? or win.opener ???
     Ok(views.html.login.loginPopup(
       SiteTpi(request),
       mode = mode,

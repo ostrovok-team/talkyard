@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *@
 
-@(tpi: debiki.SiteTpi, serverAddress: String)(content: Html)
+@(tpi: debiki.SiteTpi, serverAddress: String, noCookiesXsrfToken: Option[String] = None)(content: Html)
 
 @asset(file: String) = @{
   controllers.routes.Assets.at(path = "/public/res", file)
@@ -24,19 +24,25 @@
 <!DOCTYPE html>
 <html class="DW dw-pri">
 <head>
-  <meta name="viewport" content="width=device-width">
-  <meta charset="utf-8"/>
-  <link rel="stylesheet" href="@asset("fontello/css/fontello-embedded.css")"/>
-  <link rel="stylesheet" href="@asset(s"styles-bundle.${tpi.minMaxCss}")"/>
-  @tpi.debikiScriptsInHead(isInLoginWindow = true)
-  <script src="@tpi.assetUrl(s"translations/${tpi.languageCode}/i18n.${tpi.minMaxJs}")"></script>
-  <script src="@tpi.assetUrl(s"slim-bundle.${tpi.minMaxJs}")"></script>
-  <script src="@tpi.assetUrl(s"more-bundle.${tpi.minMaxJs}")"></script>
+<meta name="viewport" content="width=device-width">
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="@asset("fontello/css/fontello-embedded.css")"/>
+<link rel="stylesheet" href="@asset(s"styles-bundle.${tpi.minMaxCss}")"/>
+@tpi.debikiScriptsInHead(isInLoginWindow = true)
+@if(noCookiesXsrfToken.isDefined) {
+@* This escapes any weird chars — and that's not needed anyway because generated server side. *@
+<script>eds.volatileDataFromServer.noCookiesXsrfToken = '@{noCookiesXsrfToken.get}'</script>
+}
+<script src="@tpi.assetUrl(s"translations/${tpi.languageCode}/i18n.${tpi.minMaxJs}")"></script>
+<script src="@tpi.assetUrl(s"slim-bundle.${tpi.minMaxJs}")"></script>
+<script src="@tpi.assetUrl(s"more-bundle.${tpi.minMaxJs}")"></script>
 </head>
 <body>
-  <!-- views/login/popupMain.scala.html -->
-  @content
-  @views.html.anyWeinreScript()
+
+<!-- views/login/popupMain.scala.html -->
+@content
+@views.html.anyWeinreScript()
+
 </body>
 </html>
 
