@@ -24,7 +24,7 @@
 	url = ../talkyard-versions.git
 [submodule "docker/web/modules/nchan"]
 	path = docker/web/modules/nchan
-	url = https://github.com/kajmagnus/nchan.git
+	url = https://github.com/slact/nchan.git
 [submodule "docker/web/modules/lua-nginx-module"]
 	path = docker/web/modules/lua-nginx-module
 	url = https://github.com/openresty/lua-nginx-module.git
