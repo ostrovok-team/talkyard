@@ -332,6 +332,9 @@ class SpamChecker(
       .map(handleStopForumSpamResponse)
       .recover({
         case ex: Exception =>
+          // COULD rate limit requests to stopforumspam, seems as if otherwise it rejects
+          // connections?
+          // java.net.ConnectException:
           p.Logger.warn(s"Error querying api.stopforumspam.com [DwE2PWC7]", ex)
           None
       })

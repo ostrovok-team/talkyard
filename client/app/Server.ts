@@ -1398,7 +1398,7 @@ interface LongPollingState {
 }
 
 const longPollingState: LongPollingState = { nextReqNr: 1 };
-const LongPollingSeconds = 30;
+const LongPollingSeconds = 40;  // a bit more than the Nchan timeout [2ALJH9]
 
 
 // For end-to-end tests, so they can verify that new long polling requests seem to
