@@ -20,16 +20,21 @@ failfile=tests/e2e-failures.txt
 echo "" >> $failfile
 log_message "Running: $*" >> $failfile
 
+isoDate=$(date --iso-8601=seconds)
+randAlnum=$(< /dev/urandom tr -cd "[a-z0-9]" | head -c 10)
+
+testStartId="$isoDate-$randAlnum"
 
 function runE2eTest {
   site_nr=`printf '%d' $(($site_nr + 1))`
-  cmd="$@ --deleteOldSite --localHostname=e2e-test-$site_nr"
+  # Incl $testStartId so ps-grep-kill below can kill only wdio processes we start here.
+  cmd="$@ --deleteOldSite --localHostname=e2e-test-$site_nr --dummy-wdio-test $testStartId"
   echo "—————————————————————————————————————————————————————————"
   echo "Next test: $cmd"
   # Sometimes, randomly?, there's some weird port conflict causing this to fail & hang forever.
   # So timeout after 3 minutes. The slow tests take about one minute.
   # Also, kill any wdio things that have failed to stop, and might block a/the port.
-  wdio_ps=$( ps aux | grep node | egrep 'wdio(.[0-9a-z]+)?.conf.js' | grep -- '--only' )
+  wdio_ps=$(ps aux | grep node | egrep 'wdio(.[0-9a-z]+)?.conf.js' | grep "wdio-test $testStartId")
   if [ -n "$wdio_ps" ] ; then
     # Column 2 is the process id.
     wdio_ps_ids=$( echo "$wdio_ps" | awk '{ print $2 }' | tr '\n' ' ' )
