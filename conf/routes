@@ -184,8 +184,8 @@ POST  /-/reply                  controllers.ReplyController.handleReply
 POST  /-/chat                   controllers.ReplyController.handleChatMessage
 
 POST  /-/upsert-draft           controllers.DraftsController.upsertDraft
-POST  /-/load-draft             controllers.DraftsController.loadDraft
-POST  /-/list-drafts            controllers.DraftsController.listDrafts
+GET   /-/load-draft             controllers.DraftsController.loadDraft
+GET   /-/list-drafts            controllers.DraftsController.listDrafts
 POST  /-/delete-drafts          controllers.DraftsController.deleteDrafts
 
 POST  /-/submit-custom-form-as-json-reply controllers.CustomFormController.handleJsonReply

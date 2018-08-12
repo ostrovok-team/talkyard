@@ -227,7 +227,7 @@ case class Draft(
   title: Option[String],
   text: String) {
 
-  require(draftNr >= 1, "TyEBDDRFT01")
+  require(draftNr >= 1 || draftNr == NoDraftNr, "TyEBDDRFT01")
   require(lastEditedAt.isEmpty || createdAt.millis <= lastEditedAt.get.millis, "TyEBDDRFT03")
   require(autoPostAt.isEmpty || createdAt.millis <= autoPostAt.get.millis, "TyEBDDRFT04")
   require(deletedAt.isEmpty || createdAt.millis <= deletedAt.get.millis, "TyEBDDRFT05")
@@ -237,6 +237,13 @@ case class Draft(
       autoPostAt.get.millis <= deletedAt.get.millis, "TyEBDDRFT07")
   require(forWhat.isNewTopic == title.isDefined, "TyEBDDRFT08")
   require(forWhat.isNewTopic == newTopicType.isDefined, "TyEBDDRFT08")
+
+  require(text.trim.nonEmpty, "TyEBDDRFT09")
+  require(title.forall(_.trim.nonEmpty), "TyEBDDRFT10")
+
+  def isNewTopic: Boolean = forWhat.isNewTopic
+  def isReply: Boolean = forWhat.replyToPostNr.isDefined
+  def isEdit: Boolean = forWhat.editPostId.isDefined
 }
 
 

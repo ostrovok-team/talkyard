@@ -24,6 +24,7 @@ import org.scalactic.{Bad, ErrorMessage, Good, Or}
 import scala.collection.immutable
 import scala.collection.mutable.ArrayBuffer
 import com.debiki.core.PageParts.BodyNr
+import scala.util.{Failure, Success, Try}
 
 
 package object core {
@@ -618,11 +619,19 @@ package object core {
     None
   }
 
+
   implicit class GetOrBadMap[G, B](val underlying: Or[G, B]) {
     def getOrIfBad(fn: B => Nothing): G = underlying.badMap(fn).get
     def getMakeGood(errorFixFn: B => G): G = underlying match {
       case Good(value) => value
       case Bad(bad) => errorFixFn(bad)
+    }
+  }
+
+  implicit class RichTry[T](val underlying: Try[T]) {
+    def getOrIfFailure(fn: Exception => Nothing): T = underlying match {
+      case Failure(ex) => fn(ex)
+      case Success(value: T) => value
     }
   }
 

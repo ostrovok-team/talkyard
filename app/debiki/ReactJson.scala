@@ -1778,5 +1778,29 @@ object JsX {
     case None => JsNull
   }
 
+  def JsDraftLocator(draftLocator: DraftLocator): JsObject = {
+    Json.obj(
+      "newTopicCategoryId" -> JsNumberOrNull(draftLocator.newTopicCategoryId),
+      "messageToUserId" -> JsNumberOrNull(draftLocator.messageToUserId),
+      "editPostId" -> JsNumberOrNull(draftLocator.editPostId),
+      "replyToPageId" -> JsStringOrNull(draftLocator.replyToPageId),
+      "replyToPostNr" -> JsNumberOrNull(draftLocator.replyToPostNr),
+      "replyType" -> JsNumberOrNull(draftLocator.replyType.map(_.toInt)))
+  }
+
+  def JsDraft(draft: Draft): JsObject = {
+    Json.obj(
+      "byUserId" -> draft.byUserId,
+      "draftNr" -> draft.draftNr,
+      "forWhat" -> JsDraftLocator(draft.forWhat),
+      "createdAt" -> JsWhenMs(draft.createdAt),
+      "lastEditedAt" -> JsWhenMsOrNull(draft.lastEditedAt),
+      "autoPostAt" -> JsWhenMsOrNull(draft.autoPostAt),
+      "deletedAt" -> JsWhenMsOrNull(draft.deletedAt),
+      "newTopicType" -> JsNumberOrNull(draft.newTopicType.map(_.toInt)),
+      "title" -> JsStringOrNull(draft.title),
+      "text" -> JsString(draft.text),
+    )
+  }
 }
 
