@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2012-2013, 2018 Kaj Magnus Lindberg
+ * Copyright (c) 2018 Kaj Magnus Lindberg
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -25,21 +25,31 @@ import ed.server.auth.Authz
 import ed.server.http._
 import javax.inject.Inject
 import play.api._
-import play.api.libs.json.{JsObject, JsString, JsValue}
+import play.api.libs.json.{JsObject, JsString, JsValue, Json}
 import play.api.mvc._
 
 
-/** Saves replies. Lazily creates pages for embedded discussions
-  * — such pages aren't created until the very first reply is posted.
-  */
-class ReplyController @Inject()(cc: ControllerComponents, edContext: EdContext)
+class DraftsController @Inject()(cc: ControllerComponents, edContext: EdContext)
   extends EdController(cc, edContext) {
 
   import context.security.{throwNoUnless, throwIndistinguishableNotFound}
 
-  def handleReply: Action[JsValue] = PostJsonAction(RateLimits.PostReply, maxBytes = MaxPostSize) {
+  def saveDraft: Action[JsValue] = PostJsonAction(RateLimits.DraftSomething, maxBytes = MaxPostSize) {
         request: JsonPostRequest =>
     import request.{body, dao, theRequester => requester}
+
+    // Check authz  !
+
+    val draftLocator: DraftLocator = ???
+    val draft: Draft = ???
+
+    dao.readWriteTransaction { tx =>
+      tx.upsertDraft(draft)
+    }
+
+    Ok
+
+    /*
     val anyPageId = (body \ "pageId").asOpt[PageId]
     val anyAltPageId = (body \ "altPageId").asOpt[AltPageId]
     val anyEmbeddingUrl = (body \ "embeddingUrl").asOpt[String]
@@ -94,75 +104,41 @@ class ReplyController @Inject()(cc: ControllerComponents, edContext: EdContext)
     if (newPagePath ne null) {
       patchWithNewPageId = patchWithNewPageId + ("newlyCreatedPageId" -> JsString(pageId))
     }
-    OkSafeJson(patchWithNewPageId)
+    OkSafeJson(patchWithNewPageId) */
   }
 
 
-  def handleChatMessage: Action[JsValue] = PostJsonAction(RateLimits.PostReply,
-        maxBytes = MaxPostSize) { request =>
-    import request.{body, dao}
-    val pageId = (body \ "pageId").as[PageId]
-    val text = (body \ "text").as[String].trim
+  def loadDraft: Action[Unit] = GetAction { request: GetRequest =>
+      import request.{body, dao, theRequester => requester}
+    ???
+    // Atuhz!!
 
-    throwBadRequestIf(text.isEmpty, "EsE0WQCB", "Empty chat message")
-
-    val pageMeta = dao.getPageMeta(pageId) getOrElse {
-      throwIndistinguishableNotFound("EdE7JS2")
+    val draftLocator: DraftLocator = ???
+    val anyDraft = dao.readOnlyTransaction { tx =>
+      tx.loadDraftByLocator(requester.id, draftLocator)
     }
-    val replyToPosts = Nil  // currently cannot reply to specific posts, in the chat [7YKDW3]
-    val categoriesRootLast = dao.loadAncestorCategoriesRootLast(pageMeta.categoryId)
 
-    throwNoUnless(Authz.mayPostReply(
-      request.theUserAndLevels, dao.getGroupIds(request.theMember),
-      PostType.ChatMessage, pageMeta, replyToPosts, dao.getAnyPrivateGroupTalkMembers(pageMeta),
-      inCategoriesRootLast = categoriesRootLast,
-      permissions = dao.getPermsOnPages(categoriesRootLast)),
-      "EdEHDETG4K5")
-
-    // Don't follow links in chat mesages — chats don't work with search engines anyway.
-    val textAndHtml = dao.textAndHtmlMaker.forBodyOrComment(text, followLinks = false)
-    val result = dao.insertChatMessage(
-      textAndHtml, pageId = pageId, request.who, request.spamRelatedStuff)
-
-    OkSafeJson(result.storePatchJson)
+    OkSafeJson(Json.obj())
   }
 
 
-  private def tryCreateEmbeddedCommentsPage(request: DebikiRequest[_], embeddingUrl: String,
-        altPageId: Option[String]): PagePath = {
-    import request.{dao, requester}
-
-    // (Security, fine: I don't think we need to verify that there is actually a page at
-    // the embedding url. Theoretically it's possible for Mallory to post comments to an url,
-    // where he knows a page will get auto-published later at a certain date-time. Then,
-    // when the page gets auto-published, his possibly weird comments will be there, waiting.
-    // But he might as well write a bot that posts the comments, the moments the page gets published?
-    // The real solution to this, is instead to moderate new users' first comments, right?)
-
-    val siteSettings = request.dao.getWholeSiteSettings()
-    if (siteSettings.allowEmbeddingFrom.isEmpty) {
-      SECURITY; SHOULD // Later, check that allowEmbeddingFrom origin matches... the referer? [4GUYQC0].
-      throwForbidden2("EdE2WTKG8", "Embedded comments allow-from origin not configured")
+  def listDrafts: Action[Unit] = GetAction { request: GetRequest =>
+      import request.{body, dao, theRequester => requester}
+    // Atuhz!!
+    ???
+    val drafts = dao.readOnlyTransaction { tx =>
+      tx.listDraftsRecentlyEditedFirst(requester.id)
     }
 
-    val slug = None
-    val folder = None
-    val categoryId = dao.getDefaultCategoryId()
-    val categoriesRootLast = dao.loadAncestorCategoriesRootLast(categoryId)
-    val pageRole = PageRole.EmbeddedComments
+    OkSafeJson(Json.arr())
+  }
 
-    throwNoUnless(Authz.mayCreatePage(
-      request.theUserAndLevels, dao.getGroupIds(requester),
-      pageRole, PostType.Normal, pinWhere = None, anySlug = slug, anyFolder = folder,
-      inCategoriesRootLast = categoriesRootLast,
-      permissions = dao.getPermsOnPages(categories = categoriesRootLast)),
-      "EdE7USC2R8")
 
-    dao.createPage(pageRole, PageStatus.Published,
-      anyCategoryId = Some(categoryId), anyFolder = slug, anySlug = folder,
-      titleTextAndHtml = dao.textAndHtmlMaker.forTitle(s"Comments for $embeddingUrl"),
-      bodyTextAndHtml = dao.textAndHtmlMaker.forBodyOrComment(s"Comments for: $embeddingUrl"), showId = true,
-      Who.System, request.spamRelatedStuff, altPageId = altPageId, embeddingUrl = Some(embeddingUrl))
+  def deleteDrafts: Action[JsValue] = PostJsonAction(RateLimits.DraftSomething, maxBytes = 1000) {
+    request: JsonPostRequest =>
+      import request.{body, dao, theRequester => requester}
+      ???
+    // Atuhz!!
   }
 
 }

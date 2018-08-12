@@ -183,6 +183,11 @@ POST  /-/leave-page             controllers.PageController.leavePage
 POST  /-/reply                  controllers.ReplyController.handleReply
 POST  /-/chat                   controllers.ReplyController.handleChatMessage
 
+POST  /-/save-draft             controllers.DraftsController.saveDraft
+POST  /-/load-draft             controllers.DraftsController.loadDraft
+POST  /-/list-drafts            controllers.DraftsController.listDrafts
+POST  /-/delete-drafts          controllers.DraftsController.deleteDrafts
+
 POST  /-/submit-custom-form-as-json-reply controllers.CustomFormController.handleJsonReply
 POST  /-/submit-custom-form-as-new-topic  controllers.CustomFormController.handleNewTopic
 
