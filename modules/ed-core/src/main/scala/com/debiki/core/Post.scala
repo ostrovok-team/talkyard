@@ -195,6 +195,23 @@ object PostType {
 }
 
 
+case class Draft(
+  byUserId: UserId,
+  draftNr: DraftNr,
+  categoryId: Option[CategoryId],
+  pageId: Option[PageId],
+  replyToPostNr: Option[PostNr],
+  messageToUserId: Option[UserId],
+  title: Option[String],
+  text: String) {
+
+  require(draftNr >= 1, "TyE5KBRE02")
+  require(categoryId.oneIfDefined + pageId.oneIfDefined + messageToUserId.oneIfDefined == 1, "TyE4WKAB02")
+  require(pageId.isDefined == replyToPostNr.isDefined, "TyE7KABFE32")
+  require((categoryId.isDefined || messageToUserId.isDefined) == title.isDefined, "TyE7FK24R2")
+}
+
+
 
 /** A post is a page title, a page body or a comment.
   * For example, a forum topic title, topic text, or a reply.

@@ -121,6 +121,11 @@ trait SiteTransaction {
     }): _*)
   }
 
+  def nextDraftNr(userId: UserId): DraftNr
+  def upsertDraft(draft: Draft)
+  def deleteDraft(userId: UserId, draftNr: DraftNr)
+  def listDrafts(userId: UserId): immutable.Seq[Draft]
+
   def nextPostId(): PostId
   def insertPost(newPost: Post)
   def updatePost(newPost: Post)
