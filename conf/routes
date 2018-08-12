@@ -183,7 +183,7 @@ POST  /-/leave-page             controllers.PageController.leavePage
 POST  /-/reply                  controllers.ReplyController.handleReply
 POST  /-/chat                   controllers.ReplyController.handleChatMessage
 
-POST  /-/save-draft             controllers.DraftsController.saveDraft
+POST  /-/upsert-draft           controllers.DraftsController.upsertDraft
 POST  /-/load-draft             controllers.DraftsController.loadDraft
 POST  /-/list-drafts            controllers.DraftsController.listDrafts
 POST  /-/delete-drafts          controllers.DraftsController.deleteDrafts

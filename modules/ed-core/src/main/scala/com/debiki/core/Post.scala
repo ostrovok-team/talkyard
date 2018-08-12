@@ -195,20 +195,48 @@ object PostType {
 }
 
 
+case class DraftLocator(
+  newTopicCategoryId: Option[CategoryId] = None,
+  messageToUserId: Option[UserId] = None,
+  editPostId: Option[PostId] = None,
+  replyToPageId: Option[PageId] = None,
+  replyToPostNr: Option[PostNr] = None,
+  replyType: Option[PostType] = None) {
+
+  require(
+    newTopicCategoryId.oneIfDefined +
+    messageToUserId.oneIfDefined +
+    editPostId.oneIfDefined +
+    replyToPageId.oneIfDefined == 1, "TyEBDDRFTLOC1")
+  require(replyToPageId.isDefined == replyToPostNr.isDefined, "TyEBDDRFTLOC2")
+  require(replyToPageId.isDefined == replyType.isDefined, "TyEBDDRFTLOC3")
+
+  def isNewTopic: Boolean = newTopicCategoryId.isDefined || messageToUserId.isDefined
+}
+
+
 case class Draft(
   byUserId: UserId,
   draftNr: DraftNr,
-  categoryId: Option[CategoryId],
-  pageId: Option[PageId],
-  replyToPostNr: Option[PostNr],
-  messageToUserId: Option[UserId],
+  forWhat: DraftLocator,
+  createdAt: When,
+  lastEditedAt: Option[When] = None,
+  autoPostAt: Option[When] = None,
+  deletedAt: Option[When] = None,
+  newTopicType: Option[PageRole] = None,
   title: Option[String],
   text: String) {
 
-  require(draftNr >= 1, "TyE5KBRE02")
-  require(categoryId.oneIfDefined + pageId.oneIfDefined + messageToUserId.oneIfDefined == 1, "TyE4WKAB02")
-  require(pageId.isDefined == replyToPostNr.isDefined, "TyE7KABFE32")
-  require((categoryId.isDefined || messageToUserId.isDefined) == title.isDefined, "TyE7FK24R2")
+  require(draftNr >= 1, "TyEBDDRFT01")
+  require(lastEditedAt.isEmpty || createdAt.millis <= lastEditedAt.get.millis, "TyEBDDRFT03")
+  require(autoPostAt.isEmpty || createdAt.millis <= autoPostAt.get.millis, "TyEBDDRFT04")
+  require(deletedAt.isEmpty || createdAt.millis <= deletedAt.get.millis, "TyEBDDRFT05")
+  require(lastEditedAt.isEmpty || deletedAt.isEmpty ||
+      lastEditedAt.get.millis <= deletedAt.get.millis, "TyEBDDRFT06")
+  require(autoPostAt.isEmpty || deletedAt.isEmpty ||
+      autoPostAt.get.millis <= deletedAt.get.millis, "TyEBDDRFT07")
+  require(forWhat.isNewTopic == title.isDefined, "TyEBDDRFT08")
+  require(forWhat.isNewTopic == newTopicType.isDefined, "TyEBDDRFT08")
 }
 
 

@@ -34,6 +34,7 @@ package object core {
   type ActionId = Int
 
   type DraftNr = Int
+  val NoDraftNr: DraftNr = 0
 
   // TODO rename to PostId.
   type PostId = Int
