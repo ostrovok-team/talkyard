@@ -724,12 +724,14 @@ export const Editor = createComponent({
   makeEmptyDraft: function(): Draft | undefined {
     const locator: DraftLocator = {};
     const store: Store = this.state.store;
+    let replyType: PostType;
     if (this.state.editingPostUid) {
       locator.editPostId = this.state.editingPostUid;
     }
     else if (this.state.replyToPostNrs && this.state.replyToPostNrs.length) {
       locator.replyToPageId = store.currentPageId;
       locator.replyToPostNr = this.state.replyToPostNrs[0]; // for now just pick the first one
+      replyType = PostType.Normal;
     }
     else if (this.state.messageToUserIds && this.state.messageToUserIds.length) {
       locator.messageToUserId = this.state.messageToUserIds[0];  // for now
@@ -747,7 +749,7 @@ export const Editor = createComponent({
       forWhat: locator,
       createdAt: getNowMs(),
       newTopicType: this.state.newPageRole,
-      replyType: this.state.anyPostType || PostType.Normal,
+      replyType: this.state.anyPostType || replyType,
       title: '',
       text: '',
     };
@@ -770,6 +772,7 @@ export const Editor = createComponent({
       draftStatus: callbackThatClosesEditor ? DraftStatus.SavingBig : DraftStatus.SavingSmall,
     });
 
+    console.log(`Saving draft: ${draftToSave}`);
     Server.upsertDraft(draftToSave, (draftWithNr: Draft) => {
       this.setState({
         draft: draftWithNr,
@@ -1282,8 +1285,8 @@ export const Editor = createComponent({
       case DraftStatus.EditsUndone: draftStatusText = "Unchanged."; break;
       case DraftStatus.Saved: draftStatusText = "Draft saved."; break;
       case DraftStatus.ShouldSave: draftStatusText = "Will save draft ..."; break;
-      case DraftStatus.SavingSmall: draftStatusText = "Saving draft ..."; break;
-      case DraftStatus.SavingBig: draftStatusText = "Saving draft ..."; break;  // could show dialog
+      case DraftStatus.SavingSmall: draftStatusText = "Saving draft ..."; break;  // I18N
+      case DraftStatus.SavingBig: draftStatusText = "Saving draft ..."; break;  // could show in modal dialog, and an "Ok I'll wait until you're done" button, and a Cancel button.
     }
 
     const draftStatus = !draftStatusText ? null :

@@ -95,8 +95,33 @@ export function linkToUsersEmailAddrs(userIdOrUsername: UserId | string): string
   return linkToUserProfilePage(userIdOrUsername) + '/preferences/account';
 }
 
+export function linkToMyDraftsEtc(store: Store): string {
+  return linkToMyProfilePage(store) + '/drafts-etc';
+}
+
 export function linkToMyProfilePage(store: Store): string {
   return origin() + UsersRoot + store.me.id;
+}
+
+
+export function linkToDraftSource(draft: Draft): string {
+  const locator = draft.forWhat;
+  if (locator.replyToPageId) {
+    return origin() + '/-' + locator.replyToPageId +
+        '#post-' + locator.replyToPostNr;  // TODO #draftNr=...&replyToNr=...
+  }
+  else if (locator.editPostId) {
+    return '/-/open-editor?forPostId=' + locator.editPostId;  // ?? unimpl
+  }
+  else if (locator.messageToUserId) {
+    return linkToSendMessage(locator.messageToUserId);
+  }
+  else if (locator.newTopicCategoryId) {
+    return '/';  // TODO #open-new-topic-draft-...
+  }
+  else {
+    die("Unknown draft source [TyE5WADK204]")
+  }
 }
 
 

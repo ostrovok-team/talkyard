@@ -762,6 +762,12 @@ export function loadMyself(callback: (user: any) => void) {
   get(`/-/load-my-page-data?pageId=${getPageId()}`, callback);
 }
 
+export function listDrafts(userId: UserId,
+      success: (drafts: Draft[]) => void, error: () => void) {
+  const query = `?userId=${userId}`;
+  get('/-/list-drafts' + query, success, error);
+}
+
 
 export function loadNotifications(userId: UserId, upToWhenMs: number,
       success: (notfs: Notification[]) => void, error: () => void) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2015 Kaj Magnus Lindberg
+ * Copyright (c) 2018 Kaj Magnus Lindberg
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -25,16 +25,16 @@
 const r = ReactDOMFactories;
 
 
-export const UserNotifications = createFactory({
-  displayName: 'UserNotifications',
+export const UserDrafts = createFactory({
+  displayName: 'UserDrafts',
 
   getInitialState: function() {
-    return { notfs: null, error: false };
+    return { drafts: null, error: false };
   },
 
   componentDidMount: function() {
     const user: MemberInclDetails = this.props.user;
-    this.loadNotifications(user.id);
+    this.listDrafts(user.id);
   },
 
   componentWillUnmount: function() {
@@ -42,33 +42,33 @@ export const UserNotifications = createFactory({
   },
 
   componentWillReceiveProps: function(nextProps: any) {
-    // Dupl code, also in view drafts. [7WUBKZ0]
+    // Dupl code, also in view notfs. [7WUBKZ0]
     const me: Myself = this.props.store.me;
     const user: MemberInclDetails = this.props.user;
     const nextLoggedInUser: Myself = nextProps.store.me;
     const nextUser: MemberInclDetails = nextProps.user;
     if (me.id !== nextLoggedInUser.id ||
         user.id !== nextUser.id) {
-      this.loadNotifications(nextUser.id);
+      this.listDrafts(nextUser.id);
     }
   },
 
-  loadNotifications: function(userId: UserId) {
-    // Dupl code, also in view drafts. [7WUBKZ0]
+  listDrafts: function(userId: UserId) {
+    // Dupl code, also in view notfs. [7WUBKZ0]
     const me: Myself = this.props.store.me;
     if (me.id !== userId && !isStaff(me)) {
       this.setState({
-        error: "May not list an other user's notifications. [EdE7WK2L_]",
-        notfs: null,
+        error: "May not list an other user's drafts. [TyE5ARBK2]",
+        drafts: null,
       });
       return;
     }
-    Server.loadNotifications(userId, Date.now(), (notfs: Notification[]) => {
+    Server.listDrafts(userId, (drafts: Draft[]) => {
       if (this.isGone) return;
-      this.setState({ notfs: notfs });
+      this.setState({ drafts });
     }, () => {
-      // Clear state.notfs, in case we're no longer allowed to view the notfs.
-      this.setState({ error: true, notfs: null });
+      // Clear state.notfs, in case we're no longer allowed to view the drafts.
+      this.setState({ error: true, drafts: null });
     });
   },
 
@@ -79,7 +79,9 @@ export const UserNotifications = createFactory({
         r.p({ className: 'e_UP_Notfs_Err' },
           _.isString(this.state.error) ? this.state.error : "Error [EsE7YKW2]."));
 
-    if (!this.state.notfs)
+    const drafts: Draft[] = this.state.drafts;
+
+    if (!drafts)
       return r.p({}, t.Loading);
 
     const user: MemberInclDetails = this.props.user;
@@ -87,23 +89,27 @@ export const UserNotifications = createFactory({
     const me: Myself = store.me;
     const isMe = user.id === me.id;
 
-    const anyNoNotfsMessage = this.state.notfs.length ? null :
-        r.p({ className: 'e_UP_Notfs_None' }, t.upp.NoNotfs);
+    const anyNoDraftsMessage = drafts.length ? null :
+        r.p({ className: 'e_UP_Drfts_None' }, "No drafts");  // I18N
 
-    const notfsElems = this.state.notfs.map((notf: Notification) =>
-        r.li({ key: notf.id },
-          Link({ to: linkToNotificationSource(notf) },
-            notification.Notification({ notification: notf, verbose: true }))));
+    const draftElems = drafts.map((draft: Draft) =>
+        r.li({ key: draft.draftNr },
+          Link({ to: linkToDraftSource(draft) },
+            Draft({ draft, verbose: true }))));
 
     return (
       r.div({},
         r.p({}, isMe ? t.upp.NotfsToYouC : t.upp.NotfsToOtherC(user.username || user.fullName)),
-        anyNoNotfsMessage,
+        anyNoDraftsMessage,
         r.ol({ className: 'esNotfs' },
-          notfsElems)));
+          draftElems)));
   }
 });
 
+
+function Draft(props: { draft: Draft, verbose: boolean }) {
+  return r.p({}, JSON.stringify(props.draft));
+}
 
 //------------------------------------------------------------------------------
    }

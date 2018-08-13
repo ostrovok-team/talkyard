@@ -185,6 +185,10 @@ const UserPageComponent = createReactClass(<any> {
     const notificationsNavItem = !showPrivateStuff || user.isGroup ? null :
       LiNavLink({ to: linkStart + 'notifications', className: 'e_UP_NotfsB' }, t.Notifications);
 
+    const draftsEtcNavItem = !showPrivateStuff || user.isGroup ? null :
+      LiNavLink({ to: linkStart + 'drafts-etc', className: 'e_UP_DrftsB' },
+        "Drafts etc"); // I18N
+
     const preferencesNavItem = !showPrivateStuff ? null :
       LiNavLink({ to: linkStart + 'preferences', id: 'e2eUP_PrefsB' }, t.upp.Preferences);
 
@@ -210,6 +214,7 @@ const UserPageComponent = createReactClass(<any> {
       Route({ path: u + 'activity', render: (ps) => UsersActivity({ ...childProps, ...ps }) }),
       Route({ path: u + 'summary', render: () => UserSummary(childProps) }),
       Route({ path: u + 'notifications', render: () => UserNotifications(childProps) }),
+      Route({ path: u + 'drafts-etc', render: () => UserDrafts(childProps) }),
       Route({ path: u + 'preferences', render: (ps) => UserPreferences({ ...childProps, ...ps }) }),
       Route({ path: u + 'invites', render: () => UserInvites(childProps) }));
 
@@ -220,13 +225,12 @@ const UserPageComponent = createReactClass(<any> {
           activityNavItem,
           summaryNavItem,
           notificationsNavItem,
+          draftsEtcNavItem,
           invitesNavItem,
           preferencesNavItem),
         childRoutes));
   }
 });
-
-
 
 const AvatarAboutAndButtons = createComponent({
   displayName: 'AvatarAboutAndButtons',

@@ -103,6 +103,7 @@ export const MyMenuContent = createFactory({
 
     // ------- The current user
 
+    let viewDraftsAndBookmarks;
     let viewProfileMenuItem;
     let logoutMenuItem;
     let myStuffDivider;
@@ -111,6 +112,9 @@ export const MyMenuContent = createFactory({
       viewProfileMenuItem =
           MenuItemLink({ to: linkToMyProfilePage(store), id: 'e2eMM_Profile' },
             t.mm.ViewProfile);
+      viewDraftsAndBookmarks =
+          MenuItemLink({ to: linkToMyDraftsEtc(store), id: 'e_MyDrtsB' },
+              "Drafts, bookmarks, tasks");  // I18N
       logoutMenuItem =
           MenuItem({ onClick: this.onLogoutClick, id: 'e2eMM_Logout' }, t.mm.LogOut);
       myStuffDivider = MenuItemDivider();
@@ -131,6 +135,7 @@ export const MyMenuContent = createFactory({
         adminHelpLink,
         reviewMenuItem,
         (adminMenuItem || reviewMenuItem) ? MenuItemDivider() : null,
+        viewDraftsAndBookmarks,
         viewProfileMenuItem,
         viewAsOtherItem,
         logoutMenuItem,

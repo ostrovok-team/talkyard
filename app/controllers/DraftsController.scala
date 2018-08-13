@@ -159,14 +159,17 @@ class DraftsController @Inject()(cc: ControllerComponents, edContext: EdContext)
   }*/
 
 
-  def listDrafts: Action[Unit] = GetAction { request: GetRequest =>
+  def listDrafts(userId: UserId): Action[Unit] = GetAction { request: GetRequest =>
     import request.{dao, theRequester => requester}
 
+    throwForbiddenIf(!requester.isAdmin && requester.id != userId,
+      "TyE2RDGWA8", "May not view other's drafts")
+
     val drafts = dao.readOnlyTransaction { tx =>
-      tx.listDraftsRecentlyEditedFirst(requester.id)
+      tx.listDraftsRecentlyEditedFirst(userId)
     }
 
-    OkSafeJson(Json.arr(drafts map JsDraft))
+    OkSafeJson(JsArray(drafts map JsDraft))
   }
 
 
