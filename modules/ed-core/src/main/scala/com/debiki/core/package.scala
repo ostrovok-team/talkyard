@@ -629,9 +629,9 @@ package object core {
   }
 
   implicit class RichTry[T](val underlying: Try[T]) {
-    def getOrIfFailure(fn: Exception => Nothing): T = underlying match {
+    def getOrIfFailure(fn: Throwable => Nothing): T = underlying match {
       case Failure(ex) => fn(ex)
-      case Success(value: T) => value
+      case Success(value) => value
     }
   }
 

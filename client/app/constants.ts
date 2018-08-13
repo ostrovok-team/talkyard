@@ -32,6 +32,7 @@ const TitleNr = 0;
 const BodyNr = 1;
 const BodyNrStr = '1';
 const FirstReplyNr = 2;
+const NoDraftNr = 0;
 
 let NoUserId = 0;
 const SystemUserId = 1;

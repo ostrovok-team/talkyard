@@ -42,6 +42,33 @@ class EditController @Inject()(cc: ControllerComponents, edContext: EdContext)
 
   def loadDraftAndGuidelines(writingWhat: String, categoryId: Option[Int], pageRole: String)
         : Action[Unit] = GetAction { request =>
+    import request.{dao, queryString, theRequester => requester}
+
+    import Utils.ValidationImplicits.queryStringToValueGetter
+
+    val anyDraftLocator =
+      queryString.getInt("replyToPostNr") match {
+        case Some(postNr) =>
+          val replyToPageId = queryString.getFirst("replyToPageId")
+          Some(DraftLocator(
+            replyToPageId = replyToPageId,
+            replyToPostNr = Some(postNr)))
+        case None =>
+          queryString.getInt("messageToUserId") match {
+            case Some(userId) =>
+              Some(DraftLocator(messageToUserId = Some(userId)))
+            case None =>
+              categoryId map { catId =>
+                DraftLocator(newTopicCategoryId = Some(catId))
+              }
+          }
+      }
+
+    val drafts = anyDraftLocator map { draftLocator =>
+      dao.readOnlyTransaction { tx =>
+        tx.loadDraftsByLocator(requester.id, draftLocator)
+      }
+    } getOrElse Nil
 
     val writeWhat = writingWhat.toIntOption.flatMap(WriteWhat.fromInt) getOrElse throwBadArgument(
       "DwE4P6CK0", "writingWhat")
@@ -74,6 +101,7 @@ class EditController @Inject()(cc: ControllerComponents, edContext: EdContext)
     }
 
     OkSafeJson(Json.obj(
+      "drafts" -> JsArray(drafts.map(JsX.JsDraft)),
       "guidelinesSafeHtml" -> JsStringOrNull(guidelinesSafeHtml)))
   }
 
@@ -82,11 +110,14 @@ class EditController @Inject()(cc: ControllerComponents, edContext: EdContext)
     * SHOULD change to pageId + postId (not postNr)  [idnotnr]
     */
   def loadCurrentText(pageId: String, postNr: Int): Action[Unit] = GetAction { request =>
-    import request.dao
+    import request.{dao, theRequester => requester}
 
     val pageMeta = dao.getPageMeta(pageId) getOrElse throwIndistinguishableNotFound("EdE4JBR01")
     val post = dao.loadPost(pageId, postNr) getOrElse throwIndistinguishableNotFound("EdE0DK9WY3")
     val categoriesRootLast = dao.loadAncestorCategoriesRootLast(pageMeta.categoryId)
+    val anyDrafts = dao.readOnlyTransaction { tx =>
+      tx.loadDraftsByLocator(requester.id, DraftLocator(editPostId = Some(post.id)))
+    }
 
     throwNoUnless(Authz.mayEditPost(
       request.theUserAndLevels, dao.getGroupIds(request.theUser),
@@ -97,7 +128,8 @@ class EditController @Inject()(cc: ControllerComponents, edContext: EdContext)
     OkSafeJson(Json.obj(
       "postUid" -> post.id,
       "currentText" -> post.currentSource,
-      "currentRevisionNr" -> post.currentRevisionNr))
+      "currentRevisionNr" -> post.currentRevisionNr,
+      "drafts" -> anyDrafts.map(JsX.JsDraft)))
   }
 
 
@@ -105,10 +137,11 @@ class EditController @Inject()(cc: ControllerComponents, edContext: EdContext)
     */
   def edit: Action[JsValue] = PostJsonAction(RateLimits.EditPost, maxBytes = MaxPostSize) {
         request: JsonPostRequest =>
-    import request.dao
-    val pageId = (request.body \ "pageId").as[PageId]
-    val postNr = (request.body \ "postNr").as[PostNr] ; SHOULD // change to id, in case moved to other page [idnotnr]
-    val newText = (request.body \ "text").as[String]
+    import request.{dao, body}
+    val pageId = (body \ "pageId").as[PageId]
+    val postNr = (body \ "postNr").as[PostNr] ; SHOULD // change to id, in case moved to other page [idnotnr]
+    val newText = (body \ "text").as[String]
+    val deleteDraftNr = (body \ "deleteDraftNr").asOpt[DraftNr]
 
     if (postNr == PageParts.TitleNr)
       throwForbidden("DwE5KEWF4", "Edit the title via /-/edit-title-save-settings instead")
@@ -137,8 +170,8 @@ class EditController @Inject()(cc: ControllerComponents, edContext: EdContext)
       // to rel=follow). For now, instead:
       followLinks = postNr == PageParts.BodyNr && pageMeta.pageRole.shallFollowLinks)
 
-    request.dao.editPostIfAuth(pageId = pageId, postNr = postNr, request.who,
-      request.spamRelatedStuff, newTextAndHtml)
+    request.dao.editPostIfAuth(pageId = pageId, postNr = postNr, deleteDraftNr = deleteDraftNr,
+      request.who, request.spamRelatedStuff, newTextAndHtml)
 
     OkSafeJson(dao.jsonMaker.postToJson2(postNr = postNr, pageId = pageId,
       includeUnapproved = true))

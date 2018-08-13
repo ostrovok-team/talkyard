@@ -894,28 +894,36 @@ export function listUsernames(prefix: string, pageId: PageId, success: (username
 // Currently doesn't load any draft.
 // Later: add reply-to-post-unique-id, to load the correct draft?
 //
-export function loadDraftAndGuidelines(writingWhat: WritingWhat, categoryId: number,
-      pageRole: PageRole, success: (guidelinesSafeHtml: string) => void) {
-  if (!categoryId && pageRole !== PageRole.FormalMessage) {
-    // For now just cancel. There's no draft to load, and there're no guidelines, since
-    // we got no category id.
-    success(null);
-    return;
-  }
+export function loadDraftAndGuidelines(draftLocator: DraftLocator, writingWhat: WritingWhat,
+      categoryId: number, pageRole: PageRole,
+      success: (guidelinesSafeHtml: string, draft?: Draft) => void) {
+
+  const dloc = draftLocator;
+  const pageIdParam = dloc.replyToPageId ? '&replyToPageId=' + dloc.replyToPageId : '';
+  const postNrParam = dloc.replyToPostNr ? '&replyToPostNr=' + dloc.replyToPostNr : '';
+  const messageToUserIdParam = dloc.messageToUserId ? '&messageToUserId=' + dloc.messageToUserId : '';
   const categoryParam = categoryId ? '&categoryId=' + categoryId : '';
-  get('/-/load-draft-and-guidelines?writingWhat=' + writingWhat + categoryParam +
-       '&pageRole=' + pageRole, (response) => {
-    success(response.guidelinesSafeHtml);
+
+  const url = `/-/load-draft-and-guidelines?writingWhat=${writingWhat}&pageRole=${pageRole}` +
+    pageIdParam + postNrParam + messageToUserIdParam + categoryParam;
+
+  get(url, (response) => {
+    success(response.guidelinesSafeHtml, response.drafts[0]); // for now, just pick the first
   });
 }
 
 
-export function loadCurrentPostText(postNr: PostNr,
-      doneCallback: (text: string, postUid: number, revisionNr: number) => void) {
+export function loadCurrentPostTextAndDraft(postNr: PostNr,
+      onDone: (text: string, postUid: number, revisionNr: number, draft?: Draft) => void) {
   get('/-/edit?pageId='+ getPageId() + '&postNr='+ postNr, (response: any) => {
     // COULD also load info about whether the user may apply and approve the edits.
-    doneCallback(response.currentText, response.postUid, response.currentRevisionNr);
+    onDone(response.currentText, response.postUid, response.currentRevisionNr, response.draft);
   });
+}
+
+
+export function upsertDraft(draft: Draft, onDone: (draftWithNr: Draft) => void) {
+  postJsonSuccess('/-/upsert-draft', onDone, draft);
 }
 
 
@@ -954,12 +962,14 @@ export function loadVoters(postId: PostId, voteType: PostVoteType,
 }
 
 
-export function saveEdits(postNr: number, text: string, doneCallback: () => void) {
+export function saveEdits(postNr: number, text: string, deleteDraftNr: DraftNr,
+      doneCallback: () => void) {
   postJson('/-/edit', {
     data: {
       pageId: getPageId(),
       postNr: postNr,
-      text: text
+      text: text,
+      deleteDraftNr,
     },
     success: (editedPost) => {
       doneCallback();
@@ -1019,7 +1029,7 @@ export function unpinPage(success: () => void) {
 
 
 export function saveReply(postNrs: PostNr[], text: string, anyPostType: number,
-    success: () => void) {
+      deleteDraftNr: DraftNr | undefined, success: () => void) {
   postJson('/-/reply', {
     data: {
       pageId: getPageId() || undefined,
@@ -1027,7 +1037,8 @@ export function saveReply(postNrs: PostNr[], text: string, anyPostType: number,
       embeddingUrl: eds.embeddingUrl || undefined,
       postNrs: postNrs,
       postType: anyPostType || PostType.Normal,
-      text: text
+      text: text,
+      deleteDraftNr,
     },
     success: (response) => {
       d.i.handleReplyResult(response);
@@ -1037,11 +1048,13 @@ export function saveReply(postNrs: PostNr[], text: string, anyPostType: number,
 }
 
 
-export function insertChatMessage(text: string, success: () => void) {
+export function insertChatMessage(text: string, deleteDraftNr: DraftNr | undefined,
+      success: () => void) {
   postJson('/-/chat', {
     data: {
       pageId: getPageId(),
-      text: text
+      text: text,
+      deleteDraftNr,
     },
     success: (response) => {
       d.i.handleReplyResult(response);
@@ -1097,9 +1110,9 @@ export function leavePage() {
 
 
 export function startPrivateGroupTalk(title: string, text: string, pageRole: PageRole,
-    userIds: number[], success: (pageId: PageId) => void) {
+    userIds: number[], deleteDraftNr: DraftNr, success: (pageId: PageId) => void) {
   postJsonSuccess('/-/start-private-group-talk', success,
-      { title: title, text: text, pageRole: pageRole, userIds: userIds });
+      { title: title, text: text, pageRole: pageRole, userIds: userIds, deleteDraftNr });
 }
 
 

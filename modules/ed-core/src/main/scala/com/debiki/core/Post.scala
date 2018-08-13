@@ -200,16 +200,16 @@ case class DraftLocator(
   messageToUserId: Option[UserId] = None,
   editPostId: Option[PostId] = None,
   replyToPageId: Option[PageId] = None,
-  replyToPostNr: Option[PostNr] = None,
-  replyType: Option[PostType] = None) {
+  replyToPostNr: Option[PostNr] = None) {
 
-  require(
+  private def isForNumThings: Int =
     newTopicCategoryId.oneIfDefined +
     messageToUserId.oneIfDefined +
     editPostId.oneIfDefined +
-    replyToPageId.oneIfDefined == 1, "TyEBDDRFTLOC1")
+    replyToPageId.oneIfDefined
+
+  require(isForNumThings == 1, s"Is for $isForNumThings things: $this [TyEBDDRFTLOC1]")
   require(replyToPageId.isDefined == replyToPostNr.isDefined, "TyEBDDRFTLOC2")
-  require(replyToPageId.isDefined == replyType.isDefined, "TyEBDDRFTLOC3")
 
   def isNewTopic: Boolean = newTopicCategoryId.isDefined || messageToUserId.isDefined
 }
@@ -224,7 +224,8 @@ case class Draft(
   autoPostAt: Option[When] = None,
   deletedAt: Option[When] = None,
   newTopicType: Option[PageRole] = None,
-  title: Option[String],
+  replyType: Option[PostType] = None,
+  title: String,
   text: String) {
 
   require(draftNr >= 1 || draftNr == NoDraftNr, "TyEBDDRFT01")
@@ -235,11 +236,8 @@ case class Draft(
       lastEditedAt.get.millis <= deletedAt.get.millis, "TyEBDDRFT06")
   require(autoPostAt.isEmpty || deletedAt.isEmpty ||
       autoPostAt.get.millis <= deletedAt.get.millis, "TyEBDDRFT07")
-  require(forWhat.isNewTopic == title.isDefined, "TyEBDDRFT08")
   require(forWhat.isNewTopic == newTopicType.isDefined, "TyEBDDRFT08")
-
-  require(text.trim.nonEmpty, "TyEBDDRFT09")
-  require(title.forall(_.trim.nonEmpty), "TyEBDDRFT10")
+  require(isReply == replyType.isDefined, "Draft replyType missing [TyEBDDRFT09]")
 
   def isNewTopic: Boolean = forWhat.isNewTopic
   def isReply: Boolean = forWhat.replyToPostNr.isDefined

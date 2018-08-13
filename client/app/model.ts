@@ -18,6 +18,7 @@
 type PageId = string;
 type PostId = number;
 type PostNr = number;
+type DraftNr = number;
 type PageVersion = number;
 type CategoryId = number;
 type SiteId = String;
@@ -143,6 +144,30 @@ enum FlagType {
   Spam = 51,
   Inapt = 52,
   Other = 53,
+}
+
+
+interface DraftLocator {
+  newTopicCategoryId?: number;
+  messageToUserId?: UserId;
+  editPostId?: PostId;
+  replyToPageId?: PageId;
+  replyToPostNr?: PostNr;
+}
+
+
+interface Draft {
+  byUserId: UserId;
+  draftNr: number;
+  forWhat: DraftLocator;
+  createdAt: WhenMs;
+  lastEditedAt?: WhenMs;
+  autoPostAt?: WhenMs;
+  deletedAt?: WhenMs;
+  newTopicType?: PageRole;
+  replyType?: PostType;
+  title?: string;
+  text: string;
 }
 
 

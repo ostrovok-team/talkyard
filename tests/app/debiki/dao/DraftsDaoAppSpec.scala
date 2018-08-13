@@ -31,11 +31,12 @@ class DraftsDaoAppSpec extends DaoAppSuite(disableScripts = true, disableBackgro
   var categoryId: CategoryId = _
 
   var pageId: PageId = _
-  var userOneDraft: Draft = _
-  var userOneDraftTwoNewerForNewTopic: Draft = _
-  var userOneDraftTwoEdited: Draft = _
-  var userOneDraftThreeOlderDirectMessage: Draft = _
-  var userOneDraftThreeDeleted: Draft = _
+  var draftOne: Draft = _
+  var draftTwoNewerForNewTopic: Draft = _
+  var draftTwoEdited: Draft = _
+  var draftThreeOlderDirectMessage: Draft = _
+  var draftThreeDeleted: Draft = _
+  var draftFourNewTopic: Draft = _
 
   val DraftOneText = "DraftOneText"
   val DraftTwoTitleOrig = "DraftTwoTitleOrig"
@@ -43,6 +44,10 @@ class DraftsDaoAppSpec extends DaoAppSuite(disableScripts = true, disableBackgro
   val DraftTwoTextOrig = "DraftTwoTextOrig"
   val DraftTwoTextEdited = "DraftTwoTextEdited"
   val DraftThreeText = "DraftThreeText"
+  val DraftFourText = "DraftFourText"
+
+  lazy val now: When = globals.now()
+
 
   "DraftsDao can" - {
 
@@ -61,23 +66,34 @@ class DraftsDaoAppSpec extends DaoAppSuite(disableScripts = true, disableBackgro
             Who(owner.id, browserIdData)).defaultCategoryId
     }
 
+    "find the first draft nr" in {
+      dao.readOnlyTransaction { tx =>
+        tx.nextDraftNr(userOne.id) mustBe 1
+      }
+    }
+
     "save a draft for a reply" in {
-      val now = globals.now()
       val locator = DraftLocator(
         replyToPageId = Some(pageId),
-        replyToPostNr = Some(PageParts.BodyNr),
-        replyType = Some(PostType.Normal))
+        replyToPostNr = Some(PageParts.BodyNr))
 
-      userOneDraft = Draft(
+      draftOne = Draft(
         byUserId = userOne.id,
         draftNr = 1,
-        forWhat = locator,
         createdAt = now,
-        title = None,
+        forWhat = locator,
+        replyType = Some(PostType.Normal),
+        title = "",
         text = DraftOneText)
 
       dao.readWriteTransaction { tx =>
-        tx.upsertDraft(userOneDraft)
+        tx.upsertDraft(draftOne)
+      }
+    }
+
+    "find the 2nd draft nr" in {
+      dao.readOnlyTransaction { tx =>
+        tx.nextDraftNr(userOne.id) mustBe 2
       }
     }
 
@@ -89,52 +105,52 @@ class DraftsDaoAppSpec extends DaoAppSuite(disableScripts = true, disableBackgro
 
     "list one draft for user one" in {
       dao.readOnlyTransaction { tx =>
-        tx.listDraftsRecentlyEditedFirst(userOne.id) mustBe Vector(userOneDraft)
+        tx.listDraftsRecentlyEditedFirst(userOne.id) mustBe Vector(draftOne)
       }
     }
 
     "save another draft, for a new topic" in {
-      val now = globals.now()
       val locator = DraftLocator(
         newTopicCategoryId = Some(categoryId))
 
-      userOneDraftTwoNewerForNewTopic = Draft(
+      draftTwoNewerForNewTopic = Draft(
         byUserId = userOne.id,
         draftNr = 2,
         forWhat = locator,
         createdAt = now.plusMillis(1000),  // newer
         newTopicType = Some(PageRole.Discussion),
-        title = Some("New topic title"),
+        title = "New topic title",
         text = DraftTwoTextOrig)
 
       dao.readWriteTransaction { tx =>
-        tx.upsertDraft(userOneDraftTwoNewerForNewTopic)
+        tx.upsertDraft(draftTwoNewerForNewTopic)
       }
     }
 
     "save yet another draft, for a direct message" in {
-      val now = globals.now()
       val locator = DraftLocator(
         messageToUserId = Some(userTwo.id))
 
-      userOneDraftThreeOlderDirectMessage = Draft(
+      draftThreeOlderDirectMessage = Draft(
         byUserId = userOne.id,
         draftNr = 3,
         forWhat = locator,
         createdAt = now.minusMillis(1000),  // older
         newTopicType = Some(PageRole.Discussion),
-        title = Some("Direct message title"),
+        title = "Direct message title",
         text = DraftThreeText)
 
       dao.readWriteTransaction { tx =>
-        tx.upsertDraft(userOneDraftThreeOlderDirectMessage)
+        tx.upsertDraft(draftThreeOlderDirectMessage)
       }
     }
 
     "list three drafts for user one, in correct order" in {
       dao.readOnlyTransaction { tx =>
-        tx.listDraftsRecentlyEditedFirst(userOne.id) mustBe Vector(
-          userOneDraftTwoNewerForNewTopic, userOneDraft, userOneDraftThreeOlderDirectMessage)
+        val drafts = tx.listDraftsRecentlyEditedFirst(userOne.id)
+        drafts.length mustBe 3
+        drafts mustBe Vector(
+            draftTwoNewerForNewTopic, draftOne, draftThreeOlderDirectMessage)
       }
     }
 
@@ -146,9 +162,9 @@ class DraftsDaoAppSpec extends DaoAppSuite(disableScripts = true, disableBackgro
 
     "can load drafts by nr" in {
       dao.readOnlyTransaction { tx =>
-        val d1 = userOneDraft
-        val d2 = userOneDraftTwoNewerForNewTopic
-        val d3 = userOneDraftThreeOlderDirectMessage
+        val d1 = draftOne
+        val d2 = draftTwoNewerForNewTopic
+        val d3 = draftThreeOlderDirectMessage
         tx.loadDraftByNr(userOne.id, d1.draftNr) mustBe Some(d1)
         tx.loadDraftByNr(userOne.id, d2.draftNr) mustBe Some(d2)
         tx.loadDraftByNr(userOne.id, d3.draftNr) mustBe Some(d3)
@@ -157,85 +173,127 @@ class DraftsDaoAppSpec extends DaoAppSuite(disableScripts = true, disableBackgro
 
     "can load drafts by locator" in {
       dao.readOnlyTransaction { tx =>
-        val d1 = userOneDraft
-        val d2 = userOneDraftTwoNewerForNewTopic
-        val d3 = userOneDraftThreeOlderDirectMessage
-        tx.loadDraftByLocator(userOne.id, d1.forWhat) mustBe Some(d1)
-        tx.loadDraftByLocator(userOne.id, d2.forWhat) mustBe Some(d2)
-        tx.loadDraftByLocator(userOne.id, d3.forWhat) mustBe Some(d3)
+        val d1 = draftOne
+        val d2 = draftTwoNewerForNewTopic
+        val d3 = draftThreeOlderDirectMessage
+        tx.loadDraftsByLocator(userOne.id, d1.forWhat) mustBe Vector(d1)
+        tx.loadDraftsByLocator(userOne.id, d2.forWhat) mustBe Vector(d2)
+        tx.loadDraftsByLocator(userOne.id, d3.forWhat) mustBe Vector(d3)
       }
     }
 
     "soft delete a draft" in {
-      userOneDraftThreeDeleted = userOneDraftThreeOlderDirectMessage.copy(deletedAt = Some(globals.now))
+      draftThreeDeleted = draftThreeOlderDirectMessage.copy(deletedAt = Some(now.plusMillis(21000)))
       dao.readWriteTransaction { tx =>
-        tx.upsertDraft(userOneDraftThreeDeleted)
+        tx.upsertDraft(draftThreeDeleted)
       }
     }
 
     "no longer incl in drafts list (but the others still are)" in {
       dao.readOnlyTransaction { tx =>
-        tx.listDraftsRecentlyEditedFirst(userOne.id) mustBe Vector(
-          userOneDraftTwoNewerForNewTopic, userOneDraft)
+        val drafts = tx.listDraftsRecentlyEditedFirst(userOne.id)
+        drafts.length mustBe 2
+        drafts mustBe Vector(
+          draftTwoNewerForNewTopic, draftOne)
       }
     }
 
     "can still load the others, by id and loctor" in {
       dao.readOnlyTransaction { tx =>
-        val d1 = userOneDraft
-        val d2 = userOneDraftTwoNewerForNewTopic
+        val d1 = draftOne
+        val d2 = draftTwoNewerForNewTopic
         tx.loadDraftByNr(userOne.id, d1.draftNr) mustBe Some(d1)
         tx.loadDraftByNr(userOne.id, d2.draftNr) mustBe Some(d2)
-        tx.loadDraftByLocator(userOne.id, d1.forWhat) mustBe Some(d1)
-        tx.loadDraftByLocator(userOne.id, d2.forWhat) mustBe Some(d2)
+        tx.loadDraftsByLocator(userOne.id, d1.forWhat) mustBe Vector(d1)
+        tx.loadDraftsByLocator(userOne.id, d2.forWhat) mustBe Vector(d2)
       }
     }
 
-    "load the deleted draft, it's now in deleted status" in {
+    "load the deleted draft, by nr, it's now in deleted status" in {
       dao.readOnlyTransaction { tx =>
-        val d3 = userOneDraftThreeOlderDirectMessage
-        d3.draftNr mustBe userOneDraftThreeDeleted.draftNr
-        tx.loadDraftByNr(userOne.id, d3.draftNr) mustBe Some(userOneDraftThreeDeleted)
-        tx.loadDraftByLocator(userOne.id, d3.forWhat) mustBe Some(userOneDraftThreeDeleted)
+        draftThreeDeleted.draftNr mustBe draftThreeOlderDirectMessage.draftNr
+        tx.loadDraftByNr(userOne.id, draftThreeDeleted.draftNr) mustBe Some(draftThreeDeleted)
+      }
+    }
+
+    "but loading the deleted draft by locator = nothing" in {
+      dao.readOnlyTransaction { tx =>
+        tx.loadDraftsByLocator(userOne.id, draftThreeDeleted.forWhat) mustBe Vector()
       }
     }
 
     "hard delete a draft" in {
       dao.readWriteTransaction { tx =>
-        tx.deleteDraft(userOne.id, userOneDraftThreeOlderDirectMessage.draftNr)
+        tx.deleteDraft(userOne.id, draftThreeOlderDirectMessage.draftNr)
       }
     }
 
     "now cannot load it any more at all, gone" in {
       dao.readOnlyTransaction { tx =>
-        val d3 = userOneDraftThreeOlderDirectMessage
+        val d3 = draftThreeOlderDirectMessage
         tx.loadDraftByNr(userOne.id, d3.draftNr) mustBe None
-        tx.loadDraftByLocator(userOne.id, d3.forWhat) mustBe None
+        tx.loadDraftsByLocator(userOne.id, d3.forWhat) mustBe Nil
       }
     }
 
     "can edit a draft" in {
-      userOneDraftTwoEdited = userOneDraftTwoNewerForNewTopic.copy(
-        title = Some(DraftTwoTitleEdited),
+      draftTwoEdited = draftTwoNewerForNewTopic.copy(
+        lastEditedAt = Some(now.plusMillis(12000)),
+        title = DraftTwoTitleEdited,
         text = DraftTwoTextEdited)
       dao.readWriteTransaction { tx =>
-        tx.upsertDraft(userOneDraftTwoEdited)
+        tx.upsertDraft(draftTwoEdited)
       }
     }
 
     "when reloading, the changes are there" in {
       dao.readOnlyTransaction { tx =>
-        val d2 = userOneDraftTwoEdited
-        tx.loadDraftByNr(userOne.id, d2.draftNr) mustBe Some(userOneDraftTwoEdited)
-        tx.loadDraftByLocator(userOne.id, d2.forWhat) mustBe Some(userOneDraftTwoEdited)
+        val d2 = draftTwoEdited
+        tx.loadDraftByNr(userOne.id, d2.draftNr) mustBe Some(draftTwoEdited)
+        tx.loadDraftsByLocator(userOne.id, d2.forWhat) mustBe Vector(draftTwoEdited)
       }
     }
 
     "the other draft wasn't changed" in {
       dao.readOnlyTransaction { tx =>
-        val d1 = userOneDraft
+        val d1 = draftOne
         tx.loadDraftByNr(userOne.id, d1.draftNr) mustBe Some(d1)
-        tx.loadDraftByLocator(userOne.id, d1.forWhat) mustBe Some(d1)
+        tx.loadDraftsByLocator(userOne.id, d1.forWhat) mustBe Vector(d1)
+      }
+    }
+
+    "save a second new-topic draft" in {
+      val locator = DraftLocator(
+        newTopicCategoryId = Some(categoryId))
+
+      draftFourNewTopic = Draft(
+        byUserId = userOne.id,
+        draftNr = 4,
+        forWhat = locator,
+        createdAt = now.plusMillis(9000),  // newest, but older than the edits
+        newTopicType = Some(PageRole.Question),
+        title = "Is this a good question to ask?",
+        text = DraftTwoTextOrig)
+
+      dao.readWriteTransaction { tx =>
+        tx.upsertDraft(draftFourNewTopic)
+      }
+    }
+
+    "load only the new topic draft, by draft nr" in {
+      dao.readOnlyTransaction { tx =>
+        val d4 = draftFourNewTopic
+        tx.loadDraftByNr(userOne.id, d4.draftNr) mustBe Some(d4)
+      }
+    }
+
+    "load by both two new topic drafts, by locator" in {
+      dao.readOnlyTransaction { tx =>
+        val d2 = draftTwoEdited // is for new topic, too. And newest, since edted.
+        val d4 = draftFourNewTopic
+        val draftsLoaded = tx.loadDraftsByLocator(userOne.id, d4.forWhat)
+        draftsLoaded.length mustBe 2
+        draftsLoaded mustBe Vector(d2, d4)
       }
     }
 

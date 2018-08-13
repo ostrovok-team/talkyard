@@ -28,26 +28,30 @@ import javax.inject.Inject
 import play.api._
 import play.api.libs.json._
 import play.api.mvc._
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
+import JsX.JsDraft
 
 
 class DraftsController @Inject()(cc: ControllerComponents, edContext: EdContext)
   extends EdController(cc, edContext) {
 
+  import context.globals
   import context.security.{throwNoUnless, throwIndistinguishableNotFound}
 
   def upsertDraft: Action[JsValue] = PostJsonAction(RateLimits.DraftSomething, maxBytes = MaxPostSize) {
         request: JsonPostRequest =>
     import request.{body, dao, theRequester => requester}
 
+    val locatorJson = (body \ "forWhat").asOpt[JsObject] getOrThrowBadArgument(
+      "TyE4AKBP20", "No draft locator: forWhat missing")
+
     val draftLocator = Try(
       DraftLocator(
-        newTopicCategoryId = (body \ "newTopicCategoryId").asOpt[CategoryId],
-        messageToUserId = (body \ "messageToUserId").asOpt[UserId],
-        editPostId = (body \ "editPostId").asOpt[PostId],
-        replyToPageId = (body \ "replyToPageId").asOpt[PageId],
-        replyToPostNr = (body \ "replyToPostNr").asOpt[PostNr],
-        replyType = (body \ "replyType").asOpt[Int].flatMap(PostType.fromInt))) getOrIfFailure { ex =>
+        newTopicCategoryId = (locatorJson \ "newTopicCategoryId").asOpt[CategoryId],
+        messageToUserId = (locatorJson \ "messageToUserId").asOpt[UserId],
+        editPostId = (locatorJson \ "editPostId").asOpt[PostId],
+        replyToPageId = (locatorJson \ "replyToPageId").asOpt[PageId],
+        replyToPostNr = (locatorJson \ "replyToPostNr").asOpt[PostNr])) getOrIfFailure { ex =>
       throwBadRequest("TyEBDDRFTLC", ex.getMessage)
     }
 
@@ -56,13 +60,14 @@ class DraftsController @Inject()(cc: ControllerComponents, edContext: EdContext)
         byUserId = requester.id,
         draftNr = (body \ "draftNr").asOpt[DraftNr].getOrElse(NoDraftNr),
         forWhat = draftLocator,
-        createdAt = (body \ "createdAtMs").asWhen,
+        createdAt = (body \ "createdAt").asOptWhen.getOrElse(globals.now()),
         lastEditedAt = (body \ "lastEditedAt").asOptWhen,
         autoPostAt = (body \ "autoPostAt").asOptWhen,
         deletedAt = (body \ "deletedAt").asOptWhen,
-        newTopicType = (body \ "").asOpt[Int].flatMap(PageRole.fromInt),
-        title = (body \ "").asOpt[String],
-        text = (body \ "").as[String])) getOrIfFailure { ex =>
+        newTopicType = (body \ "newTopicType").asOpt[Int].flatMap(PageRole.fromInt),
+        replyType = (body \ "replyType").asOpt[Int].flatMap(PostType.fromInt),
+        title = (body \ "title").asOptStringNoneIfBlank.getOrElse(""),
+        text = (body \ "text").as[String].trim())) getOrIfFailure { ex =>
       throwBadRequest("TyEBDDRFTDT", ex.getMessage)
     }
 
@@ -78,7 +83,7 @@ class DraftsController @Inject()(cc: ControllerComponents, edContext: EdContext)
 
       val pageMeta = dao.getThePageMeta(draftLocator.replyToPageId getOrDie "TyE2ABS049S")
       val categoriesRootLast = dao.loadAncestorCategoriesRootLast(pageMeta.categoryId)
-      val postType = draftLocator.replyType getOrDie "TyER35SKS02GU"
+      val postType = draft.replyType getOrDie "TyER35SKS02GU"
       val replyToPost =
         dao.loadPost(pageMeta.pageId, draftLocator.replyToPostNr getOrDie "TyESRK0437")
           .getOrElse(throwIndistinguishableNotFound("TyE4WEB93"))
@@ -103,35 +108,65 @@ class DraftsController @Inject()(cc: ControllerComponents, edContext: EdContext)
         permissions = dao.getPermsOnPages(categoriesRootLast)), "EdEZBXK3M2")
     }
 
-    dao.readWriteTransaction { tx =>
-      tx.upsertDraft(draft)
+    val draftWithNr = dao.readWriteTransaction { tx =>
+      val draftWithNr =
+        if (draft.draftNr != NoDraftNr) draft else {
+          val nr = tx.nextDraftNr(requester.id)
+          draft.copy(draftNr = nr)
+        }
+      tx.upsertDraft(draftWithNr)
+      draftWithNr
     }
 
-    Ok
+    OkSafeJson(
+      JsDraft(draftWithNr))
   }
 
 
-  def loadDraft: Action[Unit] = GetAction { request: GetRequest =>
-      import request.{dao, theRequester => requester}
-
-    /*
-    val draftLocator: DraftLocator = ???
-    val anyDraft = dao.readOnlyTransaction { tx =>
-      tx.loadDraftByLocator(requester.id, draftLocator)
-    }*/
-
-    OkSafeJson(JsNull)
+  /*
+  def loadDraftForNewTopic(categoryId: CategoryId): Action[Unit] = GetAction { request: GetRequest =>
+    loadMatchingDraftsAndRespond(
+        DraftLocator(newTopicCategoryId = Some(categoryId)), request)
   }
+
+
+  def loadDraftForDirectMessage(toUserId: UserId): Action[Unit] = GetAction { request: GetRequest =>
+    loadMatchingDraftsAndRespond(
+        DraftLocator(messageToUserId = Some(toUserId)), request)
+  }
+
+
+  def loadDraftForReply(pageId: PageId, postNr: Int): Action[Unit] = GetAction { request: GetRequest =>
+    loadMatchingDraftsAndRespond(
+        DraftLocator(replyToPageId = Some(pageId), replyToPostNr = Some(postNr)), request)
+  }
+
+
+  def loadDraftForEdits(postId: Int): Action[Unit] = GetAction { request: GetRequest =>
+    loadMatchingDraftsAndRespond(
+        DraftLocator(editPostId = Some(postId)), request)
+  }
+
+
+  private def loadMatchingDraftsAndRespond(locator: DraftLocator, request: GetRequest): Result = {
+    import request.{dao, theRequester => requester}
+
+    val drafts = dao.readOnlyTransaction { tx =>
+      tx.loadDraftsByLocator(requester.id, locator)
+    }
+
+    OkSafeJson(Json.arr(drafts map JsX.JsDraft))
+  }*/
 
 
   def listDrafts: Action[Unit] = GetAction { request: GetRequest =>
-      import request.{dao, theRequester => requester}
+    import request.{dao, theRequester => requester}
 
     val drafts = dao.readOnlyTransaction { tx =>
       tx.listDraftsRecentlyEditedFirst(requester.id)
     }
 
-    OkSafeJson(Json.arr(drafts map JsX.JsDraft))
+    OkSafeJson(Json.arr(drafts map JsDraft))
   }
 
 

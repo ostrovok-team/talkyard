@@ -33,6 +33,7 @@ declare const TitleNr;
 declare const BodyNr: number;
 declare const BodyNrStr: string;
 declare const FirstReplyNr;
+declare const NoDraftNr;
 
 declare let NoUserId;
 declare const SystemUserId;
@@ -178,6 +179,7 @@ declare namespace debiki2 {
   var getFromLocalStorage: any;
   var putInLocalStorage: any;
   var event_isCtrlEnter: any;
+  var event_isEscape: any;
   function page_isPrivateGroup(pageRole: PageRole): boolean;
   function pageRole_iconClass(pageRole: PageRole): string;
 

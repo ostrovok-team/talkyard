@@ -1784,8 +1784,7 @@ object JsX {
       "messageToUserId" -> JsNumberOrNull(draftLocator.messageToUserId),
       "editPostId" -> JsNumberOrNull(draftLocator.editPostId),
       "replyToPageId" -> JsStringOrNull(draftLocator.replyToPageId),
-      "replyToPostNr" -> JsNumberOrNull(draftLocator.replyToPostNr),
-      "replyType" -> JsNumberOrNull(draftLocator.replyType.map(_.toInt)))
+      "replyToPostNr" -> JsNumberOrNull(draftLocator.replyToPostNr))
   }
 
   def JsDraft(draft: Draft): JsObject = {
@@ -1798,7 +1797,8 @@ object JsX {
       "autoPostAt" -> JsWhenMsOrNull(draft.autoPostAt),
       "deletedAt" -> JsWhenMsOrNull(draft.deletedAt),
       "newTopicType" -> JsNumberOrNull(draft.newTopicType.map(_.toInt)),
-      "title" -> JsStringOrNull(draft.title),
+      "replyType" -> JsNumberOrNull(draft.replyType.map(_.toInt)),
+      "title" -> JsString(draft.title),
       "text" -> JsString(draft.text),
     )
   }
