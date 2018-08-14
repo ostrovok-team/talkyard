@@ -933,6 +933,11 @@ export function upsertDraft(draft: Draft, onDone: (draftWithNr: Draft) => void) 
 }
 
 
+export function deleteDrafts(draftNrs: DraftNr[], onDone: () => void) {
+  postJsonSuccess('/-/delete-drafts', onDone, draftNrs);
+}
+
+
 const cachedOneboxHtml = {};
 
 export function loadOneboxSafeHtml(url: string, success: (safeHtml: string) => void) {

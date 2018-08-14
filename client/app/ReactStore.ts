@@ -529,7 +529,7 @@ ReactStore.activateMyself = function(anyNewMe: Myself) {
     if (eds.isInEmbeddedCommentsIframe) {
       // Don't scroll — usually people come back to look at the blog post, not the comments.
     }
-    else if (ReactActions.anyAnchorPostNr()) {
+    else if (ReactActions.anyAnchorPostNr()) {   // BUG? (harmless) should check for MagicAnchor too?
       // Then other code [7WKBQ28] scrolls to the anchored post instead.
     }
     else setTimeout(function() {

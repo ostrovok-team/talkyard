@@ -56,6 +56,13 @@ enum MagicAnchor {
   ScrollToLatest = 1,
 }
 
+enum MagicAnchorAction {  // RENAME to UrlHashAction?
+  Reply = 1,
+  Edit = 2,
+  ComposeTopic = 3,
+  ComposeMessage = 4,
+}
+
 
 interface PostToModerate {
   pageId: string;
@@ -1358,6 +1365,7 @@ interface UserAccountLoginMethod {
 
 interface ListDraftsResponse {
   drafts: Draft[];
+  pageIdsByPostId: { [postId: string]: string };
   pageTitlesById: { [pageId: string]: string };
 }
 

@@ -439,9 +439,10 @@ export function loadAndShowPost(postNr: PostNr, showChildrenToo?: boolean, callb
  * If #post-X is specified in the URL, ensures all posts leading up to
  * and including X have been loaded. Then scrolls to X.
  */
-export function loadAndScrollToAnyUrlAnchorPost(newHash?: string) {
+export function loadAndScrollToAnyUrlAnchorPost(newHash?: string) {  // RENAME to doUrlHashAction maybe?
   const magicAnchor = anyMagicAnchor(newHash);
   let anchorPostNr = anyAnchorPostNr(newHash);   // [7WKBQ28]
+  const anchorAction = anyAnchorAction(newHash);
 
   if (!anchorPostNr && !magicAnchor) {
     // No #post-X in the URL.
@@ -457,11 +458,41 @@ export function loadAndScrollToAnyUrlAnchorPost(newHash?: string) {
 
   const postElem = $byId('post-' + anchorPostNr);
   if (!postElem) {
-    loadAndShowPost(anchorPostNr, undefined, () => markAnyNotificationAsSeen(anchorPostNr));
+    loadAndShowPost(anchorPostNr, undefined, function() {
+      markAnyNotificationAsSeen(anchorPostNr);
+      doAfter();
+    });
   }
   else {
     debiki.internal.showAndHighlightPost(postElem);
     markAnyNotificationAsSeen(anchorPostNr);
+    doAfter();
+  }
+
+  function doAfter() {
+    switch (anchorAction) {
+      case MagicAnchorAction.Reply:
+        // CLEAN_UP Dupl code [5AKBR30W02]
+        if (eds.isInEmbeddedCommentsIframe) {
+          window.parent.postMessage(
+              JSON.stringify(['editorToggleReply', [anchorPostNr, true]]), eds.embeddingOrigin);
+        }
+        else {
+          // Normal = incl in draft + url?
+          Server.loadEditorAndMoreBundles(function() {
+            debiki2.editor.toggleWriteReplyToPost(anchorPostNr, true, PostType.Normal);
+          });
+        }
+        break;
+      case MagicAnchorAction.Edit:
+        // later: debiki2.ReactActions.editPostWithNr(anchorPostNr);
+        // need to lookup page & post nr, given post id.
+        break;
+      case MagicAnchorAction.ComposeTopic:
+        break;
+      case MagicAnchorAction.ComposeMessage:
+        break;
+    }
   }
 }
 
@@ -472,6 +503,13 @@ function anyMagicAnchor(hash?: string): MagicAnchor {
   return undefined;
 }
 
+function anyAnchorAction(hash?: string): MagicAnchorAction | undefined {
+  const theHash = firstDefinedOf(hash, location.hash);  // REFACTOR dupl code, move to caller
+  if (theHash.indexOf('&edit') >= 0) return MagicAnchorAction.Edit;
+  if (theHash.indexOf('&reply') >= 0) return MagicAnchorAction.Reply;
+  if (theHash.indexOf('#composeTopic') >= 0) return MagicAnchorAction.ComposeTopic;
+  if (theHash.indexOf('#composeMessage') >= 0) return MagicAnchorAction.ComposeMessage;
+}
 
 export function anyAnchorPostNr(hash?: string): number {
   // AngularJS (I think it is) somehow inserts a '/' at the start of the hash. I'd

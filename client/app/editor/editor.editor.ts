@@ -33,10 +33,12 @@ enum DraftStatus {
   NothingHappened = 1,
   EditsUndone = 2,
   Saved = 3,
-  NeedNotSave = Saved,
-  ShouldSave = 4,
-  SavingSmall = 5,
-  SavingBig = 6,
+  Deleted = 4,
+  NeedNotSave = 4,
+  ShouldSave = 5,
+  SavingSmall = 6,
+  SavingBig = 7,
+  Deleting = 8,
 }
 
 export const ReactTextareaAutocomplete = reactCreateFactory(window['ReactTextareaAutocomplete']);
@@ -88,6 +90,7 @@ export const Editor = createComponent({
       store: debiki2.ReactStore.allData(),
       visible: false,
       text: '',
+      title: '',
       draft: null,
       draftStatus: DraftStatus.NothingHappened,
       safePreviewHtml: '',
@@ -766,14 +769,44 @@ export const Editor = createComponent({
       return;
     }
 
-    const draftOldOrEmpty: Draft = this.state.draft || this.makeEmptyDraft();
-    const draftToSave = { ...draftOldOrEmpty, text: this.state.text, title: this.state.title };
+    const text: string = (this.state.text || '').trim();
+    const title: string = (this.state.title || '').trim();
+    const oldDraft: Draft | undefined = this.state.draft;
+
+    // If empty. Delete any old draft.
+    if (!text.trim() && !title.trim()) {
+      if (oldDraft) {
+        console.debug("Deleting draft...");
+        this.setState({
+          // When closing editor, after having deleted text, it's totally uninteresting that the
+          // draft gets deleted? (cannot show a modal dialog about that)
+          // Otherwise, a bit useful with a non-obtrusive small info about that.
+          draftStatus: callbackThatClosesEditor ?
+              DraftStatus.NothingHappened : DraftStatus.Deleting,
+        });
+        Server.deleteDrafts([oldDraft.draftNr], () => {
+          console.debug("...Deleted draft.");
+          this.setState({
+            draft: null,
+            draftStatus: DraftStatus.Deleted,
+          });
+          if (callbackThatClosesEditor) {
+            callbackThatClosesEditor();
+          }
+        });
+      }
+      return;
+    }
+
+    const draftOldOrEmpty: Draft = oldDraft || this.makeEmptyDraft();
+    const draftToSave = { ...draftOldOrEmpty, text, title };
     this.setState({
       draftStatus: callbackThatClosesEditor ? DraftStatus.SavingBig : DraftStatus.SavingSmall,
     });
 
-    console.log(`Saving draft: ${draftToSave}`);
+    console.debug(`Saving draft: ${JSON.stringify(draftToSave)}`);
     Server.upsertDraft(draftToSave, (draftWithNr: Draft) => {
+      console.debug("...Saved draft.");
       this.setState({
         draft: draftWithNr,
         draftStatus: DraftStatus.Saved,
@@ -982,7 +1015,13 @@ export const Editor = createComponent({
   },
 
   clearTextAndClose: function() {
-    this.setState({ text: '', draft: null, replyToPostNrs: [], anyPostType: undefined });
+    this.setState({
+      text: '',
+      draft: null,
+      draftStatus: DraftStatus.NothingHappened,
+      replyToPostNrs: [],
+      anyPostType: undefined,
+    });
     this.saveDraftCloseEditor();
   },
 
@@ -1067,6 +1106,7 @@ export const Editor = createComponent({
       titleInput =
           r.input({ className: 'title-input esEdtr_titleEtc_title form-control' + titleErrorClass,
               type: 'text', ref: 'titleInput', tabIndex: 1, onChange: this.onTitleEdited,
+              value: this.state.title,
               placeholder: t.e.TitlePlaceholder });
 
       if (this.state.newForumTopicCategoryId && !isPrivateGroup &&
@@ -1284,9 +1324,11 @@ export const Editor = createComponent({
       case DraftStatus.NothingHappened: break;
       case DraftStatus.EditsUndone: draftStatusText = "Unchanged."; break;
       case DraftStatus.Saved: draftStatusText = "Draft saved."; break;
+      case DraftStatus.Deleted: draftStatusText = "Draft deleted."; break;
       case DraftStatus.ShouldSave: draftStatusText = "Will save draft ..."; break;
       case DraftStatus.SavingSmall: draftStatusText = "Saving draft ..."; break;  // I18N
       case DraftStatus.SavingBig: draftStatusText = "Saving draft ..."; break;  // could show in modal dialog, and an "Ok I'll wait until you're done" button, and a Cancel button.
+      case DraftStatus.Deleting: draftStatusText = "Deleting draft ..."; break;
     }
 
     const draftStatus = !draftStatusText ? null :

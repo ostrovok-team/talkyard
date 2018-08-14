@@ -108,16 +108,16 @@ export function linkToDraftSource(draft: Draft): string {
   const locator = draft.forWhat;
   if (locator.replyToPageId) {
     return origin() + '/-' + locator.replyToPageId +
-        '#post-' + locator.replyToPostNr;  // TODO #draftNr=...&replyToNr=...
+        '#post-' + locator.replyToPostNr + '&reply';  // later, maybe: &draftNr=
   }
   else if (locator.editPostId) {
-    return '/-/open-editor?forPostId=' + locator.editPostId;  // ?? unimpl
+    return '/-/open-editor?forPostId=' + locator.editPostId;  // ?? unimpl. Redir to: #post-nr&edit
   }
   else if (locator.messageToUserId) {
     return linkToSendMessage(locator.messageToUserId);
   }
   else if (locator.newTopicCategoryId) {
-    return '/';  // TODO #open-new-topic-draft-...
+    return '/#composeTopic';
   }
   else {
     die("Unknown draft source [TyE5WADK204]")

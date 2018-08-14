@@ -65,7 +65,11 @@ export const UserDrafts = createFactory({
     }
     Server.listDrafts(userId, (response: ListDraftsResponse) => {
       if (this.isGone) return;
-      this.setState({ drafts: response.drafts, pageTitlesById: response.pageTitlesById });
+      this.setState({
+        drafts: response.drafts,
+        pageTitlesById: response.pageTitlesById,
+        pageIdsByPostId: response.pageIdsByPostId,
+      });
     }, () => {
       // Clear state.notfs, in case we're no longer allowed to view the drafts.
       this.setState({ error: true, drafts: null });
@@ -90,39 +94,42 @@ export const UserDrafts = createFactory({
     const isMe = user.id === me.id;
 
     const anyNoDraftsMessage = drafts.length ? null :
-        r.p({ className: 'e_UP_Drfts_None' }, "No drafts");  // I18N
+        r.p({ className: 'e_Dfs_None' }, "No drafts");  // I18N
 
     const draftElems = drafts.map((draft: Draft) =>
         r.li({ key: draft.draftNr },
-          Link({ to: linkToDraftSource(draft) },
-            Draft({ draft, pageTitlesById: this.state.pageTitlesById, verbose: true }))));
+          Draft({ draft, pageTitlesById: this.state.pageTitlesById,
+            pageIdsByPostId: this.state.pageIdsByPostId, verbose: true })));
 
     return (
       r.div({},
-        r.p({}, isMe ? t.upp.NotfsToYouC : t.upp.NotfsToOtherC(user.username || user.fullName)),
+        r.p({}, isMe ? "Your drafts:" : `Drafts by ${user.username || user.fullName}:`),  // I18N
         anyNoDraftsMessage,
-        r.ol({ className: 'esNotfs s_Dfs' },
+        r.ol({ className: 's_Dfs' },
           draftElems)));
   }
 });
 
 
-function Draft(props: { draft: Draft, pageTitlesById: { [pageId: string]: string }, verbose: boolean }) {
+function Draft(props: { draft: Draft, pageTitlesById: { [pageId: string]: string },
+        pageIdsByPostId: { [pageId: string]: string }, verbose: boolean }) {
   const draft = props.draft;
   const text = draft.text;
   let title = draft.title;
   if (!title) {
-    let postId = draft.forWhat.editPostId || draft.forWhat.editPostId;
-    if (!postId) {
-    let postId = draft.forWhat.editPostId;
+    let pageId = draft.forWhat.replyToPageId;
+    if (!pageId) {
+      let postId = draft.forWhat.editPostId;
+      pageId = props.pageIdsByPostId[postId];
+    }
+    title = props.pageTitlesById[pageId];
   }
   return (
-    r.div({ className: 's_Dfs_Df' },
-      r.h4({ className: 's_Dfs_Df_Ttl' }, title),
-      r.p({ className: 's_Dfs_Df_Txt' }, text),
-
-      r.pre({},
-        JSON.stringify(props.draft)   // temp debug
+    Link({ to: linkToDraftSource(draft), className: 's_Dfs_Df' },
+      r.div({ className: 's_Dfs_Df_Ttl' }, title),
+      r.div({ className: 's_Dfs_Df_Txt' }, text),
+      r.pre({ style: { display: 'none' }}, // temp debug json
+        JSON.stringify(props.draft)
         )));
 }
 

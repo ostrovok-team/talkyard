@@ -43,6 +43,8 @@ class DraftsController @Inject()(cc: ControllerComponents, edContext: EdContext)
         request: JsonPostRequest =>
     import request.{body, dao, theRequester => requester}
 
+    throwForbiddenIf(requester.isGroup, "EdE65AFRDJ2", "Groups may not save drafts")
+
     val locatorJson = (body \ "forWhat").asOpt[JsObject] getOrThrowBadArgument(
       "TyE4AKBP20", "No draft locator: forWhat missing")
 
@@ -72,7 +74,8 @@ class DraftsController @Inject()(cc: ControllerComponents, edContext: EdContext)
       throwBadRequest("TyEBDDRFTDT", ex.getMessage)
     }
 
-    throwForbiddenIf(requester.isGroup, "EdE65AFRDJ2", "Groups may not save drafts")
+    throwForbiddenIf(draft.text.isEmpty && draft.title.isEmpty,
+      "TyE4RBK02R9", "Draft empty. Delete it instead")
 
     if (draft.isNewTopic) {
       // For now, check later, when posting topic. The user can just pick another category,
@@ -180,11 +183,15 @@ class DraftsController @Inject()(cc: ControllerComponents, edContext: EdContext)
 
     val pageStuffById = dao.getPageStuffById(pageIds)
 
+    val postPageIds: Seq[(String, JsValue)] = pageIdsForPostIds.map({
+        case (k, v) => (k.toString, JsString(v))
+      }).toSeq
+
     // Typescript: ListDraftsResponse.
     OkSafeJson(Json.obj(
       "drafts" -> JsArray(drafts map JsDraft),
-      "pageIdsByPostId" -> Json.obj(pageIdsForPostIds.mapValues(JsString).toSeq: _*),
-      "pageTitlesByPageId" -> JsObject(pageStuffById.mapValues(stuff => JsString(stuff.title)))))
+      "pageIdsByPostId" -> JsObject(postPageIds),
+      "pageTitlesById" -> JsObject(pageStuffById.mapValues(stuff => JsString(stuff.title)))))
   }
 
 
@@ -193,14 +200,13 @@ class DraftsController @Inject()(cc: ControllerComponents, edContext: EdContext)
     import request.{body, dao, theRequester => requester}
 
     val byUserId = requester.id
-    val draftNr = (body \ "draftNr").asOpt[DraftNr].getOrElse(NoDraftNr)
+    val draftNrs = body.as[Seq[DraftNr]]
 
     val foundAndDeleted = dao.readWriteTransaction { tx =>
-      tx.deleteDraft(byUserId, draftNr)
+      draftNrs.foreach(nr => tx.deleteDraft(byUserId, nr))
     }
 
-    OkSafeJson(Json.obj(
-      "foundAndDeleted" -> foundAndDeleted))
+    Ok
   }
 
 }
