@@ -63,9 +63,9 @@ export const UserDrafts = createFactory({
       });
       return;
     }
-    Server.listDrafts(userId, (drafts: Draft[]) => {
+    Server.listDrafts(userId, (response: ListDraftsResponse) => {
       if (this.isGone) return;
-      this.setState({ drafts });
+      this.setState({ drafts: response.drafts, pageTitlesById: response.pageTitlesById });
     }, () => {
       // Clear state.notfs, in case we're no longer allowed to view the drafts.
       this.setState({ error: true, drafts: null });
@@ -95,20 +95,35 @@ export const UserDrafts = createFactory({
     const draftElems = drafts.map((draft: Draft) =>
         r.li({ key: draft.draftNr },
           Link({ to: linkToDraftSource(draft) },
-            Draft({ draft, verbose: true }))));
+            Draft({ draft, pageTitlesById: this.state.pageTitlesById, verbose: true }))));
 
     return (
       r.div({},
         r.p({}, isMe ? t.upp.NotfsToYouC : t.upp.NotfsToOtherC(user.username || user.fullName)),
         anyNoDraftsMessage,
-        r.ol({ className: 'esNotfs' },
+        r.ol({ className: 'esNotfs s_Dfs' },
           draftElems)));
   }
 });
 
 
-function Draft(props: { draft: Draft, verbose: boolean }) {
-  return r.p({}, JSON.stringify(props.draft));
+function Draft(props: { draft: Draft, pageTitlesById: { [pageId: string]: string }, verbose: boolean }) {
+  const draft = props.draft;
+  const text = draft.text;
+  let title = draft.title;
+  if (!title) {
+    let postId = draft.forWhat.editPostId || draft.forWhat.editPostId;
+    if (!postId) {
+    let postId = draft.forWhat.editPostId;
+  }
+  return (
+    r.div({ className: 's_Dfs_Df' },
+      r.h4({ className: 's_Dfs_Df_Ttl' }, title),
+      r.p({ className: 's_Dfs_Df_Txt' }, text),
+
+      r.pre({},
+        JSON.stringify(props.draft)   // temp debug
+        )));
 }
 
 //------------------------------------------------------------------------------

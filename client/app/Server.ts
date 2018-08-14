@@ -763,7 +763,7 @@ export function loadMyself(callback: (user: any) => void) {
 }
 
 export function listDrafts(userId: UserId,
-      success: (drafts: Draft[]) => void, error: () => void) {
+      success: (response: ListDraftsResponse) => void, error: () => void) {
   const query = `?userId=${userId}`;
   get('/-/list-drafts' + query, success, error);
 }

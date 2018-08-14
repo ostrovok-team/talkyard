@@ -38,6 +38,7 @@ class DraftsController @Inject()(cc: ControllerComponents, edContext: EdContext)
   import context.globals
   import context.security.{throwNoUnless, throwIndistinguishableNotFound}
 
+
   def upsertDraft: Action[JsValue] = PostJsonAction(RateLimits.DraftSomething, maxBytes = MaxPostSize) {
         request: JsonPostRequest =>
     import request.{body, dao, theRequester => requester}
@@ -165,11 +166,25 @@ class DraftsController @Inject()(cc: ControllerComponents, edContext: EdContext)
     throwForbiddenIf(!requester.isAdmin && requester.id != userId,
       "TyE2RDGWA8", "May not view other's drafts")
 
-    val drafts = dao.readOnlyTransaction { tx =>
-      tx.listDraftsRecentlyEditedFirst(userId)
+    SHOULD; OPTIMIZE // cache per user? don't want to touch the db all the time?
+    SECURITY; COULD // rate limit? max 1 cache-miss req per 5 seconds on average?
+
+    val (drafts, pageIdsForPostIds: Map[PostId, PageId], pageIds) = dao.readOnlyTransaction { tx =>
+      val ds = tx.listDraftsRecentlyEditedFirst(userId)
+      val postIds = ds.flatMap(_.forWhat.editPostId).toSet
+      val pageIdsByPostId = tx.loadPageIdsByPostIds(postIds)
+      val pageIdsToReplyTo = ds.flatMap(_.forWhat.replyToPageId).toSet
+      val allPageIds: Set[PageId] = pageIdsToReplyTo ++ pageIdsByPostId.values
+      (ds, pageIdsByPostId, allPageIds)
     }
 
-    OkSafeJson(JsArray(drafts map JsDraft))
+    val pageStuffById = dao.getPageStuffById(pageIds)
+
+    // Typescript: ListDraftsResponse.
+    OkSafeJson(Json.obj(
+      "drafts" -> JsArray(drafts map JsDraft),
+      "pageIdsByPostId" -> Json.obj(pageIdsForPostIds.mapValues(JsString).toSeq: _*),
+      "pageTitlesByPageId" -> JsObject(pageStuffById.mapValues(stuff => JsString(stuff.title)))))
   }
 
 

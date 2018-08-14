@@ -1356,6 +1356,11 @@ interface UserAccountLoginMethod {
 }
 
 
+interface ListDraftsResponse {
+  drafts: Draft[];
+  pageTitlesById: { [pageId: string]: string };
+}
+
 
 // ----- Public API
 
