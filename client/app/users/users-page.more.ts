@@ -148,10 +148,13 @@ const UserPageComponent = createReactClass(<any> {
     });
   },
 
-  maybeOpenMessageEditor: function(userId: number) {
-    if (window.location.hash.indexOf('#writeMessage') >= 0 && !this.hasOpenedEditor) {
+  maybeOpenMessageEditor: function(userId: number) {  // [4JABRF0]
+    // Cannot message system user or guests.
+    if (userId <= SystemUserId)
+      return;
+
+    if (window.location.hash.indexOf('#composeDirectMessage') >= 0 && !this.hasOpenedEditor) {
       this.hasOpenedEditor = true;
-      dieIf(userId_isGuest(userId), 'EdE6JKY20');
       const myUserId = ReactStore.getMe().id;
       if (userId !== myUserId) {
         editor.openToWriteMessage(userId);

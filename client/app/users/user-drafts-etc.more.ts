@@ -114,23 +114,48 @@ export const UserDrafts = createFactory({
 function Draft(props: { draft: Draft, pageTitlesById: { [pageId: string]: string },
         pageIdsByPostId: { [pageId: string]: string }, verbose: boolean }) {
   const draft = props.draft;
+  const forWhat: DraftLocator = draft.forWhat;
+
   const text = draft.text;
   let title = draft.title;
-  if (!title) {
-    let pageId = draft.forWhat.replyToPageId;
-    if (!pageId) {
-      let postId = draft.forWhat.editPostId;
+  let what;
+
+  if (forWhat.replyToPageId || forWhat.editPostId) {
+    // This draft is related to an already existing page and post.
+
+    let pageId = forWhat.replyToPageId;
+    if (pageId) {
+      what = "A reply"; // I18N
+    }
+    else if (forWhat.editPostId) {
+      what = "Edits"; // I18N
+      let postId = forWhat.editPostId;
       pageId = props.pageIdsByPostId[postId];
+    }
+    else {
+      // @ifdef DEBUG
+      die('TyE24BKF0');
+      // @endif
     }
     title = props.pageTitlesById[pageId];
   }
+  else {
+    // This draft is for a new page.
+    title = title || "(No title)";  // I18N
+
+    if (draft.forWhat.messageToUserId) {
+      what = "New message"; // I18N
+    }
+    else {
+      what = "New topic"; // I18N
+    }
+  }
+
   return (
     Link({ to: linkToDraftSource(draft), className: 's_Dfs_Df' },
+      r.div({ className: 's_Dfs_Df_Wht' }, what ),
       r.div({ className: 's_Dfs_Df_Ttl' }, title),
-      r.div({ className: 's_Dfs_Df_Txt' }, text),
-      r.pre({ style: { display: 'none' }}, // temp debug json
-        JSON.stringify(props.draft)
-        )));
+      r.div({ className: 's_Dfs_Df_Txt' }, text)));
 }
 
 //------------------------------------------------------------------------------

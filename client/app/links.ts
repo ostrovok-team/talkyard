@@ -84,7 +84,7 @@ export function linkToUsersNotfs(userIdOrUsername: UserId | string): string {
 }
 
 export function linkToSendMessage(userIdOrUsername: UserId | string): string {
-  return linkToUserProfilePage(userIdOrUsername) + '/activity/posts#writeMessage';
+  return linkToUserProfilePage(userIdOrUsername) + '/activity/posts#composeDirectMessage';
 }
 
 export function linkToInvitesFromUser(userId: UserId): string {
@@ -106,18 +106,24 @@ export function linkToMyProfilePage(store: Store): string {
 
 export function linkToDraftSource(draft: Draft): string {
   const locator = draft.forWhat;
+  const andDraftNrParam = '&draftNr=' + draft.draftNr;
   if (locator.replyToPageId) {
     return origin() + '/-' + locator.replyToPageId +
-        '#post-' + locator.replyToPostNr + '&reply';  // later, maybe: &draftNr=
+        '#post-' + locator.replyToPostNr + '&replyToPost' + andDraftNrParam;
   }
   else if (locator.editPostId) {
-    return '/-/open-editor?forPostId=' + locator.editPostId;  // ?? unimpl. Redir to: #post-nr&edit
+    // Ask the server to lookup the page id and post nr, given the post id,
+    // and to redirect & edit that page-id and post-nr. The URL will then
+    // look like:  /page#post-123&editPost&draftNr=456
+    return '/-/open-editor?toEditPostId=' + locator.editPostId + andDraftNrParam;
   }
   else if (locator.messageToUserId) {
-    return linkToSendMessage(locator.messageToUserId);
+    return linkToSendMessage(locator.messageToUserId) + andDraftNrParam;
   }
   else if (locator.newTopicCategoryId) {
-    return '/#composeTopic';
+    // If [subcomms]: BUG should go to the correct sub community url path.
+    // For now, incl /latest, otherwise there'll be a redirect [5ABKR02]? so #frag-action lost.
+    return '/latest#composeForumTopic' + andDraftNrParam;
   }
   else {
     die("Unknown draft source [TyE5WADK204]")

@@ -56,11 +56,33 @@ enum MagicAnchor {
   ScrollToLatest = 1,
 }
 
-enum MagicAnchorAction {  // RENAME to UrlHashAction?
-  Reply = 1,
-  Edit = 2,
-  ComposeTopic = 3,
-  ComposeMessage = 4,
+
+/**
+ * The URL #hash-fragment can tell us to do different things. Examples:
+ *
+ * #post-123: We'll scroll to post 123.
+ *
+ * #post-456&replyToPost&draftNr=7 — we'll scroll to post 456,
+ * open the editor to reply, and load draft nr 7.
+ *
+ * /-/users/someone#composeDirectMessage[&draftNr=234] — we go to user @someone,
+ * open the editor to write a direct message, and, if draft nr specified,
+ * we load draft nr 234.
+ */
+interface FragAction {
+  type: FragActionType;
+  postNr?: PostNr;
+  draftNr?: DraftNr;
+}
+
+
+enum FragActionType {
+  ScrollToPost = 11,
+  ScrollToLatestPost = 12,
+  ReplyToPost = 21,
+  EditPost = 22,
+  ComposeForumTopic = 31,
+  ComposeDirectMessage = 32,
 }
 
 

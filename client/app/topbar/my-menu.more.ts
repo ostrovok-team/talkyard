@@ -103,8 +103,8 @@ export const MyMenuContent = createFactory({
 
     // ------- The current user
 
-    let viewDraftsAndBookmarks;
     let viewProfileMenuItem;
+    let viewDraftsAndBookmarks;
     let logoutMenuItem;
     let myStuffDivider;
     let unhideHelpMenuItem;
@@ -135,8 +135,8 @@ export const MyMenuContent = createFactory({
         adminHelpLink,
         reviewMenuItem,
         (adminMenuItem || reviewMenuItem) ? MenuItemDivider() : null,
-        viewDraftsAndBookmarks,
         viewProfileMenuItem,
+        viewDraftsAndBookmarks,
         viewAsOtherItem,
         logoutMenuItem,
         notfsDivider,

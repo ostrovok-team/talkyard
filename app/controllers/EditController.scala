@@ -178,6 +178,24 @@ class EditController @Inject()(cc: ControllerComponents, edContext: EdContext)
   }
 
 
+  def openEditor(toEditPostId: Int, draftNr: Option[Int]): Action[Unit] = GetAction { request =>
+    import request.dao
+
+    val post = dao.loadPostByUniqueId(toEditPostId) getOrElse {
+      throwIndistinguishableNotFound("TyE4RBKA01")
+    }
+    val pagePath = dao.getPagePath(post.pageId) getOrElse {
+      throwIndistinguishableNotFound("TyE4RBKA02")
+    }
+    val anyDraftNrParam = draftNr.map(nr => s"&draftNr=$nr") getOrElse ""
+
+    if (request.isAjax)
+      OkSafeJson(JsString(pagePath.value + "&editPost" + anyDraftNrParam))
+    else
+      TemporaryRedirect(pagePath.value + s"#post-${post.nr}&editPost$anyDraftNrParam")
+  }
+
+
   /** Downloads the linked resource via an external request to the URL (assuming it's
     * a trusted safe site) then creates and returns sanitized onebox html.
     */
