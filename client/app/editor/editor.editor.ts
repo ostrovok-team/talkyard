@@ -407,17 +407,16 @@ export const Editor = createComponent({
   editPost: function(postId: number, onDone?) {
     if (this.alertBadState())
       return;
-    Server.loadCurrentPostTextAndDraft(
-        postId, (text: string, postUid: number, revisionNr: number, draft?: Draft) => {
+    Server.loadTextAndDraft(postId, (response: LoadTextAndDraftResponse) => {
       if (this.isGone) return;
       this.showEditor();
-      const draftOrCurrentText = draft ? draft.text : text;
+      const draft: Draft | undefined = response.draft;
       this.setState({
         anyPostType: null,
         editingPostId: postId,
-        editingPostUid: postUid,
-        editingPostRevisionNr: revisionNr,
-        text: draftOrCurrentText,
+        editingPostUid: response.postUid,
+        editingPostRevisionNr: response.currentRevisionNr,
+        text: draft ? draft.text : response.currentText,
         onDone: onDone,
         draft,
       });
@@ -450,26 +449,8 @@ export const Editor = createComponent({
     this.updatePreview();
   },
 
-  openToEditChatTitleAndPurpose: function() {
-    if (this.alertBadState())
-      return;
-    Server.loadCurrentPostTextAndDraft(
-        BodyNr, (text: string, postUid: number, revisionNr: number, draft?: Draft) => {
-      if (this.isGone) return;
-      this.showEditor();
-      // TODO edit title too
-      const draftOrCurrentText = draft ? draft.text : text;
-      this.setState({
-        anyPostType: null,
-        editingPostId: BodyNr,
-        editingPostUid: postUid,
-        editingPostRevisionNr: revisionNr,
-        text: draftOrCurrentText,
-        onDone: null,
-        draft,
-      });
-      this.updatePreview();
-    });
+  openToEditChatTitleAndPurpose: function() {   // RENAME to  openToEditChatPurpose only (not title)
+    this.editPost(BodyNr);
   },
 
   openToWriteChatMessage: function(text: string, onDone?) {
@@ -1320,15 +1301,18 @@ export const Editor = createComponent({
           this.state.splitHorizontally ? t.e.ToNormal : t.e.TileHorizontally);
 
     let draftStatusText;
+    const draft: Draft = this.state.draft;
+    const draftNr: number | string = draft ? draft.draftNr : '';
     switch (this.state.draftStatus) {
       case DraftStatus.NothingHappened: break;
       case DraftStatus.EditsUndone: draftStatusText = "Unchanged."; break;
-      case DraftStatus.Saved: draftStatusText = "Draft saved."; break;
-      case DraftStatus.Deleted: draftStatusText = "Draft deleted."; break;
-      case DraftStatus.ShouldSave: draftStatusText = "Will save draft ..."; break;
-      case DraftStatus.SavingSmall: draftStatusText = "Saving draft ..."; break;  // I18N
-      case DraftStatus.SavingBig: draftStatusText = "Saving draft ..."; break;  // could show in modal dialog, and an "Ok I'll wait until you're done" button, and a Cancel button.
-      case DraftStatus.Deleting: draftStatusText = "Deleting draft ..."; break;
+      case DraftStatus.Saved: draftStatusText = `Draft ${draftNr} saved.`; break;
+      case DraftStatus.Deleted: draftStatusText = `Draft ${draftNr} deleted.`; break;
+      case DraftStatus.ShouldSave: draftStatusText = `Will save draft ${draftNr} ...`; break;
+      case DraftStatus.SavingSmall: draftStatusText = `Saving draft ${draftNr} ...`; break;  // I18N
+      // UX COULD show in modal dialog, and an "Ok I'll wait until you're done" button, and a Cancel button.
+      case DraftStatus.SavingBig: draftStatusText = `Saving draft ${draftNr} ...`; break;
+      case DraftStatus.Deleting: draftStatusText = `Deleting draft ${draftNr} ...`; break;
     }
 
     const draftStatus = !draftStatusText ? null :

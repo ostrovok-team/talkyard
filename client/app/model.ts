@@ -1385,6 +1385,14 @@ interface UserAccountLoginMethod {
 }
 
 
+// COULD also load info about whether the user may apply and approve the edits.
+interface LoadTextAndDraftResponse {
+  currentText: string;
+  postUid: string; // CLEAN_UP RENAME to just postId.
+  currentRevisionNr: number;
+  draft?: Draft;
+}
+
 interface ListDraftsResponse {
   drafts: Draft[];
   pagePostNrsByPostId: { [postId: string]: [PageId, PostNr] };

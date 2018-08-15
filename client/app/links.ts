@@ -104,18 +104,20 @@ export function linkToMyProfilePage(store: Store): string {
 }
 
 
-export function linkToDraftSource(draft: Draft): string {
+export function linkToDraftSource(draft: Draft,
+      // CLEAN_UP incl these in `draft` instead?
+      // and rename from Draft.replyToNnn to Draft.postNr, postId, pageId, and DraftLocator.what  ?
+      // where  what: DraftForWhat ?
+      pageId?: PageId, postNr?: PostNr): string {
   const locator = draft.forWhat;
   const andDraftNrParam = '&draftNr=' + draft.draftNr;
   if (locator.replyToPageId) {
     return origin() + '/-' + locator.replyToPageId +
-        '#post-' + locator.replyToPostNr + '&replyToPost' + andDraftNrParam;
+        '#post-' + locator.replyToPostNr + FragActionAndReplyToPost + andDraftNrParam;
   }
   else if (locator.editPostId) {
-    // Ask the server to lookup the page id and post nr, given the post id,
-    // and to redirect & edit that page-id and post-nr. The URL will then
-    // look like:  /page#post-123&editPost&draftNr=456
-    return '/-/open-editor?toEditPostId=' + locator.editPostId + andDraftNrParam;
+    return origin() + '/-' + pageId +
+        '#post-' + postNr + FragActionAndEditPost + andDraftNrParam;
   }
   else if (locator.messageToUserId) {
     return linkToSendMessage(locator.messageToUserId) + andDraftNrParam;
@@ -123,7 +125,7 @@ export function linkToDraftSource(draft: Draft): string {
   else if (locator.newTopicCategoryId) {
     // If [subcomms]: BUG should go to the correct sub community url path.
     // For now, incl /latest, otherwise there'll be a redirect [5ABKR02]? so #frag-action lost.
-    return '/latest#composeForumTopic' + andDraftNrParam;
+    return '/latest' + FragActionHashComposeTopic + andDraftNrParam;
   }
   else {
     die("Unknown draft source [TyE5WADK204]")

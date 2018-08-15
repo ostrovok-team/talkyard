@@ -1787,6 +1787,9 @@ object JsX {
       "replyToPostNr" -> JsNumberOrNull(draftLocator.replyToPostNr))
   }
 
+  def JsDraftOrNull(draft: Option[Draft]): JsValue =
+    draft.map(JsDraft).getOrElse(JsNull)
+
   def JsDraft(draft: Draft): JsObject = {
     Json.obj(
       "byUserId" -> draft.byUserId,

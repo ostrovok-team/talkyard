@@ -119,21 +119,20 @@ function Draft(props: { draft: Draft, pageTitlesById: { [pageId: string]: string
   const text = draft.text;
   let title = draft.title;
   let what;
+  let pageId = forWhat.replyToPageId;
+  let postNr = forWhat.replyToPostNr;
 
   if (forWhat.replyToPageId || forWhat.editPostId) {
     // This draft is related to an already existing page and post.
-
-    let pageId = forWhat.replyToPageId;
     if (pageId) {
-      what = "A reply"; // I18N
+      what = "Replying"; // I18N
     }
     else if (forWhat.editPostId) {
-      what = "Edits"; // I18N
+      what = "Editing"; // I18N
       let postId = forWhat.editPostId;
       const pagePostNr = props.pagePostNrsByPostId[postId];
       pageId = pagePostNr[0];
-
-      // postNr = pagePostNr[1]  !!
+      postNr = pagePostNr[1];
     }
     else {
       // @ifdef DEBUG
@@ -147,15 +146,15 @@ function Draft(props: { draft: Draft, pageTitlesById: { [pageId: string]: string
     title = title || "(No title)";  // I18N
 
     if (draft.forWhat.messageToUserId) {
-      what = "New message"; // I18N
+      what = "Direct message"; // I18N
     }
     else {
-      what = "New topic"; // I18N
+      what = "New forum topic"; // I18N
     }
   }
 
   return (
-    Link({ to: linkToDraftSource(draft), className: 's_Dfs_Df' },  // postNr !
+    Link({ to: linkToDraftSource(draft, pageId, postNr), className: 's_Dfs_Df' },
       r.div({ className: 's_Dfs_Df_Wht' }, what ),
       r.div({ className: 's_Dfs_Df_Ttl' }, title),
       r.div({ className: 's_Dfs_Df_Txt' }, text)));

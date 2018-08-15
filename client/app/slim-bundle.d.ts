@@ -222,7 +222,7 @@ declare namespace debiki2 {
   function origin(): string;
   function linkToPageId(pageId: PageId): string;
   function linkToPostNr(pageId: PageId, postNr: PostNr): string;
-  function linkToDraftSource(draft: Draft): string;
+  function linkToDraftSource(draft: Draft, pageId?: PageId, postNr?: PostNr): string;
   function linkToNotificationSource(notf: Notification): string;
   function linkToAdminPageAdvancedSettings(hostname?: string): string;
   function linkToRedirToAboutCategoryPage(categoryId: CategoryId): string;

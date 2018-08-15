@@ -101,5 +101,10 @@ const ServerSideWindowWidthLaptop = 1200;
 
 const OriginRegex = /^https?:\/\/[^/]+/i;  // CLEAN_UP this regex not in use everywhere, some dupl regexs
 
+const FragActionAndReplyToPost = '&replyToPost';
+const FragActionAndEditPost = '&editPost';
+const FragActionHashComposeTopic = '#composeForumTopic';
+const FragActionHashComposeMessage = '#composeDirectMessage';
+const FragActionHashScrollLatest = '#scrollToLatestPost';
 
 // vim: fdm=marker et ts=2 sw=2 tw=0 fo=r list

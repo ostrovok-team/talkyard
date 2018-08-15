@@ -919,12 +919,8 @@ export function loadDraftAndGuidelines(draftLocator: DraftLocator, writingWhat: 
 }
 
 
-export function loadCurrentPostTextAndDraft(postNr: PostNr,
-      onDone: (text: string, postUid: number, revisionNr: number, draft?: Draft) => void) {
-  get('/-/edit?pageId='+ getPageId() + '&postNr='+ postNr, (response: any) => {
-    // COULD also load info about whether the user may apply and approve the edits.
-    onDone(response.currentText, response.postUid, response.currentRevisionNr, response.draft);
-  });
+export function loadTextAndDraft(postNr: PostNr, onDone: (response: LoadTextAndDraftResponse) => void) {
+  get(`/-/edit?pageId=${getPageId()}&postNr=${postNr}`, onDone);
 }
 
 

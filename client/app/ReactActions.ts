@@ -517,7 +517,7 @@ export function doUrlFragmentAction(newHashFragment?: string) {
 export function findUrlFragmentAction(hashFragment?: string): FragAction | undefined {
   const theHashFrag = firstDefinedOf(hashFragment, location.hash);
 
-  if (theHashFrag.indexOf('#scrollToLatestPost') >= 0) {
+  if (theHashFrag.indexOf(FragActionHashScrollLatest) >= 0) {
     // Lookup most recent post nr. Is this a HACK? To access the store here?
     const store: Store = ReactStore.allData();
     const result = !store.currentPage ? undefined : {
@@ -527,10 +527,10 @@ export function findUrlFragmentAction(hashFragment?: string): FragAction | undef
     return result;
   }
 
-  if (theHashFrag.indexOf('#composeForumTopic') >= 0)
+  if (theHashFrag.indexOf(FragActionHashComposeTopic) >= 0)
     return { type: FragActionType.ComposeForumTopic };
 
-  if (theHashFrag.indexOf('#composeDirectMessage') >= 0)
+  if (theHashFrag.indexOf(FragActionHashComposeMessage) >= 0)
     return { type: FragActionType.ComposeDirectMessage };
 
   // The rest of the actions are for a specific post.
@@ -540,10 +540,10 @@ export function findUrlFragmentAction(hashFragment?: string): FragAction | undef
     return undefined;
 
   let actionType;
-  if (theHashFrag.indexOf('&editPost') >= 0) {
+  if (theHashFrag.indexOf(FragActionAndEditPost) >= 0) {
     actionType = FragActionType.EditPost;
   }
-  else if (theHashFrag.indexOf('&replyToPost') >= 0) {
+  else if (theHashFrag.indexOf(FragActionAndReplyToPost) >= 0) {
     actionType = FragActionType.ReplyToPost;
   }
   else {

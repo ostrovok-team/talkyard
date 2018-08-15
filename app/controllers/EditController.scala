@@ -115,9 +115,6 @@ class EditController @Inject()(cc: ControllerComponents, edContext: EdContext)
     val pageMeta = dao.getPageMeta(pageId) getOrElse throwIndistinguishableNotFound("EdE4JBR01")
     val post = dao.loadPost(pageId, postNr) getOrElse throwIndistinguishableNotFound("EdE0DK9WY3")
     val categoriesRootLast = dao.loadAncestorCategoriesRootLast(pageMeta.categoryId)
-    val anyDrafts = dao.readOnlyTransaction { tx =>
-      tx.loadDraftsByLocator(requester.id, DraftLocator(editPostId = Some(post.id)))
-    }
 
     throwNoUnless(Authz.mayEditPost(
       request.theUserAndLevels, dao.getGroupIds(request.theUser),
@@ -125,11 +122,19 @@ class EditController @Inject()(cc: ControllerComponents, edContext: EdContext)
       inCategoriesRootLast = categoriesRootLast,
       permissions = dao.getPermsOnPages(categoriesRootLast)), "EdEZBXKSM2")
 
+    val anyDrafts = dao.readOnlyTransaction { tx =>
+      tx.loadDraftsByLocator(requester.id, DraftLocator(editPostId = Some(post.id)))
+    }
+
+    // There's a unique key so each person can have only one is-editing draft, per post.
+    dieIf(anyDrafts.length > 1, "TyE5ABK02I", s"Got ${anyDrafts.length} drafts")
+    val anyDraft = anyDrafts.headOption
+
     OkSafeJson(Json.obj(
       "postUid" -> post.id,
       "currentText" -> post.currentSource,
       "currentRevisionNr" -> post.currentRevisionNr,
-      "drafts" -> anyDrafts.map(JsX.JsDraft)))
+      "draft" -> JsX.JsDraftOrNull(anyDraft)))
   }
 
 
