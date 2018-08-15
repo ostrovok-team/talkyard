@@ -153,7 +153,7 @@ trait SiteTransaction {
   }
 
   // Returns recently active pages first.
-  def loadPageIdsByPostIds(postIds: Iterable[PostId]): immutable.Map[PostId, PageId]
+  def loadPagePostNrsByPostIds(postIds: Iterable[PostId]): Map[PostId, PagePostNr]
   def loadPageIdsUserIsMemberOf(userId: UserId, onlyPageRoles: Set[PageRole]): immutable.Seq[PageId]
   def loadReadProgress(userId: UserId, pageId: PageId): Option[ReadingProgress]
   def loadReadProgressAndIfHasSummaryEmailed(userId: UserId, pageId: PageId)

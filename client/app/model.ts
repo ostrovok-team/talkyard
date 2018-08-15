@@ -1387,7 +1387,7 @@ interface UserAccountLoginMethod {
 
 interface ListDraftsResponse {
   drafts: Draft[];
-  pageIdsByPostId: { [postId: string]: string };
+  pagePostNrsByPostId: { [postId: string]: [PageId, PostNr] };
   pageTitlesById: { [pageId: string]: string };
 }
 

@@ -68,7 +68,7 @@ export const UserDrafts = createFactory({
       this.setState({
         drafts: response.drafts,
         pageTitlesById: response.pageTitlesById,
-        pageIdsByPostId: response.pageIdsByPostId,
+        pagePostNrsByPostId: response.pagePostNrsByPostId,
       });
     }, () => {
       // Clear state.notfs, in case we're no longer allowed to view the drafts.
@@ -99,7 +99,7 @@ export const UserDrafts = createFactory({
     const draftElems = drafts.map((draft: Draft) =>
         r.li({ key: draft.draftNr },
           Draft({ draft, pageTitlesById: this.state.pageTitlesById,
-            pageIdsByPostId: this.state.pageIdsByPostId, verbose: true })));
+            pagePostNrsByPostId: this.state.pagePostNrsByPostId, verbose: true })));
 
     return (
       r.div({},
@@ -112,7 +112,7 @@ export const UserDrafts = createFactory({
 
 
 function Draft(props: { draft: Draft, pageTitlesById: { [pageId: string]: string },
-        pageIdsByPostId: { [pageId: string]: string }, verbose: boolean }) {
+        pagePostNrsByPostId: { [pageId: string]: [PageId, PostNr] }, verbose: boolean }) {
   const draft = props.draft;
   const forWhat: DraftLocator = draft.forWhat;
 
@@ -130,7 +130,10 @@ function Draft(props: { draft: Draft, pageTitlesById: { [pageId: string]: string
     else if (forWhat.editPostId) {
       what = "Edits"; // I18N
       let postId = forWhat.editPostId;
-      pageId = props.pageIdsByPostId[postId];
+      const pagePostNr = props.pagePostNrsByPostId[postId];
+      pageId = pagePostNr[0];
+
+      // postNr = pagePostNr[1]  !!
     }
     else {
       // @ifdef DEBUG
@@ -152,7 +155,7 @@ function Draft(props: { draft: Draft, pageTitlesById: { [pageId: string]: string
   }
 
   return (
-    Link({ to: linkToDraftSource(draft), className: 's_Dfs_Df' },
+    Link({ to: linkToDraftSource(draft), className: 's_Dfs_Df' },  // postNr !
       r.div({ className: 's_Dfs_Df_Wht' }, what ),
       r.div({ className: 's_Dfs_Df_Ttl' }, title),
       r.div({ className: 's_Dfs_Df_Txt' }, text)));
