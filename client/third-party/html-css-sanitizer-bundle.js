@@ -3190,6 +3190,7 @@ html4.ATTRIBS = {
   '*::translate': 0,
   'a::accesskey': 0,
   'a::coords': 0,
+  'a::download': 1,
   'a::href': 1,
   'a::hreflang': 0,
   'a::name': 7,
