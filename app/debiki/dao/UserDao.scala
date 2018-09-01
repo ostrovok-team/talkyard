@@ -735,6 +735,17 @@ trait UserDao {
   }
 
 
+  def getMemberByExternalId(externalId: String): Option[User] = {
+    COULD_OPTIMIZE // later, when people actually use the API?
+    loadMemberByExternalId(externalId)
+  }
+
+
+  def loadMemberByExternalId(externalId: String): Option[User] = {
+    readOnlyTransaction(_.loadMemberByExternalId(externalId))
+  }
+
+
   def getGroupIds(user: Option[User]): Vector[UserId] = {
     user.map(getGroupIds) getOrElse Vector(Group.EveryoneId)
   }
@@ -1418,6 +1429,9 @@ trait UserDao {
       // This resets the not-mentioned-here fields to default values.
       val memberDeleted = MemberInclDetails(
         id = memberBefore.id,
+        // Reset the external id, so the external user will be able to sign up again. (Not our
+        // choice to prevent that? That'd be the external login system's responsibility, right.)
+        externalId = None,
         fullName = None,
         username = anonUsername,
         createdAt = memberBefore.createdAt,

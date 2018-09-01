@@ -90,6 +90,8 @@ package object core {
 
   type AuditLogEntryId = Int
 
+  type ApiSecretNr = Int
+
   type PricePlan = String  // for now
 
   /** Where to start rendering a page. The specified post and all its successors
@@ -590,6 +592,27 @@ package object core {
       immutable.Set[PostNr](postNrs: _*)
     }
   }
+
+
+  sealed abstract class ApiSecretType(val IntVal: Int) { def toInt: Int = IntVal }
+  object ApiSecretType {
+    case object BeAnyUser extends ApiSecretType(1)
+    case object ForOneUser extends ApiSecretType(2)
+    def fromInt(value: Int): Option[ApiSecretType] = Some(value match {
+      case BeAnyUser.IntVal => BeAnyUser
+      case ForOneUser.IntVal => ForOneUser
+      case _ => return None
+    })
+  }
+
+  case class ApiSecret(
+    nr: ApiSecretNr,
+    userId: UserId,
+    createdAt: When,
+    deletedAt: Option[When],
+    secretType: ApiSecretType,
+    secretValue: String)
+
 
 
   def ifThenSome[A](condition: Boolean, value: A): Option[A] =

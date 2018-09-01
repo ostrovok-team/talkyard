@@ -264,6 +264,10 @@ POST  /-/set-tag-notf-level     controllers.TagsController.setTagNotfLevel
 GET   /-/load-my-tag-notf-levels controllers.TagsController.loadMyTagNotfLevels
 POST  /-/add-remove-tags        controllers.TagsController.addRemoveTags
 
+GET   /-/list-api-secrets       controllers.ApiSecretsController.listApiSecrets
+POST  /-/create-api-secret      controllers.ApiSecretsController.createApiSecret
+POST  /-/delete-api-secrets     controllers.ApiSecretsController.deleteApiSecrets
+
 GET   /-/sa                      controllers.SuperAdminController.redirect
 GET   /-/super-admin             controllers.SuperAdminController.redirect
 GET   /-/super-admin/            controllers.SuperAdminController.redirect

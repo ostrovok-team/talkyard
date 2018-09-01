@@ -67,6 +67,7 @@ case class Invite(
 
   def makeUser(userId: UserId, username: String, currentTime: ju.Date) = MemberInclDetails(
     id = userId,
+    externalId = None,
     fullName = None,
     username = username,
     createdAt = currentTime,
@@ -105,6 +106,7 @@ sealed abstract class NewUserData {
 
   def makeUser(userId: UserId, createdAt: ju.Date) = MemberInclDetails(
     id = userId,
+    externalId = None,
     fullName = name,
     username = username,
     createdAt = createdAt,
@@ -147,6 +149,7 @@ case class NewPasswordUserData(
 
   def makeUser(userId: UserId) = MemberInclDetails(
     id = userId,
+    externalId = None,
     fullName = name,
     username = username,
     createdAt = createdAt.toJavaDate,
@@ -252,18 +255,29 @@ case object User {
   val SystemUserUsername = "system"
   val SystemUserFullName = "System"
 
-  val SuperAdminId = 2
+  /** Like system, but only does things because of API requests (which the System user never does).
+    * Nice to know if something was done because of an API request (the Sysbot user),
+    * or because of Talkyard's own source code (the System user), also if the audit log
+    * has been emptied.
+    */
+  val SysbotUserId = 2
+
+  /** If a superadmin logs in and does something. */
+  val SuperAdminId = 3
+
+  /** Maintenance tasks by bot(s) that supervise all sites. */
+  // val SuperbotId = 4  ?
 
   // The real ids of deactivated and deleted users, are replaced with these ids, when rendering
   // pages, so others won't find the real ids of the deactivated/deleted accounts.
-  val DeactivatedUserId = 3
-  val DeletedUserId = 4
+  val DeactivatedUserId = 5
+  val DeletedUserId = 6
 
   // ?? If a member chooses to post anonymously:
-  // val AnonymousUserId = 7
+  // val AnonymousUserId = 9
 
   /** Cannot talk with members with lower ids (System, SuperAdmin, Deactivated, Deleted users). */
-  val LowestTalkToMemberId = 5  // change to 7 ? == AnonymousUserId (maybe 5 & 6 neded for sth else cannot-talk)
+  val LowestTalkToMemberId = 9  // same as anonymous users?
 
   /** A user that did something, e.g. voted on a comment, but was not logged in. */
   val UnknownUserId: UserId = -3
@@ -670,6 +684,7 @@ sealed trait MemberOrGroupInclDetails {
 
 case class MemberInclDetails(
   id: UserId,
+  externalId: Option[String],
   fullName: Option[String],
   username: String,
   createdAt: ju.Date,
@@ -706,6 +721,8 @@ case class MemberInclDetails(
 
   require(User.isOkayUserId(id), "DwE077KF2")
   require(username.length >= 2, "DwE6KYU9")
+  require(externalId.forall(extId => 1 <= extId.length), "TyE5AKBR20")
+  require(externalId.forall(extId => extId.length <= 200), "TyE5AKBR21")
   require(!username.contains(isBlank _), "EdE8FKY07")
   require(!primaryEmailAddress.contains(isBlank _), "EdE6FKU02")
   require(fullName == fullName.map(_.trim), "EdE3WKD5F")

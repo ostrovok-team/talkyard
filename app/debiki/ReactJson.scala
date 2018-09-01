@@ -1804,5 +1804,16 @@ object JsX {
       "title" -> JsString(draft.title),
       "text" -> JsString(draft.text))
   }
+
+  def JsApiSecret(apiSecret: ApiSecret): JsObject = {
+    Json.obj(
+      "nr" -> apiSecret.nr,
+      "userId" -> apiSecret.userId,
+      "createdAt" -> JsWhenMs(apiSecret.createdAt),
+      "deletedAt" -> JsWhenMsOrNull(apiSecret.deletedAt),
+      "secretType" -> apiSecret.secretType.toInt,
+      "secretValue" -> JsString(apiSecret.secretValue))
+  }
+
 }
 

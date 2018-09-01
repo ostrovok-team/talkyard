@@ -421,6 +421,7 @@ trait SiteTransaction {
 
   def loadMemberByPrimaryEmailOrUsername(emailOrUsername: String): Option[Member]
   def loadMemberOrGroupByUsername(username: String): Option[User]
+  def loadMemberByExternalId(externalId: String): Option[Member]
 
   def loadMembersWithPrefix(usernamePrefix: String): immutable.Seq[Member]
 
@@ -598,6 +599,12 @@ trait SiteTransaction {
   def insertBlock(block: Block)
   def unblockIp(ip: InetAddress)
   def unblockBrowser(browserIdCookie: String)
+
+  def nextApiSecretNr(): DraftNr
+  def upsertApiSecret(secret: ApiSecret)
+  def setApiSecretDeleted(secretNr: ApiSecretNr, when: When): Boolean
+  def loadApiSecretBySecretValue(secretValue: String): Option[ApiSecret]
+  def listApiSecretsRecentlyCreatedFirst(): immutable.Seq[ApiSecret]
 }
 
 

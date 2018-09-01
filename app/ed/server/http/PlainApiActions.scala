@@ -17,11 +17,12 @@
 
 package ed.server.http
 
+import org.apache.commons.codec.{binary => acb}
 import com.debiki.core._
 import com.debiki.core.Prelude._
 import debiki._
 import debiki.RateLimits.NoRateLimits
-import debiki.dao.LoginNotFoundException
+import debiki.dao.{LoginNotFoundException, SiteDao}
 import ed.server._
 import ed.server.security._
 import java.{util => ju}
@@ -97,6 +98,63 @@ class PlainApiActions(
 
       val site = globals.lookupSiteOrThrow(request)
 
+      request.headers.get("Authorization") match {
+        case Some(authHeaderValue) =>
+          invokeBlockAuthViaApiSecret(request, site, authHeaderValue, block)
+        case None =>
+          invokeBlockAuthViaCookie(request, site, block)
+      }
+    }
+
+
+    private def invokeBlockAuthViaApiSecret[A](request: Request[A], site: SiteBrief,
+          authHeaderValue: String, block: ApiRequest[A] => Future[Result]): Future[Result] = {
+      val usernamePasswordBase64Encoded = authHeaderValue.replaceFirst("Basic ", "")
+      val decodedBytes: Array[Byte] = acb.Base64.decodeBase64(usernamePasswordBase64Encoded)
+      val usernameColonPassword = new String(decodedBytes, "UTF-8")
+      val (username, colonPassword) = usernameColonPassword.span(_ != ':')
+      val secretValue = colonPassword.drop(1)
+      val dao = globals.siteDao(site.id)
+      val apiSecret = dao.getApiSecret(secretValue) getOrElse {
+        throwNotFound("TyE0SECRET", "No such API secret or it has been deleted")
+      }
+      val talkyardIdPrefix = "talkyardId="
+      val externalIdPrefix = "externalId="
+      val anyUser: Option[User] =
+        if (username.startsWith(talkyardIdPrefix)) {
+          val userIdStr = username.drop(talkyardIdPrefix.length)
+          val userId = userIdStr.toIntOrThrow("TyESSOTYID", s"User id is not a number: $userIdStr")
+          dao.getUser(userId)
+        }
+        else if (username.startsWith(externalIdPrefix)) {
+          val externalId = username.drop(externalIdPrefix.length)
+          dao.getMemberByExternalId(externalId)
+        }
+        else {
+          throwBadRequest("TyESSOUSERNAME",
+              s"Username doesn't start with '$talkyardIdPrefix' or '$externalIdPrefix': $username")
+        }
+
+      val user = anyUser getOrElse throwNotFound("TySSO0USR", s"User not found: $username")
+
+      if (apiSecret.secretType == ApiSecretType.ForOneUser) {
+        // Fine, accept any `user`.
+      }
+      else if (user.id == apiSecret.userId) {
+        // Fine, this is the user for the specified secret.
+      }
+      else {
+        throwBadRequest("TyESSOUSERID", s"Wrong user id specified: $username")
+      }
+
+      runBlockIfAuthOk(request, site, dao, Some(user),
+          SidOk("_api_secret_", 0, Some(user.id)), XsrfOk("_api_secret_"), None, block)
+    }
+
+
+    private def invokeBlockAuthViaCookie[A](request: Request[A], site: SiteBrief,
+          block: ApiRequest[A] => Future[Result]): Future[Result] = {
+
       val (actualSidStatus, xsrfOk, newCookies) =
         security.checkSidAndXsrfToken(request, site.id, maySetCookies = true)
 
@@ -113,7 +171,11 @@ class PlainApiActions(
       // any AsyncResult(future-result-that-might-be-a-failure) here.
       val resultOldCookies: Future[Result] =
         try {
-          runBlockIfAuthOk(request, site, mendedSidStatus, xsrfOk, browserId, block)
+          val dao = globals.siteDao(site.id)
+          dao.perhapsBlockRequest(request, mendedSidStatus, browserId)
+          val anyUserMaybeSuspended = dao.getUserBySessionId(mendedSidStatus)
+          runBlockIfAuthOk(request, site, dao, anyUserMaybeSuspended,
+              mendedSidStatus, xsrfOk, browserId, block)
         }
         catch {
           case _: LoginNotFoundException =>
@@ -150,14 +212,10 @@ class PlainApiActions(
     }
 
 
-    def runBlockIfAuthOk[A](request: Request[A], site: SiteBrief, sidStatus: SidStatus,
+    private def runBlockIfAuthOk[A](request: Request[A], site: SiteBrief, dao: SiteDao,
+          anyUserMaybeSuspended: Option[User], sidStatus: SidStatus,
           xsrfOk: XsrfOk, browserId: Option[BrowserId], block: ApiRequest[A] => Future[Result])
           : Future[Result] = {
-
-      val dao = globals.siteDao(site.id)
-      dao.perhapsBlockRequest(request, sidStatus, browserId)
-
-      val anyUserMaybeSuspended = dao.getUserBySessionId(sidStatus)
 
       // Maybe the user was logged in in two different browsers, and deleted hens account
       // in one browser and got logged out there, only.

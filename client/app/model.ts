@@ -1367,6 +1367,22 @@ enum PricePlan {  // [4GKU024S]
 }
 
 
+enum ApiSecretType {
+  BeAnyUser = 1,
+  ForOneUser = 2,
+}
+
+
+interface ApiSecret {
+  nr: number;
+  userId: UserId;
+  createdAt: WhenMs;
+  deletedAt?: WhenMs;
+  secretType: ApiSecretType;
+  secretValue: string;
+}
+
+
 interface SuperAdminStuff {
   firstSiteHostname?: string;
   baseDomain: string;

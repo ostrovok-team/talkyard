@@ -24,6 +24,7 @@ import debiki.EdHttp._
 import ed.server.search.SearchEngine
 import org.{elasticsearch => es}
 import redis.RedisClient
+import scala.collection.immutable
 import scala.collection.mutable
 import SiteDao._
 import ed.server.EdContext
@@ -354,6 +355,22 @@ class SiteDao(
 
   def markNotificationAsSeen(userId: UserId, notfId: NotificationId): Unit =
     readWriteTransaction(_.markNotfAsSeenSkipEmail(userId, notfId))
+
+
+  // ----- API secrets
+
+  def listApiSecrets(): immutable.Seq[ApiSecret] = {
+    readOnlyTransaction(_.listApiSecretsRecentlyCreatedFirst())
+  }
+
+  def deleteApiSecrets(secretNrs: immutable.Seq[ApiSecretNr]) {
+    val now = globals.now()
+    readOnlyTransaction(tx => secretNrs.foreach(tx.setApiSecretDeleted(_, now)))
+  }
+
+  def getApiSecret(secretValue: String): Option[ApiSecret] = {
+    readOnlyTransaction(_.loadApiSecretBySecretValue(secretValue))
+  }
 
 
   // ----- Emails
