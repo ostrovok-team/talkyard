@@ -1808,10 +1808,10 @@ object JsX {
   def JsApiSecret(apiSecret: ApiSecret): JsObject = {
     Json.obj(
       "nr" -> apiSecret.nr,
-      "userId" -> apiSecret.userId,
+      "userId" -> JsNumberOrNull(apiSecret.userId),
       "createdAt" -> JsWhenMs(apiSecret.createdAt),
       "deletedAt" -> JsWhenMsOrNull(apiSecret.deletedAt),
-      "secretType" -> apiSecret.secretType.toInt,
+      "isDeleted" -> apiSecret.isDeleted,
       "secretValue" -> JsString(apiSecret.secretValue))
   }
 

@@ -359,8 +359,26 @@ class SiteDao(
 
   // ----- API secrets
 
-  def listApiSecrets(): immutable.Seq[ApiSecret] = {
-    readOnlyTransaction(_.listApiSecretsRecentlyCreatedFirst())
+  def listApiSecrets(limit: Int): immutable.Seq[ApiSecret] = {
+    readOnlyTransaction(_.listApiSecretsRecentlyCreatedFirst(limit))
+  }
+
+  def createApiSecret(forUserId: Option[UserId]): ApiSecret = {
+    val now = globals.now()
+    val recentSecrets = listApiSecrets(limit = 100).takeWhile(secret =>
+      now.millisSince(secret.createdAt) < 30 * OneDayInMillis)
+    // More than two *sysbot* secrets per day? Crazy.
+    require(forUserId.isEmpty, "TyE4AKBR02") // for now
+    throwForbiddenIf(recentSecrets.length > 60, "TyE5PKR2Q", "You're creating secrets too fast")
+
+    val value = nextRandomString()
+    readWriteTransaction { tx =>
+      val nr = tx.nextApiSecretNr()
+      val secret = ApiSecret(nr, userId = forUserId, createdAt = now,
+        deletedAt = None, isDeleted = false, secretValue = value)
+      tx.insertApiSecret(secret)
+      secret
+    }
   }
 
   def deleteApiSecrets(secretNrs: immutable.Seq[ApiSecretNr]) {

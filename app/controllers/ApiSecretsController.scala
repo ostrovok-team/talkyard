@@ -18,7 +18,7 @@
 package controllers
 
 import com.debiki.core._
-import com.debiki.core.Prelude._
+import debiki.EdHttp._
 import debiki.JsX.JsApiSecret
 import ed.server.{EdContext, EdController}
 import ed.server.http._
@@ -31,18 +31,23 @@ import scala.collection.immutable
 class ApiSecretsController @Inject()(cc: ControllerComponents, edContext: EdContext)
   extends EdController(cc, edContext) {
 
-  import context.globals
-
 
   def listApiSecrets(): Action[Unit] = AdminGetAction { request: GetRequest =>
-    val secrets = request.dao.listApiSecrets()
+    val secrets = request.dao.listApiSecrets(limit = 100)
     OkSafeJson(JsArray(secrets map JsApiSecret))
   }
 
 
-  def createApiSecret: Action[JsValue] = AdminPostJsonAction(maxBytes = 500) { request: JsonPostRequest =>
-    import request.{dao, body}
-    Ok
+  def createApiSecret: Action[JsValue] = AdminPostJsonAction(maxBytes = 500) {
+        request: JsonPostRequest =>
+    import request.{body, dao}
+    val forUserId: Option[UserId] = (body \ "forUserId").asOpt[UserId]
+
+    // For now:
+    throwForbiddenIf(forUserId.isDefined, "TyE2ABKR5", "Unimplemented")
+
+    val secret = dao.createApiSecret(forUserId)
+    OkSafeJson(JsApiSecret(secret))
   }
 
 

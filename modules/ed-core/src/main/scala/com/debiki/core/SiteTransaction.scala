@@ -601,10 +601,10 @@ trait SiteTransaction {
   def unblockBrowser(browserIdCookie: String)
 
   def nextApiSecretNr(): DraftNr
-  def upsertApiSecret(secret: ApiSecret)
+  def insertApiSecret(secret: ApiSecret)
   def setApiSecretDeleted(secretNr: ApiSecretNr, when: When): Boolean
   def loadApiSecretBySecretValue(secretValue: String): Option[ApiSecret]
-  def listApiSecretsRecentlyCreatedFirst(): immutable.Seq[ApiSecret]
+  def listApiSecretsRecentlyCreatedFirst(limit: Int): immutable.Seq[ApiSecret]
 }
 
 

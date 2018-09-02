@@ -261,6 +261,7 @@ package object core {
   def FirstSiteId: SiteId = Site.FirstSiteId
   val NoUserId = 0
   def SystemUserId: UserId = User.SystemUserId
+  def SysbotUserId: UserId = User.SysbotUserId
   def SystemSpamStuff = SpamRelReqStuff(userAgent = None, referer = None, uri = "/dummy")
   def SystemUserFullName: String = User.SystemUserFullName
   def SystemUserUsername: String = User.SystemUserUsername
@@ -594,6 +595,7 @@ package object core {
   }
 
 
+  /*
   sealed abstract class ApiSecretType(val IntVal: Int) { def toInt: Int = IntVal }
   object ApiSecretType {
     case object BeAnyUser extends ApiSecretType(1)
@@ -603,15 +605,30 @@ package object core {
       case ForOneUser.IntVal => ForOneUser
       case _ => return None
     })
-  }
+  }*/
 
+  /** Lets one do requests via the API.
+    *
+    * @param nr
+    * @param userId — which user this API secret is for. If None, then may specify any user id.
+    * @param createdAt
+    * @param deletedAt
+    * @param isDeleted — once set to true, never changed back to false. `deletedAt` might not`
+    *   always be accurate in case the server's clock is off.
+    * @param secretValue — don't show
+    */
   case class ApiSecret(
     nr: ApiSecretNr,
-    userId: UserId,
+    userId: Option[UserId],
     createdAt: When,
     deletedAt: Option[When],
-    secretType: ApiSecretType,
-    secretValue: String)
+    isDeleted: Boolean,
+    secretValue: String) {
+
+    require(!isDeleted || deletedAt.isDefined, "TyE4ABKR01")
+    require(deletedAt.isEmpty || createdAt.millis <= deletedAt.get.millis, "TyE4ABKR02")
+    require(userId.forall(id => id == SysbotUserId || id >= LowestTalkToMemberId), "TyE5ABKR02")
+  }
 
 
 

@@ -1375,10 +1375,10 @@ enum ApiSecretType {
 
 interface ApiSecret {
   nr: number;
-  userId: UserId;
+  userId?: UserId;
   createdAt: WhenMs;
   deletedAt?: WhenMs;
-  secretType: ApiSecretType;
+  isDeleted: boolean,
   secretValue: string;
 }
 

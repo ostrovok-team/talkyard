@@ -1414,6 +1414,18 @@ export function markCurrentPageAsSeen() {
 }
 
 
+export function listApiSecrets(onOk: (secrets: ApiSecret[]) => void) {
+  get('/-/list-api-secrets', onOk);
+}
+
+
+export function createApiSecret(onOk: (secret: ApiSecret) => void) {
+  postJsonSuccess('/-/create-api-secret', onOk, {
+    forUserId: SysbotUserId,
+    secretType: ApiSecretType.BeAnyUser,
+  });
+}
+
 
 export function search(rawQuery: string, success: (results: SearchResults) => void) {
   postJsonSuccess('/-/search', success, { rawQuery: rawQuery });

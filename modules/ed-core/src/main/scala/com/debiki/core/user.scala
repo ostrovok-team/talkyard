@@ -277,7 +277,8 @@ case object User {
   // val AnonymousUserId = 9
 
   /** Cannot talk with members with lower ids (System, SuperAdmin, Deactivated, Deleted users). */
-  val LowestTalkToMemberId = 9  // same as anonymous users?
+  val LowestTalkToMemberId = Group.EveryoneId  // or 9, same as anonymous users?
+  assert(LowestTalkToMemberId == 10)
 
   /** A user that did something, e.g. voted on a comment, but was not logged in. */
   val UnknownUserId: UserId = -3

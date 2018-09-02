@@ -32,18 +32,26 @@ export const ApiPanel = createFactory({
   displayName: 'ApiPanel',
 
   getInitialState: function() {
-    return {
-    };
+    return {};
   },
 
   componentDidMount: function() {
-    Server.loadApiSecrets(secrets => {
+    Server.listApiSecrets(secrets => {
+      if (this.isGone) return;
       this.setState({ secrets });
     });
   },
 
   componentWillUnmount: function() {
     this.isGone = true;
+  },
+
+  createSecret: function() {
+    Server.createApiSecret(secret => {
+      if (this.isGone) return;
+      const secrets = [secret, ...this.state.secrets];
+      this.setState({ secrets });
+    });
   },
 
   render: function() {
@@ -53,15 +61,29 @@ export const ApiPanel = createFactory({
     const store: Store = this.props.store;
 
     let elems = this.state.secrets.map((apiSecret: ApiSecret, index: number) => {
-      return ApiSecretItem({ secretIndex: index });
+      return ApiSecretItem({ index, apiSecret });
     });
 
-    if (!elems.length)
-      elems = r.p({ className: 'esAdminSectionIntro e_NoApiSecrets' }, "No API secrets.");
+    const elemsList = elems.length
+        ? r.table({ className: 's_A_Api_SecrL' },
+            r.thead({},
+              r.th({}, "Nr"),
+              r.th({}, "For user"),
+              r.th({}, "Created"),
+              r.th({}, "Deleted"),
+              r.th({}, "Type"),
+              r.th({}, "Value")),
+            r.tbody({}, elems))
+        : r.p({ className: 'e_NoApiSecrets' }, "No API secrets.");
+
+    const createSecretButton = Button({ onClick: this.createSecret }, "Create new secret");
 
     return (
       r.div({ className: 's_A_Api' },
-        elems));
+        r.h3({}, "API Secrets"),
+        r.p({}, "Recent first."),
+        elemsList,
+        createSecretButton));
   }
 });
 
@@ -79,7 +101,14 @@ const ApiSecretItem = createComponent({
   },
 
   render: function() {
-    return r.p({}, "API Secret here, props: " + JSON.stringify(this.props));
+    const secret: ApiSecret = this.props.apiSecret;
+    return r.tr({ key: this.props.index },
+      r.td({}, secret.nr),
+      r.td({}, "*"),  // currently may call API using any user id
+      r.td({}, timeExact(secret.createdAt)),
+      r.td({}, secret.deletedAt ? timeExact(secret.deletedAt) : '-'),
+      r.td({}, "Do anything"), // secret.secretType is always for any user
+      r.td({}, secret.secretValue));
   }
 });
 

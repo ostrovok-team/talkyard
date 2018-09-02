@@ -137,14 +137,12 @@ class PlainApiActions(
 
       val user = anyUser getOrElse throwNotFound("TySSO0USR", s"User not found: $username")
 
-      if (apiSecret.secretType == ApiSecretType.ForOneUser) {
-        // Fine, accept any `user`.
-      }
-      else if (user.id == apiSecret.userId) {
-        // Fine, this is the user for the specified secret.
-      }
-      else {
-        throwBadRequest("TyESSOUSERID", s"Wrong user id specified: $username")
+      apiSecret.userId match {
+        case None =>
+          // Fine, this key lets one do things as any user.
+        case Some(userId) =>
+          throwForbiddenIf(userId != user.id,
+            "TyESSOWRNGUSR", s"The specified user does not own the API secret: $username")
       }
 
       runBlockIfAuthOk(request, site, dao, Some(user),
