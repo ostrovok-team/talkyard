@@ -1421,9 +1421,13 @@ export function listApiSecrets(onOk: (secrets: ApiSecret[]) => void) {
 
 export function createApiSecret(onOk: (secret: ApiSecret) => void) {
   postJsonSuccess('/-/create-api-secret', onOk, {
-    forUserId: SysbotUserId,
-    secretType: ApiSecretType.BeAnyUser,
+    forUserId: null, // means any user
   });
+}
+
+
+export function deleteApiSecrets(secretNrs: ApiSecretNr[], onOk: (secret: ApiSecret) => void) {
+  postJsonSuccess('/-/delete-api-secrets', onOk, { secretNrs });
 }
 
 

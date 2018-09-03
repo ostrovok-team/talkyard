@@ -34,6 +34,7 @@ type IpAddress = String;
 type EmailId = String;
 type AuditLogEntryId = number;
 type TagLabel = string;
+type ApiSecretNr = number;
 type DateMs = number;  // use When instead? sounds better since using When server side too
 type WhenMs = number;
 
@@ -1367,14 +1368,8 @@ enum PricePlan {  // [4GKU024S]
 }
 
 
-enum ApiSecretType {
-  BeAnyUser = 1,
-  ForOneUser = 2,
-}
-
-
 interface ApiSecret {
-  nr: number;
+  nr: ApiSecretNr;
   userId?: UserId;
   createdAt: WhenMs;
   deletedAt?: WhenMs;

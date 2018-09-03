@@ -383,7 +383,7 @@ class SiteDao(
 
   def deleteApiSecrets(secretNrs: immutable.Seq[ApiSecretNr]) {
     val now = globals.now()
-    readOnlyTransaction(tx => secretNrs.foreach(tx.setApiSecretDeleted(_, now)))
+    readWriteTransaction(tx => secretNrs.foreach(tx.setApiSecretDeleted(_, now)))
   }
 
   def getApiSecret(secretValue: String): Option[ApiSecret] = {

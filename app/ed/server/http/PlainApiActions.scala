@@ -142,8 +142,13 @@ class PlainApiActions(
           // Fine, this key lets one do things as any user.
         case Some(userId) =>
           throwForbiddenIf(userId != user.id,
-            "TyESSOWRNGUSR", s"The specified user does not own the API secret: $username")
+            "TyEAPIWRNGUSR", s"The specified user does not own the API secret: $username")
       }
+
+      throwForbiddenIf(user.id == SystemUserId,
+        "TyEAPISYSUSR", s"Call the API as Sysbot (id 2), not System (id 1)")
+      throwForbiddenIf(user.id < Group.EveryoneId,
+        "TyEAPIBADUSR", s"Not allowed to call the API as user ${user.usernameOrGuestName}")
 
       runBlockIfAuthOk(request, site, dao, Some(user),
           SidOk("_api_secret_", 0, Some(user.id)), XsrfOk("_api_secret_"), None, block)

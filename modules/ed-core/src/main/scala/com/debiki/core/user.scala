@@ -312,6 +312,7 @@ case object User {
   def isOkayUserId(id: UserId): Boolean =
     id >= LowestAuthenticatedUserId ||
       id == SystemUserId ||
+      id == SysbotUserId ||
       //id == SuperAdminId ||     later
       //id == AnonymousUserId ||  later
       id == UnknownUserId ||

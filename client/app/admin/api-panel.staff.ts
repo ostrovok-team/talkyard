@@ -65,14 +65,14 @@ export const ApiPanel = createFactory({
     });
 
     const elemsList = elems.length
-        ? r.table({ className: 's_A_Api_SecrL' },
+        ? r.table({ className: 's_A_Api_SecrT' },
             r.thead({},
               r.th({}, "Nr"),
               r.th({}, "For user"),
               r.th({}, "Created"),
               r.th({}, "Deleted"),
-              r.th({}, "Type"),
-              r.th({}, "Value")),
+              r.th({}, "Capabilities"),
+              r.th({}, "Value and actions")),
             r.tbody({}, elems))
         : r.p({ className: 'e_NoApiSecrets' }, "No API secrets.");
 
@@ -93,22 +93,36 @@ const ApiSecretItem = createComponent({
   displayName: 'ApiSecretItem',
 
   getInitialState: function() {
-    return {};
+    return {
+      showValue: false,
+    };
   },
 
   componentWillUnmount: function() {
     this.isGone = true;
   },
 
+  deleteSecret: function() {
+    const secret: ApiSecret = this.props.apiSecret;
+    Server.deleteApiSecrets([secret.nr]);  // for now: refresh page to view deleted status
+  },
+
   render: function() {
     const secret: ApiSecret = this.props.apiSecret;
+    const shallShow = this.state.showValue || secret.isDeleted;
+    const valueOrShowButton = shallShow ? secret.secretValue :
+        Button({ onClick: () => this.setState({ showValue: true }) }, "Show");
+
+    const deleteButton = secret.isDeleted ? null :
+      Button({ onClick: this.deleteSecret }, "Delete");
+
     return r.tr({ key: this.props.index },
       r.td({}, secret.nr),
-      r.td({}, "*"),  // currently may call API using any user id
+      r.td({}, "Any"),  // currently may call API using any user id
       r.td({}, timeExact(secret.createdAt)),
-      r.td({}, secret.deletedAt ? timeExact(secret.deletedAt) : '-'),
+      r.td({}, secret.deletedAt ? rFragment("Yes, ", timeExact(secret.deletedAt)) : "No"),
       r.td({}, "Do anything"), // secret.secretType is always for any user
-      r.td({}, secret.secretValue));
+      r.td({}, deleteButton, valueOrShowButton));
   }
 });
 
