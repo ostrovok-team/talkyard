@@ -637,11 +637,40 @@ case class Member(
   override def canPromoteToFullMember: Boolean =
     trustLevel == TrustLevel.BasicMember
 
+  /*  def copyWithExternalData(externalUser: ExternalUser): Member = {
+    copy(
+      externalUserId: String,
+      primaryEmailAddress: String,
+      isEmailAddressVerified: Boolean,
+      username: Option[String],
+      fullName: Option[String],
+      avatarUrl: Option[String],
+      aboutUser: Option[String],
+      isAdmin: Boolean,
+      isModerator: Boolean
+    )
+  } */
+
   require(!fullName.map(_.trim).contains(""), "DwE4GUK28")
   require(User.isOkayUserId(id), "DwE02k12R5")
   require(theUsername.length >= 2, "EsE7YKW3")
   require(!isEmailLocalPartHidden(email), "DwE6kJ23")
   require(tinyAvatar.isDefined == smallAvatar.isDefined, "EdE5YPU2")
+}
+
+
+case class ExternalUser(
+  externalId: String,
+  primaryEmailAddress: String,
+  isEmailAddressVerified: Boolean,
+  username: Option[String],
+  fullName: Option[String],
+  avatarUrl: Option[String],
+  aboutUser: Option[String],
+  isAdmin: Boolean,
+  isModerator: Boolean) {
+
+  // require ...
 }
 
 

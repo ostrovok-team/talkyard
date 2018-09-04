@@ -102,7 +102,7 @@ class SiteDao(
   with AuditDao {
 
   protected lazy val memCache = new MemCache(siteId, cache, globals.mostMetrics)
-  protected lazy val redisCache = new RedisCache(siteId, redisClient, context.globals.now)
+  lazy val redisCache = new RedisCache(siteId, redisClient, context.globals.now)
   protected lazy val searchEngine = new SearchEngine(siteId, elasticSearchClient)
 
   def globals: debiki.Globals = context.globals

@@ -115,8 +115,9 @@ class EdAppComponents(appLoaderContext: ApplicationLoader.Context)
     new _root_.controllers.DebugTestController(cc, context),
     new _root_.controllers.SiteAssetBundlesController(cc, context),
     new _root_.controllers.TagsController(cc, context),
-    new _root_.controllers.ApiSecretsController(cc, context),
     new _root_.controllers.SuperAdminController(cc, context),
+    new _root_.controllers.ApiSecretsController(cc, context),
+    new _root_.controllers.ApiV0Controller(cc, context),
     new _root_.controllers.ViewPageController(cc, context),
     assets)
 

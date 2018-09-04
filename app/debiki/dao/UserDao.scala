@@ -482,31 +482,44 @@ trait UserDao {
   }
 
 
-  def createPasswordUserCheckPasswordStrong(
-        userData: NewPasswordUserData, browserIdData: BrowserIdData): Member = {
+  def createPasswordUserCheckPasswordStrong(userData: NewPasswordUserData, browserIdData: BrowserIdData): Member = {
     security.throwErrorIfPasswordBad(
       password = userData.password, username = userData.username,
       fullName = userData.name, email = userData.email,
       minPasswordLength = globals.minPasswordLengthAllSites,
       isForOwner = userData.isOwner)
     val user = readWriteTransaction { tx =>
-      val now = userData.createdAt
-      val userId = tx.nextMemberId
-      val user = userData.makeUser(userId)
+      createPasswordUserImpl(userData, browserIdData, tx).briefUser
+    }
+    memCache.fireUserCreated(user)
+    user
+  }
+
+
+  def createUserForExternalSsoUser(userData: NewPasswordUserData, botIdData: BrowserIdData,
+        tx: SiteTransaction): MemberInclDetails = {
+    val member = createPasswordUserImpl(userData, botIdData, tx)
+    memCache.fireUserCreated(member.briefUser)
+    member
+  }
+
+
+  private def createPasswordUserImpl(userData: NewPasswordUserData, browserIdData: BrowserIdData,
+        tx: SiteTransaction): MemberInclDetails = {
+    val now = userData.createdAt
+    val userId = tx.nextMemberId
+    val user = userData.makeUser(userId)
       ensureSiteActiveOrThrow(user, tx)
       tx.deferConstraints()
       tx.insertMember(user)
-      user.primaryEmailInfo.foreach(tx.insertUserEmailAddress)
-      tx.insertUsernameUsage(UsernameUsage(
+    user.primaryEmailInfo.foreach(tx.insertUserEmailAddress)
+    tx.insertUsernameUsage(UsernameUsage(
         usernameLowercase = user.usernameLowercase, // [CANONUN]
         inUseFrom = now, userId = user.id))
-      tx.upsertUserStats(UserStats.forNewUser(
+    tx.upsertUserStats(UserStats.forNewUser(
         user.id, firstSeenAt = userData.firstSeenAt.getOrElse(now), emailedAt = None))
-      joinGloballyPinnedChats(user.briefUser, tx)
-      tx.insertAuditLogEntry(makeCreateUserAuditEntry(user, browserIdData, tx.now))
-      user.briefUser
-    }
-    memCache.fireUserCreated(user)
+    joinGloballyPinnedChats(user.briefUser, tx)
+    tx.insertAuditLogEntry(makeCreateUserAuditEntry(user, browserIdData, tx.now))
     user
   }
 
