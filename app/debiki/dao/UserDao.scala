@@ -750,13 +750,13 @@ trait UserDao {
 
 
   def getMemberByExternalId(externalId: String): Option[User] = {
-    COULD_OPTIMIZE // later, when people actually use the API?
-    loadMemberByExternalId(externalId)
+    COULD_OPTIMIZE // can in-mem cache
+    loadMemberInclDetailsByExternalId(externalId).map(_.briefUser)
   }
 
 
-  def loadMemberByExternalId(externalId: String): Option[User] = {
-    readOnlyTransaction(_.loadMemberByExternalId(externalId))
+  def loadMemberInclDetailsByExternalId(externalId: String): Option[MemberInclDetails] = {
+    readOnlyTransaction(_.loadMemberInclDetailsByExternalId(externalId))
   }
 
 

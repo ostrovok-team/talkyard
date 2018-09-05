@@ -962,6 +962,7 @@ interface GroupInclDetails extends MemberOrGroupInclDetails {
 
 
 interface MemberInclDetails extends MemberOrGroupInclDetails {
+  externalId?: string;
   createdAtEpoch: number;  // change to millis
   fullName: string;
   email: string;

@@ -421,7 +421,8 @@ trait SiteTransaction {
 
   def loadMemberByPrimaryEmailOrUsername(emailOrUsername: String): Option[Member]
   def loadMemberOrGroupByUsername(username: String): Option[User]
-  def loadMemberByExternalId(externalId: String): Option[Member]
+  def loadMemberInclDetailsByExternalId(externalId: String): Option[MemberInclDetails]
+  def loadMemberInclDetailsByEmailAddr(email: String): Option[MemberInclDetails]
 
   def loadMembersWithPrefix(usernamePrefix: String): immutable.Seq[Member]
 

@@ -213,8 +213,9 @@ class UserController @Inject()(cc: ControllerComponents, edContext: EdContext)
       callerIsAdmin: Boolean, callerIsStaff: Boolean = false, callerIsUserHerself: Boolean = false,
       anyStats: Option[UserStats] = None)
         : JsObject = {
-    var userJson = Json.obj(
+    var userJson = Json.obj(  // MemberInclDetails
       "id" -> user.id,
+      "externalId" -> JsStringOrNull(user.externalId),
       "createdAtEpoch" -> JsNumber(user.createdAt.getTime),
       "username" -> user.username,
       "fullName" -> user.fullName,

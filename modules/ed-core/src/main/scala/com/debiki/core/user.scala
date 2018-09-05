@@ -182,7 +182,9 @@ case class NewPasswordUserData(
 
 object NewPasswordUserData {
   def create(
-        name: Option[String], username: String, email: String, password: String,
+        name: Option[String], username: String, email: String,
+        password: Option[String] = None,
+        externalId: Option[String] = None,
         createdAt: When,
         isAdmin: Boolean, isOwner: Boolean, isModerator: Boolean = false,
         emailVerifiedAt: Option[When] = None,
@@ -196,7 +198,7 @@ object NewPasswordUserData {
     }
     yield {
       NewPasswordUserData(name = okName, username = okUsername, email = okEmail,
-        password = Some(password), externalId = None, createdAt = createdAt,
+        password = password, externalId = externalId, createdAt = createdAt,
         firstSeenAt = Some(createdAt),  // for now
         isAdmin = isAdmin, isOwner = isOwner, isModerator = isModerator,
         emailVerifiedAt = emailVerifiedAt,
@@ -887,6 +889,24 @@ case class MemberInclDetails(
     if (this.threatLevel.toInt >= newThreatLevel.toInt) this
     else copy(threatLevel = newThreatLevel)
 
+
+  def copyWithExternalData(externalUser: ExternalUser): MemberInclDetails = {
+    unimplementedIf(primaryEmailAddress != externalUser.primaryEmailAddress,
+      "Diffferent primaryEmailAddress not yet impl [TyE2BKRP0]")
+    unimplementedIf(emailVerifiedAt.isDefined != externalUser.isEmailAddressVerified,
+      "Diffferent email verified status, then do what? [TyE5KBRH8]")
+    copy(
+      externalId = Some(externalUser.externalId),
+      primaryEmailAddress = externalUser.primaryEmailAddress,
+      //emailVerifiedAt = externalUser.isEmailAddressVerified,
+      // username: Option[String] — keep old?
+      // fullName: Option[String] — keep old? or change?
+      // avatarUrl: Option[String],
+      // aboutUser: Option[String],
+      // isAdmin: Boolean,
+      // isModerator: Boolean
+      )
+  }
 
   def briefUser = Member(
     id = id,

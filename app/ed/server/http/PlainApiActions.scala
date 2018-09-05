@@ -116,14 +116,14 @@ class PlainApiActions(
       val secretValue = colonPassword.drop(1)
       val dao = globals.siteDao(site.id)
       val apiSecret = dao.getApiSecret(secretValue) getOrElse {
-        throwNotFound("TyE0SECRET", "No such API secret or it has been deleted")
+        throwNotFound("TyEAPIAUTH0SECRET", "No such API secret or it has been deleted")
       }
       val talkyardIdPrefix = "talkyardId="
       val externalIdPrefix = "externalId="
       val anyUser: Option[User] =
         if (username.startsWith(talkyardIdPrefix)) {
           val userIdStr = username.drop(talkyardIdPrefix.length)
-          val userId = userIdStr.toIntOrThrow("TyESSOTYID", s"User id is not a number: $userIdStr")
+          val userId = userIdStr.toIntOrThrow("TyEAPIUSERID", s"User id is not a number: $userIdStr")
           dao.getUser(userId)
         }
         else if (username.startsWith(externalIdPrefix)) {

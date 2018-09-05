@@ -18,7 +18,7 @@
 package controllers
 
 import com.debiki.core._
-import com.debiki.core.Prelude.{nextRandomLong, nextRandomString}
+import com.debiki.core.Prelude.{nextRandomLong, nextRandomString, dieIf}
 import debiki.EdHttp._
 import debiki.RateLimits
 import ed.server.{EdContext, EdController}
@@ -51,17 +51,21 @@ class ApiV0Controller @Inject()(cc: ControllerComponents, edContext: EdContext)
       getOnly(queryParam) getOrThrowBadArgument(errorCode, queryParam)
 
     apiEndpoint match {
-      case "get-session-cookie" =>
+      // ex: http://localhost/-/v0/sso-create-session?oneTimeSecret=nnnnn
+      case "sso-create-session" =>
         val oneTimeSecret = getOnlyOrThrow("oneTimeSecret", "TyE7AKK25")
-        val thenGoTo = getOnlyOrThrow("thenGoTo", "TyE5KKR2PW3")
+        val thenGoToUnsafe = getOnly("thenGoTo")
         val anyUserId = dao.redisCache.getOneTimeSsoLoginUserIdDestroySecret(oneTimeSecret)
         val userId = anyUserId getOrElse {
-          throwForbidden("TyE4AKBR02", "Bad or expired SSO secret")
+          throwForbidden("TyE4AKBR02", "Bad or expired one time secret")
         }
         val user = dao.getTheMember(userId)
         dao.pubSub.userIsActive(request.siteId, user, request.theBrowserIdData)
         val (_, _, sidAndXsrfCookies) = security.createSessionIdAndXsrfToken(request.siteId, user.id)
-        Ok.withCookies(sidAndXsrfCookies: _*)
+        // Remove server origin, so Mallory cannot somehow redirect to a phishing website.
+        val thenGoTo = thenGoToUnsafe.flatMap(Prelude.stripOrigin) getOrElse "/"
+        TemporaryRedirect(thenGoTo)
+            .withCookies(sidAndXsrfCookies: _*)
       case _ =>
         throwForbidden("TyEAPIGET404", s"No such API endpoint: $apiEndpoint")
     }
@@ -74,8 +78,11 @@ class ApiV0Controller @Inject()(cc: ControllerComponents, edContext: EdContext)
     import request.{body, dao, theRequester => requester}
     lazy val now = context.globals.now()
 
+    throwForbiddenIf(!request.isViaApiSecret,
+        "TyEAPI0SYSBT", "The API may be called only via Basic Auth and an API secret")
+
     apiEndpoint match {
-      case "login-or-signup" =>
+      case "sso-upsert-user" =>
         val extUser = Try(ExternalUser(
           externalId = (body \ "externalUserId").as[String],
           primaryEmailAddress = (body \ "primaryEmailAddress").as[String],
@@ -95,21 +102,27 @@ class ApiV0Controller @Inject()(cc: ControllerComponents, edContext: EdContext)
           val okayUsername = User.makeOkayUsername(usernameToTry, allowDotDash = false,  // [CANONUN]
             tx.isUsernameInUse)  getOrElse throwForbidden("TyE2GKRC4C2", s"Cannot generate username")
 
-          def newOneTimeSecret() = nextRandomString()
-
           // Look up by external id, if found, login.
           // Look up by email. If found, reuse account, set external id, and login.
           // Else, create new user with specified external id and email.
 
-          val user = tx.loadMemberByExternalId(extUser.externalId).map({ user =>
+          val user = tx.loadMemberInclDetailsByExternalId(extUser.externalId).map({ user =>
             // TODO update fields, if different.
             // email:  UserController.scala:  setPrimaryEmailAddresses
             // mod / admin:  UserDao:  editMember
             // name etc:  UserDao:  saveAboutMemberPrefs
             user
-          }) orElse tx.loadMemberByPrimaryEmailOrUsername(extUser.primaryEmailAddress).map({ user =>
-            //throwForbiddenIf(user.externalId.isDefined, "TyE5AKBR20", "Anther external user has this email")
-            user
+          }) orElse tx.loadMemberInclDetailsByEmailAddr(extUser.primaryEmailAddress).map({ user =>
+            throwForbiddenIf(user.externalId.isDefined,
+                "TyE5AKBR20", "Another external user has this email address")
+            // Apparently this Talkyard user was created "long ago", and now we're'
+            // single-sign-on logging in as that user, for the first time. Connect this old account
+            // with the external user account, and thereafter it'll get looked up via external
+            // id instead.
+            val updatedUser = user.copyWithExternalData(extUser)
+            dieIf(updatedUser == user, "TyE4AKBRE2")
+            tx.updateMemberInclDetails(updatedUser)
+            updatedUser
           }) getOrElse {
             // Create new account.
             val userData = // [5LKKWA10]
@@ -117,7 +130,8 @@ class ApiV0Controller @Inject()(cc: ControllerComponents, edContext: EdContext)
                 name = extUser.fullName,
                 username = okayUsername,
                 email = extUser.primaryEmailAddress,
-                password = "",
+                password = None,
+                externalId = Some(extUser.externalId),
                 createdAt = now,
                 isOwner = false,
                 isAdmin = extUser.isAdmin,
@@ -128,14 +142,13 @@ class ApiV0Controller @Inject()(cc: ControllerComponents, edContext: EdContext)
                 case Bad(errorMessage) =>
                   throwUnprocessableEntity("DwE805T4", s"$errorMessage, please try again.")
               }
-            val newMember = dao.createUserForExternalSsoUser(userData, request.theBrowserIdData, tx)
-            newMember.briefUser
+            dao.createUserForExternalSsoUser(userData, request.theBrowserIdData, tx)
           }
 
-          val secret = newOneTimeSecret()
+          val secret = nextRandomString()
           dao.redisCache.saveOneTimeSsoLoginSecret(secret, user.id)
           OkApiJson(Json.obj(
-            "createSessionOneTimeSecret" -> secret))
+            "createSessionSecret" -> secret))
         }
 
       case _ =>
