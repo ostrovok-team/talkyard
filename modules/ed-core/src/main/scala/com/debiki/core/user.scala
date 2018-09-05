@@ -95,7 +95,7 @@ object Invite {
 }
 
 
-// Rename to NewMemberData?
+// Rename to NewSocialIdentityMemberData?
 sealed abstract class NewUserData {
   def name: Option[String]
   def username: String
@@ -129,12 +129,13 @@ sealed abstract class NewUserData {
 }
 
 
-
+// RENAME to  NewPasswordOrExternalMemberData?
 case class NewPasswordUserData(
   name: Option[String],
   username: String,
   email: String,
-  password: String,
+  password: Option[String],
+  externalId: Option[String],
   createdAt: When,
   firstSeenAt: Option[When],
   isAdmin: Boolean,
@@ -144,12 +145,12 @@ case class NewPasswordUserData(
   trustLevel: TrustLevel = TrustLevel.NewMember,
   threatLevel: ThreatLevel = ThreatLevel.HopefullySafe) {
 
-  val passwordHash: String =
-    DbDao.saltAndHashPassword(password)
+  val passwordHash: Option[String] =
+    password.map(DbDao.saltAndHashPassword)
 
   def makeUser(userId: UserId) = MemberInclDetails(
     id = userId,
-    externalId = None,
+    externalId = externalId,
     fullName = name,
     username = username,
     createdAt = createdAt.toJavaDate,
@@ -162,31 +163,31 @@ case class NewPasswordUserData(
     // Initially, when the forum / comments site is tiny, it's good to be notified
     // about everything. (isOwner —> it's the very first user, so the site is empty.) [7LERTA1]
     emailForEveryNewPost = isOwner,
-    passwordHash = Some(passwordHash),
+    passwordHash = passwordHash,
     isOwner = isOwner,
     isAdmin = isAdmin,
     isModerator = isModerator,
     trustLevel = trustLevel,
     threatLevel = threatLevel)
 
-
   dieIfBad(Validation.checkName(name), "TyE6KWB2A1", identity)
   dieIfBad(Validation.checkUsername(username), "TyE5FKA2K0", identity)
   dieIfBad(Validation.checkEmail(email), "TyE4WKBJ7Z", identity)
   // Password: See security.throwErrorIfPasswordTooWeak, instead.
 
+  require(externalId.isDefined != password.isDefined, "TyE5AKBR02")
   require(!firstSeenAt.exists(_.isBefore(createdAt)), "EdE2WVKF063")
 }
 
 
 object NewPasswordUserData {
-  def create(name: Option[String], username: String, email: String, password: String,
+  def create(
+        name: Option[String], username: String, email: String, password: String,
         createdAt: When,
         isAdmin: Boolean, isOwner: Boolean, isModerator: Boolean = false,
         emailVerifiedAt: Option[When] = None,
         trustLevel: TrustLevel = TrustLevel.NewMember,
-        threatLevel: ThreatLevel = ThreatLevel.HopefullySafe)
-        : NewPasswordUserData Or ErrorMessage = {
+        threatLevel: ThreatLevel = ThreatLevel.HopefullySafe): NewPasswordUserData Or ErrorMessage = {
     for {
       okName <- Validation.checkName(name)
       okUsername <- Validation.checkUsername(username)
@@ -195,7 +196,7 @@ object NewPasswordUserData {
     }
     yield {
       NewPasswordUserData(name = okName, username = okUsername, email = okEmail,
-        password = password, createdAt = createdAt,
+        password = Some(password), externalId = None, createdAt = createdAt,
         firstSeenAt = Some(createdAt),  // for now
         isAdmin = isAdmin, isOwner = isOwner, isModerator = isModerator,
         emailVerifiedAt = emailVerifiedAt,

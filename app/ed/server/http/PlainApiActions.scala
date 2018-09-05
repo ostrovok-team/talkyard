@@ -147,7 +147,7 @@ class PlainApiActions(
 
       throwForbiddenIf(user.id == SystemUserId,
         "TyEAPISYSUSR", s"Call the API as Sysbot (id 2), not System (id 1)")
-      throwForbiddenIf(user.id < Group.EveryoneId,
+      throwForbiddenIf(user.id < Group.EveryoneId && user.id != SysbotUserId,
         "TyEAPIBADUSR", s"Not allowed to call the API as user ${user.usernameOrGuestName}")
 
       runBlockIfAuthOk(request, site, dao, Some(user),

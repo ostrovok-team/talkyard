@@ -115,8 +115,8 @@ class ApiV0Controller @Inject()(cc: ControllerComponents, edContext: EdContext)
             val userData = // [5LKKWA10]
               NewPasswordUserData.create(
                 name = extUser.fullName,
-                email = extUser.primaryEmailAddress,
                 username = okayUsername,
+                email = extUser.primaryEmailAddress,
                 password = "",
                 createdAt = now,
                 isOwner = false,

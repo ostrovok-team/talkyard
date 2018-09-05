@@ -1428,6 +1428,7 @@ interface UserAccountLoginMethod {
   loginType: string;
   provider: string;
   email?: string;
+  externalId?: string;
 }
 
 

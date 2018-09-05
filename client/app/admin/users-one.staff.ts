@@ -39,11 +39,11 @@ export const UserProfileAdminView = createFactory({
     };
   },
 
-  componentDidMount: function(nextProps) {
+  componentDidMount: function() {
     this.loadCompleteUser();
   },
 
-  componentWillUnmount: function(nextProps) {
+  componentWillUnmount: function() {
     this.isGone = true;
   },
 

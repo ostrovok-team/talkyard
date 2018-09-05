@@ -482,9 +482,10 @@ trait UserDao {
   }
 
 
-  def createPasswordUserCheckPasswordStrong(userData: NewPasswordUserData, browserIdData: BrowserIdData): Member = {
+  def createPasswordUserCheckPasswordStrong(userData: NewPasswordUserData, browserIdData: BrowserIdData)
+        : Member = {
     security.throwErrorIfPasswordBad(
-      password = userData.password, username = userData.username,
+      password = userData.password.getOrDie("TyE2AKB84"), username = userData.username,
       fullName = userData.name, email = userData.email,
       minPasswordLength = globals.minPasswordLengthAllSites,
       isForOwner = userData.isOwner)
@@ -509,9 +510,9 @@ trait UserDao {
     val now = userData.createdAt
     val userId = tx.nextMemberId
     val user = userData.makeUser(userId)
-      ensureSiteActiveOrThrow(user, tx)
-      tx.deferConstraints()
-      tx.insertMember(user)
+    ensureSiteActiveOrThrow(user, tx)
+    tx.deferConstraints()
+    tx.insertMember(user)
     user.primaryEmailInfo.foreach(tx.insertUserEmailAddress)
     tx.insertUsernameUsage(UsernameUsage(
         usernameLowercase = user.usernameLowercase, // [CANONUN]
