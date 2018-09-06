@@ -66,6 +66,10 @@ class ApiV0Controller @Inject()(cc: ControllerComponents, edContext: EdContext)
         val thenGoTo = thenGoToUnsafe.flatMap(Prelude.stripOrigin) getOrElse "/"
         TemporaryRedirect(thenGoTo)
             .withCookies(sidAndXsrfCookies: _*)
+      case "feed.atom" =>
+
+        def loadPostsSkipTitles(limit: Int, orderBy: OrderBy, byUserId: Option[UserId]): immutable.Seq[Post]
+        FeedBuilder.buildPublicFeed(request.dao)
       case _ =>
         throwForbidden("TyEAPIGET404", s"No such API endpoint: $apiEndpoint")
     }

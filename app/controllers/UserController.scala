@@ -383,7 +383,7 @@ class UserController @Inject()(cc: ControllerComponents, edContext: EdContext)
     val limit = all ? 9999 | 100
 
     val postsInclForbidden = dao.readOnlyTransaction { transaction =>
-      transaction.loadPostsByAuthorSkipTitles(authorId, limit = limit, OrderBy.MostRecentFirst)
+      transaction.loadPostsSkipTitles(byUserId = Some(authorId), limit = limit, OrderBy.MostRecentFirst)
     }
     val pageIdsInclForbidden = postsInclForbidden.map(_.pageId).toSet
     val pageMetaById = dao.getPageMetasAsMap(pageIdsInclForbidden)
