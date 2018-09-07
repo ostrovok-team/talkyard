@@ -105,8 +105,10 @@ object AtomFeedXml {   // RENAME file, and class? to AtomFeedBuilder?
      // element unless all of the entry elements contain at least one
      // author element.
     <feed xmlns="http://www.w3.org/2005/Atom">
+      <link href="http://todo.example.com/feed.xml?type=atom" rel="self" type="application/rss+xml" />
       <title>{feedTitle}</title>
       <id>{feedId}</id>
+      <author><name>settings.communityName?</name></author>
       <updated>{toIso8601T(feedUpdated)}</updated>
       {
         posts.flatMap({ post =>

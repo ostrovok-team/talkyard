@@ -28,6 +28,7 @@ import org.scalactic.{Bad, Good}
 import play.api.libs.json._
 import play.api.mvc._
 import scala.util.Try
+import Utils.OkXml
 
 // How test API?
 //  https://medium.com/javascript-scene/why-i-use-tape-instead-of-mocha-so-should-you-6aa105d8eaf4
@@ -108,7 +109,7 @@ class ApiV0Controller @Inject()(cc: ControllerComponents, edContext: EdContext)
         val newestPost = posts.headOption.getOrDie("TyE2AKB04")
         val atomXml = debiki.AtomFeedXml.renderFeed(origin, feedId = feedId, feedTitle = "Posts",
           feedUpdated = newestPost.createdAt, posts, pageStuffById)
-        Ok(atomXml)
+        OkXml(atomXml, "application/atom+xml")
       case _ =>
         throwForbidden("TyEAPIGET404", s"No such API endpoint: $apiEndpoint")
     }
