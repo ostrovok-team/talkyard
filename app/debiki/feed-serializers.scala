@@ -18,14 +18,14 @@
 package debiki
 
 import com.debiki.core._
-import java.{util => ju, io => jio}
-import scala.collection.JavaConversions._
-import _root_.scala.xml.{NodeSeq, Node, Elem, Text, XML, Attribute}
+import java.{io => jio, util => ju}
+import scala.collection.immutable
+import _root_.scala.xml.{Attribute, Elem, Node, NodeSeq, Text, XML}
 import Prelude._
+import debiki.dao.PageStuff
 
-/* Disabled. Uses old deleted PageParts.
 
-object AtomFeedXml {
+object AtomFeedXml {   // RENAME file, and class? to AtomFeedBuilder?
 
   /**
    * See http://www.atomenabled.org/developers/syndication/.
@@ -43,7 +43,7 @@ object AtomFeedXml {
    * in a significant way.
    */
   def renderFeed(hostUrl: String, feedId: String, feedTitle: String,
-                 feedUpdated: ju.Date, pathsAndPages: Seq[(PagePath, PageParts)]
+        feedUpdated: ju.Date, posts: immutable.Seq[Post], pageStuffById: Map[PageId, PageStuff]
                     ): Node = {
     // Based on the Atom XML shown here:
     //   http://exploring.liftweb.net/master/index-15.html#toc-Section-15.7
@@ -54,42 +54,34 @@ object AtomFeedXml {
     val baseUrl = hostUrl +"/"
     def urlTo(pp: PagePath) = baseUrl + pp.value.dropWhile(_ == '/')
 
-    def pageToAtom(pathAndPage: (PagePath, PageParts)): NodeSeq = {
-      val pagePath = pathAndPage._1
-      val page = pathAndPage._2
-      val pageBody = page.body.getOrElse {
-        warnDbgDie("Page "+ safed(page.guid) +
-              " lacks a root post [error DwE09k14p2]")
-        return Nil
-      }
-      val pageTitle = page.approvedTitleText getOrElse pagePath.slugOrIdOrQustnMark
-      val pageBodyAuthor =
-            pageBody.user.map(_.displayName) getOrElse "(Author name unknown)"
-      val urlToPage =  urlTo(pagePath)
+    def postToAtom(post: Post, page: PageStuff): NodeSeq = {
+      //val pageBodyAuthor =
+      //      pageBody.user.map(_.displayName) getOrElse "(Author name unknown)"
+      val urlToPage = hostUrl + "/-" + page.pageId  // for now
 
       // (Should we strip any class names or ids? They make no sense in atom feeds?
       // No CSS or JS that cares about them anyway?)
-      val rootPostHtml =
-        xml.Unparsed(pageBody.approvedHtmlSanitized getOrElse "<i>Page not yet approved</i>")
+      val postHtml =
+        xml.Unparsed(post.approvedHtmlSanitized getOrElse "<i>Text not yet approved</i>")
 
       <entry>{
         /* Identifies the entry using a universally unique and
         permanent URI. */}
         <id>{urlToPage}</id>{
         /* Contains a human readable title for the entry. */}
-        <title>{pageTitle}</title>{
+        <title>{page.title}</title>{
         /* Indicates the last time the entry was modified in a
         significant way. This value need not change after a typo is
         fixed, only after a substantial modification.
         COULD introduce a page's updatedTime?
         */}
-        <updated>{toIso8601T(pageBody.creationDati)}</updated>{
+        <updated>{toIso8601T(post.createdAt)}</updated>{
         /* Names one author of the entry. An entry may have multiple
         authors. An entry must [sometimes] contain at least one author
         element [...] More info here:
           http://www.atomenabled.org/developers/syndication/
                                                 #recommendedEntryElements  */}
-        <author><name>{pageBodyAuthor}</name></author>{
+        {/*<author><name>{post}</name></author>*/}{
         /* The time of the initial creation or first availability
         of the entry.  -- but that shouldn't be the ctime, the page
         shouldn't be published at creation.
@@ -100,7 +92,7 @@ object AtomFeedXml {
         /* Contains or links to the complete content of the entry. */}
         <content type="xhtml">
           <div xmlns="http://www.w3.org/1999/xhtml">
-            { rootPostHtml }
+            { postHtml }
           </div>
         </content>
       </entry>
@@ -116,9 +108,14 @@ object AtomFeedXml {
       <title>{feedTitle}</title>
       <id>{feedId}</id>
       <updated>{toIso8601T(feedUpdated)}</updated>
-      { pathsAndPages.flatMap(pageToAtom) }
+      {
+        posts.flatMap({ post =>
+          pageStuffById.get(post.pageId) map { page =>
+            postToAtom(post, page)
+          }
+        })
+      }
     </feed>
   }
 }
 
- */

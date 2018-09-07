@@ -18,7 +18,7 @@
 package controllers
 
 import com.debiki.core._
-import com.debiki.core.Prelude.{nextRandomLong, nextRandomString, dieIf}
+import com.debiki.core.Prelude._
 import debiki.EdHttp._
 import debiki.RateLimits
 import ed.server.{EdContext, EdController}
@@ -29,6 +29,9 @@ import play.api.libs.json._
 import play.api.mvc._
 import scala.util.Try
 
+
+// docs how? Slate? like these use:
+// https://developers.giosg.com/http_api.html#list-external-subscriptions-for-scheduled-email-report
 
 class ApiV0Controller @Inject()(cc: ControllerComponents, edContext: EdContext)
   extends EdController(cc, edContext) {
@@ -67,9 +70,30 @@ class ApiV0Controller @Inject()(cc: ControllerComponents, edContext: EdContext)
         TemporaryRedirect(thenGoTo)
             .withCookies(sidAndXsrfCookies: _*)
       case "feed.atom" =>
+        // ----- Dupl code [4AKB2F0]
+        val postsInclForbidden = dao.readOnlyTransaction { tx =>
+          tx.loadPostsSkipTitles(limit = 20, OrderBy.MostRecentFirst, byUserId = None)
+        }
+        val pageIdsInclForbidden = postsInclForbidden.map(_.pageId).toSet
+        val pageMetaById = dao.getPageMetasAsMap(pageIdsInclForbidden)
+        val posts = for {
+          post <- postsInclForbidden
+          pageMeta <- pageMetaById.get(post.pageId)
+          if dao.maySeePostUseCache(post, pageMeta, user = None, maySeeUnlistedPages = false)._1
+        } yield post
+        val pageIds = posts.map(_.pageId).distinct
+        val pageStuffById = dao.getPageStuffById(pageIds)
+        // ----- /Dupl code
 
-        def loadPostsSkipTitles(limit: Int, orderBy: OrderBy, byUserId: Option[UserId]): immutable.Seq[Post]
-        FeedBuilder.buildPublicFeed(request.dao)
+        if (posts.isEmpty)
+          throwNotFound("TyENOFEED", "No posts found, or they are private")
+
+        val origin = globals.originOf(request)
+        val feedId = origin + "/-/v0/feed" // for now
+        val newestPost = posts.headOption.getOrDie("TyE2AKB04")
+        val atomXml = debiki.AtomFeedXml.renderFeed(origin, feedId = feedId, feedTitle = "Posts",
+          feedUpdated = newestPost.createdAt, posts, pageStuffById)
+        Ok(atomXml)
       case _ =>
         throwForbidden("TyEAPIGET404", s"No such API endpoint: $apiEndpoint")
     }
