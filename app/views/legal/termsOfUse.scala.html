@@ -12,6 +12,7 @@
 @import com.debiki.core.ContribAgreement
 @import com.debiki.core.ContentLicense
 
+@mustLoginToRead = @{ tpi.siteSettings.userMustBeAuthenticated }
 @companyDomain = @{ tpi.companyDomain }
 @companyFullName = @{ tpi.companyFullName orIfEmpty "Unnamed Organization" }
 @companyAbbreviation = @{
@@ -29,8 +30,11 @@
 
 <div class="esLegal_home">@{/*
   href="/" will be wrong if coming from the forum and it's base path isn't /, but e.g.
-  /forum/. Ignore this minor problem, for now. */}
-  <a class="esLegal_home_link" href="/">Home</a><span class="esLegal_home_arw"> →</span>
+  /forum/. Ignore this minor problem, for now.
+  UX SHOULD show this Home link, if is logged in. [7WKBAY02] Also, I18N. Solution = move to Typescript**/}
+  @if(!mustLoginToRead) {
+    <a class="esLegal_home_link" href="/">Home</a><span class="esLegal_home_arw"> →</span>
+  }
 </div>
 
 <ul class="legal nav nav-pills">
