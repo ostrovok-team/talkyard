@@ -19,12 +19,17 @@ package debiki
 
 import com.debiki.core._
 import java.{io => jio, util => ju}
+import org.jsoup.Jsoup
 import scala.collection.immutable
 import _root_.scala.xml.{Attribute, Elem, Node, NodeSeq, Text, XML}
 import Prelude._
+import controllers.routes
 import debiki.dao.PageStuff
 
 
+/**
+  * Descr of all Atom tags: https://validator.w3.org/feed/docs/atom.html
+  */
 object AtomFeedXml {   // RENAME file, and class? to AtomFeedBuilder?
 
   /**
@@ -42,9 +47,9 @@ object AtomFeedXml {   // RENAME file, and class? to AtomFeedBuilder?
    * feedMtime: Indicates the last time the feed was modified
    * in a significant way.
    */
-  def renderFeed(hostUrl: String, feedId: String, feedTitle: String,
-        feedUpdated: ju.Date, posts: immutable.Seq[Post], pageStuffById: Map[PageId, PageStuff]
-                    ): Node = {
+  def renderFeed(hostUrl: String, posts: immutable.Seq[Post], pageStuffById: Map[PageId, PageStuff]
+        ): Node = {
+
     // Based on the Atom XML shown here:
     //   http://exploring.liftweb.net/master/index-15.html#toc-Section-15.7
 
@@ -54,20 +59,28 @@ object AtomFeedXml {   // RENAME file, and class? to AtomFeedBuilder?
     val baseUrl = hostUrl +"/"
     def urlTo(pp: PagePath) = baseUrl + pp.value.dropWhile(_ == '/')
 
-    def postToAtom(post: Post, page: PageStuff): NodeSeq = {
+    def atomEntryFor(post: Post, page: PageStuff): NodeSeq = {
       //val pageBodyAuthor =
       //      pageBody.user.map(_.displayName) getOrElse "(Author name unknown)"
       val urlToPage = hostUrl + "/-" + page.pageId  // for now
 
-      // (Should we strip any class names or ids? They make no sense in atom feeds?
+      // Convert HTML to XHTML.
+      // Atom parsers wants xml — they apparently choke on unclosed html tags.
+      // Need to add closing tags, e.g. <p>...</p>, and convert entitiest like &nbsp; to &#xa0;
+      // (&nbsp; is not valid xhtml).
+      // (Could strip tag ids and class names? They make no sense in atom feeds?
       // No CSS or JS that cares about them anyway?)
-      val postHtml =
-        xml.Unparsed(post.approvedHtmlSanitized getOrElse "<i>Text not yet approved</i>")
+      val jsoupDoc = Jsoup.parse(post.approvedHtmlSanitized getOrElse "<i>Text not yet approved</i>")
+      jsoupDoc.outputSettings()
+        .charset(java.nio.charset.StandardCharsets.UTF_8)
+        .syntax(org.jsoup.nodes.Document.OutputSettings.Syntax.xml)
+        .escapeMode(org.jsoup.nodes.Entities.EscapeMode.xhtml)
+      val postXhtml: String = jsoupDoc.body().html()
 
       <entry>{
         /* Identifies the entry using a universally unique and
         permanent URI. */}
-        <id>{urlToPage}</id>{
+        <id>{urlToPage + "#post-" + post.nr}</id>{
         /* Contains a human readable title for the entry. */}
         <title>{page.title}</title>{
         /* Indicates the last time the entry was modified in a
@@ -92,30 +105,38 @@ object AtomFeedXml {   // RENAME file, and class? to AtomFeedBuilder?
         /* Contains or links to the complete content of the entry. */}
         <content type="xhtml">
           <div xmlns="http://www.w3.org/1999/xhtml">
-            { postHtml }
+            { xml.Unparsed(postXhtml) }
           </div>
         </content>
       </entry>
     }
 
-     // Could add:
+    val feedUrl = hostUrl + routes.ApiV0Controller.getFromApi("feed")
+    val feedName = stripScheme(hostUrl)
+    val feedUpdatedAt = posts.headOption.map(_.createdAt).getOrElse(new ju.Date)
+
+     // About the tags:
+     // <category term="sports"/> — add later, for category specific feeds.
      // <link>: Identifies a related Web page
      // <author>: Names one author of the feed. A feed may have multiple
      // author elements. A feed must contain at least one author
      // element unless all of the entry elements contain at least one
      // author element.
     <feed xmlns="http://www.w3.org/2005/Atom">
-      <link href="http://todo.example.com/feed.xml?type=atom" rel="self" type="application/rss+xml" />
-      <title>{feedTitle}</title>
-      <id>{feedId}</id>
-      <author><name>settings.communityName?</name></author>
-      <updated>{toIso8601T(feedUpdated)}</updated>
+      <title>{feedName}</title>
+      <id>{feedUrl}</id>
+      <link href={feedUrl} rel="self" type="application/atom+xml" />
+      <updated>{toIso8601T(feedUpdatedAt)}</updated>
+      <author>
+        <name>{feedName}</name>
+      </author>
+      <generator uri="https://www.talkyard.io">Talkyard</generator>
       {
-        posts.flatMap({ post =>
+        posts flatMap { post =>
           pageStuffById.get(post.pageId) map { page =>
-            postToAtom(post, page)
+            atomEntryFor(post, page)
           }
-        })
+        }
       }
     </feed>
   }

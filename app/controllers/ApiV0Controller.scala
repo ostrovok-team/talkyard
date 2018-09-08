@@ -85,7 +85,7 @@ class ApiV0Controller @Inject()(cc: ControllerComponents, edContext: EdContext)
         val thenGoTo = thenGoToUnsafe.flatMap(Prelude.stripOrigin) getOrElse "/"
         TemporaryRedirect(thenGoTo)
             .withCookies(sidAndXsrfCookies: _*)
-      case "feed.atom" =>
+      case "feed" =>
         // ----- Dupl code [4AKB2F0]
         val postsInclForbidden = dao.readOnlyTransaction { tx =>
           tx.loadPostsSkipTitles(limit = 20, OrderBy.MostRecentFirst, byUserId = None)
@@ -105,11 +105,8 @@ class ApiV0Controller @Inject()(cc: ControllerComponents, edContext: EdContext)
           throwNotFound("TyENOFEED", "No posts found, or they are private")
 
         val origin = globals.originOf(request)
-        val feedId = origin + "/-/v0/feed" // for now
-        val newestPost = posts.headOption.getOrDie("TyE2AKB04")
-        val atomXml = debiki.AtomFeedXml.renderFeed(origin, feedId = feedId, feedTitle = "Posts",
-          feedUpdated = newestPost.createdAt, posts, pageStuffById)
-        OkXml(atomXml, "application/atom+xml")
+        val atomXml = debiki.AtomFeedXml.renderFeed(origin, posts, pageStuffById)
+        OkXml(atomXml, "application/atom+xml; charset=UTF-8")
       case _ =>
         throwForbidden("TyEAPIGET404", s"No such API endpoint: $apiEndpoint")
     }
