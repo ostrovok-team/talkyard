@@ -51,6 +51,7 @@ interface TalkyardTranslations {
   Okay: string;
   OkayDots: string;
   Online: string;
+  Password: string;
   PreviewV: string;
   Problem: string;
   Question: string;

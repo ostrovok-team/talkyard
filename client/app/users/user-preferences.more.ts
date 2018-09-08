@@ -357,6 +357,18 @@ const AboutMember = createComponent({
                 className: 'btn s_UP_Prefs_ChangeEmailB' }, t.ChangeDots)),
           r.p({ className: 'help-block' }, t.upp.NotShown)),
 
+        isBuiltInUser ? null : r.div({ className: 'form-group' },    // + also on  Account tab.
+          r.label({}, "Password:"), // I18N t.Password),
+          r.a({ style: { verticalAlign: 'baseline' },
+            // UX COULD improve: For now, link to the reset password page where one types
+            // one's email or username, and then gets a pwd reset link via email.
+            // Later: link directly to the reset-pwd page, and have the user first type
+            // the current pwd, before asking for a new. If they've forgotte their pwd,
+            // send a pwd reset email. (But never let anyone changing pwd, without confirming
+            // that hen knows the old, or is the email addr owner.)
+            href: linkToResetPassword(), target: '_blank',
+            className: 'btn s_UP_Prefs_ChangePwB' }, t.ChangeDots)),
+
         activitySummaryStuff,
 
         isBuiltInUser ? null : r.div({ className: 'form-group' },

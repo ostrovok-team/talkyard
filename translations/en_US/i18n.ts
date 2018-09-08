@@ -65,6 +65,7 @@ var t_en_US: TalkyardTranslations = t = {
   Okay: "Okay",
   OkayDots: "Okay ...",
   Online: "Online",
+  Password: "Password",
   PreviewV: "Preview",
   Problem: "Problem",
   Question: "Question",
@@ -939,7 +940,7 @@ var t_en_US: TalkyardTranslations = t = {
   // Password input
 
   pwd: {
-    PasswordC: "Password:",
+    PasswordC: "Password:",   // reuse  t.Password instead.  ':' the same in all langs?
     StrengthC: "Strength: ",
     FairlyWeak: "Fairly weak.",
     toShort: "too short",
