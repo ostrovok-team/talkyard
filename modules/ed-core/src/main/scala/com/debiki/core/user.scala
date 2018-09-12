@@ -175,8 +175,8 @@ case class NewPasswordUserData(
   dieIfBad(Validation.checkEmail(email), "TyE4WKBJ7Z", identity)
   // Password: See security.throwErrorIfPasswordTooWeak, instead.
 
-  require(externalId.isDefined != password.isDefined, "TyE5AKBR02")
-  require(!firstSeenAt.exists(_.isBefore(createdAt)), "EdE2WVKF063")
+  require(externalId.isDefined != password.isDefined, "TyE5VAKBR02")
+  require(!firstSeenAt.exists(_.isBefore(createdAt)), "TyE2WVKF063")
 }
 
 
@@ -596,7 +596,7 @@ case class Member(
   id: UserId,
   fullName: Option[String],
   theUsername: String,
-  email: String,  // COULD RENAME to primaryEmailAddr
+  email: String,  // COULD RENAME to primaryEmailAddress
   emailNotfPrefs: EmailNotfPrefs,
   emailVerifiedAt: Option[ju.Date] = None,
   passwordHash: Option[String] = None,  // OPTIMIZE no need to always load? Move to MemberInclDetails?
@@ -613,12 +613,15 @@ case class Member(
   isModerator: Boolean = false,
   isSuperAdmin: Boolean = false,
   override val isDeactivated: Boolean = false,
-  override val isDeleted: Boolean = false) extends User {
+  override val isDeleted: Boolean = false) extends User with MemberMaybeDetails {
+
+  def primaryEmailAddress: String = email
 
   override def anyName: Option[String] = fullName
   override def anyUsername: Option[String] = username
   def username: Option[String] = Some(theUsername)
   def usernameOrGuestName: String = theUsername
+  def usernameHashId: String = s"@$username#$id"
 
   def usernameParensFullName: String = fullName match {
     case Some(name) => s"$theUsername ($name)"
@@ -647,6 +650,12 @@ case class Member(
   require(theUsername.length >= 2, "EsE7YKW3")
   require(!isEmailLocalPartHidden(email), "DwE6kJ23")
   require(tinyAvatar.isDefined == smallAvatar.isDefined, "EdE5YPU2")
+}
+
+
+trait MemberMaybeDetails {
+  def usernameHashId: String
+  def primaryEmailAddress: String
 }
 
 
@@ -744,7 +753,7 @@ case class MemberInclDetails(
   threatLevel: ThreatLevel = ThreatLevel.HopefullySafe,  // RENAME to autoThreatLevel?
   lockedThreatLevel: Option[ThreatLevel] = None,
   deactivatedAt: Option[When] = None,
-  deletedAt: Option[When] = None) extends MemberOrGroupInclDetails {
+  deletedAt: Option[When] = None) extends MemberOrGroupInclDetails with MemberMaybeDetails {
 
   require(User.isOkayUserId(id), "DwE077KF2")
   require(username.length >= 2, "DwE6KYU9")
@@ -796,6 +805,7 @@ case class MemberInclDetails(
   //def canonicalUsername: String = User.makeUsernameCanonical(username)  // [CANONUN]
 
   def idSpaceName: String = s"$id @$username"
+  def usernameHashId: String = s"@$username#$id"
 
   def createdWhen: When = When.fromDate(createdAt)
 

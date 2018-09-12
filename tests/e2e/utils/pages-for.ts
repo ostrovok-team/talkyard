@@ -3129,6 +3129,10 @@ function pagesFor(browser) {
           setCheckbox('#emailForEveryNewPost', enabled);
         },
 
+        clickChangePassword: function() {
+          browser.debug();
+        },
+
         save: function() {
           api.userProfilePage.preferences.clickSave();
           api.waitUntilModalGone();
@@ -3138,7 +3142,6 @@ function pagesFor(browser) {
         clickSave: function() {
           api.waitAndClick('#e2eUP_Prefs_SaveB');
         },
-
         // ---- /END should be wrapped in `about { .. }`.
 
         privacy: {
@@ -3877,6 +3880,13 @@ function pagesFor(browser) {
         browser.waitAndClick('input[type="submit"]');
         browser.waitForNewUrl();
         browser.waitForVisible('#e2eBeenUnsubscribed');
+      },
+    },
+
+
+    changePasswordDialog: {
+      clickYesChange: () => {
+        browser.debug();
       },
     },
 
