@@ -45,7 +45,11 @@ class EdAppComponents(appLoaderContext: ApplicationLoader.Context)
   SECURITY // it adds some maybe-useful security related filters too, investigate if should use them.
   override def httpFilters: Seq[EssentialFilter] = Seq(EdFilters.makeGzipFilter(materializer))
 
-  val globals = new Globals(appLoaderContext, executionContext, wsClient, actorSystem)
+  val tracer: io.opentracing.Tracer = io.jaegertracing.Configuration.fromEnv
+    .withServiceName("ty_app")
+    .getTracer
+
+  val globals = new Globals(appLoaderContext, executionContext, wsClient, actorSystem, tracer)
   val security = new ed.server.security.EdSecurity(globals)
   val rateLimiter = new RateLimiter(globals, security)
   val safeActions = new SafeActions(globals, security, controllerComponents.parsers)
