@@ -46,17 +46,21 @@ class PlainApiActions(
   import safeActions.ExceptionAction
 
   def PlainApiAction[B](parser: BodyParser[B],
-        rateLimits: RateLimits, allowAnyone: Boolean = false, isLogin: Boolean = false) =
+        rateLimits: RateLimits, allowAnyone: Boolean = false, isLogin: Boolean = false)
+        : ActionBuilder[ApiRequest, B] =
     PlainApiActionImpl(parser, rateLimits, adminOnly = false, staffOnly = false,
         allowAnyone = allowAnyone, isLogin = isLogin)
 
-  def PlainApiActionStaffOnly[B](parser: BodyParser[B]) =
+  def PlainApiActionStaffOnly[B](parser: BodyParser[B])
+        : ActionBuilder[ApiRequest, B] =
     PlainApiActionImpl(parser, NoRateLimits, adminOnly = false, staffOnly = true)
 
-  def PlainApiActionAdminOnly[B](parser: BodyParser[B]) =
+  def PlainApiActionAdminOnly[B](parser: BodyParser[B])
+        : ActionBuilder[ApiRequest, B] =
     PlainApiActionImpl(parser, NoRateLimits, adminOnly = true, staffOnly = false)
 
-  def PlainApiActionSuperAdminOnly[B](parser: BodyParser[B]) =
+  def PlainApiActionSuperAdminOnly[B](parser: BodyParser[B])
+        : ActionBuilder[ApiRequest, B] =
     PlainApiActionImpl(parser, NoRateLimits, adminOnly = false, staffOnly = false,
         superAdminOnly = true)
 
@@ -74,7 +78,8 @@ class PlainApiActions(
   def PlainApiActionImpl[B](aParser: BodyParser[B],
         rateLimits: RateLimits, adminOnly: Boolean, staffOnly: Boolean,
         allowAnyone: Boolean = false,  // try to delete 'allowAnyone'? REFACTOR
-        isLogin: Boolean = false, superAdminOnly: Boolean = false) =
+        isLogin: Boolean = false, superAdminOnly: Boolean = false)
+        : ActionBuilder[ApiRequest, B] =
       new ActionBuilder[ApiRequest, B] {
 
     override def parser: BodyParser[B] =
@@ -98,12 +103,23 @@ class PlainApiActions(
 
       val site = globals.lookupSiteOrThrow(request)
 
-      request.headers.get("Authorization") match {
+      var traceOpName =
+        if (request.path.startsWith("/-/")
+          || request.path.startsWith("/favicon.ico")
+          || request.path.startsWith("/robots.txt")) request.path
+        else "/page"
+
+      val span = globals.tracer.buildSpan(traceOpName).start()
+
+      val futureResult = request.headers.get("Authorization") match {
         case Some(authHeaderValue) =>
           invokeBlockAuthViaApiSecret(request, site, authHeaderValue, block)
         case None =>
           invokeBlockAuthViaCookie(request, site, block)
       }
+
+      futureResult.foreach(result => span.finish())
+      futureResult
     }
 
 
