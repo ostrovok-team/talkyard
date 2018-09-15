@@ -100,26 +100,13 @@ class PlainApiActions(
 
     override def invokeBlock[A](request: Request[A], block: ApiRequest[A] => Future[Result])
         : Future[Result] = {
-
       val site = globals.lookupSiteOrThrow(request)
-
-      var traceOpName =
-        if (request.path.startsWith("/-/")
-          || request.path.startsWith("/favicon.ico")
-          || request.path.startsWith("/robots.txt")) request.path
-        else "/page"
-
-      val span = globals.tracer.buildSpan(traceOpName).start()
-
-      val futureResult = request.headers.get("Authorization") match {
+      request.headers.get("Authorization") match {
         case Some(authHeaderValue) =>
           invokeBlockAuthViaApiSecret(request, site, authHeaderValue, block)
         case None =>
           invokeBlockAuthViaCookie(request, site, block)
       }
-
-      futureResult.foreach(result => span.finish())
-      futureResult
     }
 
 
@@ -355,6 +342,16 @@ class PlainApiActions(
       // COULD use markers instead for site id and ip, and perhaps uri too? Dupl code [5KWC28]
       val requestUriAndIp = s"site $site, ip ${apiRequest.ip}: ${apiRequest.uri}"
       //p.Logger.debug(s"API request started [DwM6L8], " + requestUriAndIp)
+
+
+      import apiRequest.tracerSpan
+      tracerSpan.setTag("siteId", site.id)
+      anyUser foreach { user =>
+        tracerSpan.setTag("userId", user.id)
+        if (user.isStaff) tracerSpan.setTag("isStaff", true)
+        if (user.isAdmin) tracerSpan.setTag("isAdmin", true)
+        if (user.isModerator) tracerSpan.setTag("isModerator", true)
+      }
 
       val timer = globals.metricRegistry.timer(request.path)
       val timerContext = timer.time()

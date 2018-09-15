@@ -106,6 +106,8 @@ class InviteController @Inject()(cc: ControllerComponents, edContext: EdContext)
   }
 
 
+  //   SECURITY send as query param, so less risk accidentally ends up in sth that logs URL paths
+  //
   def acceptInvite(secretKey: String): Action[Unit] = GetActionAllowAnyone { request =>
     val (newUser, invite, alreadyAccepted) = request.dao.acceptInviteCreateUser(
       secretKey, request.theBrowserIdData)
