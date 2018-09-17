@@ -1299,7 +1299,7 @@ export const Editor = createComponent({
     }
 
     let saveButtonTitle = t.Save;
-    let cancelButtonTitle = t.Cancel;
+    let cancelButtonTitle = t.Cancel;  // t.SaveDraft
     if (_.isNumber(this.state.editingPostNr)) {
       saveButtonTitle = makeSaveTitle(t.e.Save, t.e.edits);
     }
