@@ -399,6 +399,7 @@ export const Editor = createComponent({
   },
 
   editPost: function(postNr: PostNr, onDone?) {
+    // Skip drafts plz.
     if (this.alertBadState())
       return;
     Server.loadDraftAndText(postNr, (response: LoadDraftAndTextResponse) => {
