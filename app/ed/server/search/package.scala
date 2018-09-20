@@ -271,7 +271,7 @@ package object search {
   // all built-in languages:
   // https://www.elastic.co/guide/en/elasticsearch/reference/master/analysis-lang-analyzer.html#analysis-lang-analyzer
   val Indexes = Seq[IndexSettingsAndMappings](
-    IndexSettingsAndMappings(shards = 5, language = "english"))
+    IndexSettingsAndMappings(shards = 5, language = "russian"))
 
 }
 
