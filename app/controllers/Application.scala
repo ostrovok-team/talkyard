@@ -63,6 +63,8 @@ class Application @Inject()(cc: ControllerComponents, edContext: EdContext)
     """.stripMargin) as "application/manifest+json"  // TODO cache 1 day only, for now?
     // needs to be that content type, see:
     // https://github.com/discourse/discourse/commit/8fc08aad09d0db9bc176a9f2376f05b3c9cebc6b#diff-d73ec52fd8b68ed588bf337398eee53d
+    // cache max 1 day? later, maybe half a week?
+    //   "max-age=86400, s-maxage=86400, public"
   }
 
 
